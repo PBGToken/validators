@@ -1,0 +1,42 @@
+module common_ProtocolAddresses
+
+import { 
+    VAULT_ADDR,
+    PBG_COUNTER_ADDR,
+    ASSETS_COUNTER_ADDR,
+    SUCCESS_FEE_TIME_ADDR,
+    SUCCESS_FEE_DISTRIBUTOR_ADDR,
+    MANAGEMENT_FEE_TIME_ADDR,
+    PRICE_VALIDATOR_ADDR,
+    GOVERNANCE_ADDR,
+    VOUCHER_VALIDATOR_ADDR,
+    TOTAL_VALUE_REDUCER_ADDR
+} from "./addresses"
+
+struct ProtocolAddresses {
+    vault: Address
+    pbg_counter: Address
+    assets_counter: Address
+    success_fee_time_validator: Address
+    success_fee_distributor: Address
+    management_fee_time_validator: Address
+    price_validator: Address
+    governance: Address
+    voucher_validator: Address
+    total_value_reducer: Address
+
+    func get() -> ProtocolAddresses {
+        ProtocolAddresses{
+            vault: VAULT_ADDR,
+            pbg_counter: PBG_COUNTER_ADDR,
+            assets_counter: ASSETS_COUNTER_ADDR,
+            success_fee_time_validator: SUCCESS_FEE_TIME_ADDR,
+            success_fee_distributor: SUCCESS_FEE_DISTRIBUTOR_ADDR,
+            management_fee_time_validator: MANAGEMENT_FEE_TIME_ADDR,
+            price_validator: PRICE_VALIDATOR_ADDR,
+            governance: GOVERNANCE_ADDR,
+            voucher_validator: VOUCHER_VALIDATOR_ADDR,
+            total_value_reducer: TOTAL_VALUE_REDUCER_ADDR
+        }
+    }
+}

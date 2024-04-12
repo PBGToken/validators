@@ -1,0 +1,31 @@
+{
+  "name": "pbg-token-validators",
+  "version": "1.0.0",
+  "description": "PBG Token contracts validators for Cardano",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "npx hl2ts --out-dir ./dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PBGToken/validators.git"
+  },
+  "keywords": [
+    "PBGToken",
+    "smart",
+    "contract",
+    "validators",
+    "Cardano",
+    "Helios"
+  ],
+  "author": "Christian Schmitz",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/PBGToken/validators/issues"
+  },
+  "homepage": "https://github.com/PBGToken/validators#readme",
+  "dependencies": {
+    "@helios-lang/compiler": "npm:@hyperionbt/helios@^0.16.4",
+    "@helios-lang/contract-utils": "^0.1.40"
+  }
+}

@@ -1,0 +1,7 @@
+module common_MintRequestRedeemer
+
+enum MintRequestRedeemer {
+    Cancel
+    Mint
+    Reject
+}

@@ -1,0 +1,120 @@
+module common_BurnRequestDatum
+
+import {
+    GOVERNANCE_ADDR,
+    SUCCESS_FEE_TIME_ADDR
+} from "./addresses"
+
+import {
+    SuccessFeeCycle,
+    SUCCESS_FEE_CYCLE_TOKEN
+} from "./SuccessFeeCycle"
+
+import { 
+    Price
+} from "./Price"
+
+import {
+    Fees,
+    FEES_PARAMETER_TOKEN
+} from "./Fees"
+
+import {
+    Voucher
+} from "./Voucher"
+
+import { current_price } from "./common"
+
+// result is a number of pbgs
+func sum_reimbursements(tx: Tx, vouchers: []ByteArray, price: Price, cycle: SuccessFeeCycle) -> Int {
+    vouchers.fold((prev: Int, request_id: ByteArray) -> {
+        ac = AssetClass::new(Scripts::voucher_policy, request_id);
+
+        assert(tx.minted.get(ac) == -1, "token must be burned");
+
+        voucher = Voucher::find(Scripts::voucher_policy, tx, request_id);
+
+        if (voucher.cycle_id == cycle.id) {
+            prev + cycle.calc_success_fee_reimbursement(voucher.mint_price, price, voucher.pbgs)
+        } else {
+            prev
+        }
+    }, 0)
+}
+
+struct BurnRequestDatum {
+    customer:          Address
+    max_rejection_fee: Int // in lovelace, so input must contain some lovelace
+    min_lovelace:      Int // minimum lovelace expected in exchange
+    max_price_age:     Duration
+
+    func get_customer_key(self) -> PubKeyHash {
+        Credential::PubKey{customer_key} = self.customer.credential;
+        customer_key
+    }
+
+    func is_signed_by_customer(self, tx: Tx) -> Bool {
+        tx.is_signed_by(self.get_customer_key())
+    }
+
+    func calc_return_lovelace_upon_burn(input: TxInput, reimbursement: Int, fees: Fees, price: Price, cycle: SuccessFeeCycle) -> Int {
+        input_pbgs:    Int       = input.value.get(AssetClass::new(Scripts::pbg_policy, #));
+        total_pbgs:    Int       = input_pbgs + reimbursement - cycle.calc_success_fee(price, input_pbgs);
+        lovelace:      Int       = price.convert_asset_to_lovelace(total_pbgs);
+        fees.subtract_burn_fee(lovelace)
+    }
+
+    func returned_enough_upon_burn(self, ctx: ScriptContext, fees: Fees, price: Price, cycle: SuccessFeeCycle, vouchers: []ByteArray) -> Bool {
+        tx:            Tx        = ctx.tx;
+        current_input: TxInput   = ctx.get_current_input();
+        request_id:    ByteArray = current_input.output_id.serialize().blake2b();
+        reimbursement: Int       = sum_reimbursements(tx, vouchers, price, cycle);
+        //print("reimbursement: " + reimbursement.show());
+        expected_lovelace:      Int = BurnRequestDatum::calc_return_lovelace_upon_burn(current_input, reimbursement, fees, price, cycle);
+        return_lovelace:  Int       = tx.value_paid_to(self.customer, request_id).get_lovelace();
+
+        (return_lovelace >= expected_lovelace).trace("returned enough")
+        && (expected_lovelace >= self.min_lovelace).trace("returned more than user expected min: ")
+    }
+
+    func calc_return_value_upon_rejection(self, input: TxInput, fees: Fees) -> Value {
+        max_rejection_fee: Value = fees.calc_max_burn_rejection_fee(self.max_rejection_fee);
+        input.value - max_rejection_fee
+    }
+
+    func returned_enough_upon_rejection(self, ctx: ScriptContext, fees: Fees) -> Bool {
+        tx:                Tx        = ctx.tx;
+        current_input:     TxInput   = ctx.get_current_input();
+        request_id:        ByteArray = current_input.output_id.serialize().blake2b();
+        return_value:      Value     = tx.value_paid_to(self.customer, request_id);
+        expected_return_value: Value = self.calc_return_value_upon_rejection(current_input, fees);
+
+        return_value.contains(expected_return_value)
+    }
+
+    /**
+     * price: lovelace per asset
+     */
+
+    func new(price: Real, n_pbgs: Int, slippage: Real, ctx: ContractContext) -> BurnRequestDatum {
+        success_fee_cycle_input: TxInput = ctx.network.pick(SUCCESS_FEE_TIME_ADDR, SUCCESS_FEE_CYCLE_TOKEN).get_singleton();
+        success_fee_cycle = SuccessFeeCycle::from_data(success_fee_cycle_input.datum.get_inline_data());
+
+        ga: Address = GOVERNANCE_ADDR;
+        fees_input: TxInput = ctx.network.pick(ga, FEES_PARAMETER_TOKEN).get_singleton();
+        fees = Fees::from_data(fees_input.datum.get_inline_data());
+
+        p = Price::from_real(price, ctx);
+
+        pbgs_after_fees:   Int = n_pbgs - success_fee_cycle.calc_success_fee(p, n_pbgs); // TODO: take into account reimbursement
+        lovelace:          Int = (pbgs_after_fees.to_real()*price).floor();
+        expected_lovelace: Int = fees.subtract_burn_fee(lovelace);
+
+        BurnRequestDatum{
+            ctx.agent.address,
+            1_000_000,
+            (expected_lovelace.to_real()*(1.0 - slippage)).floor(),
+            12*Duration::HOUR
+        }
+    }
+}

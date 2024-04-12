@@ -1,0 +1,57 @@
+module common_Fees
+
+import { PARAMETER_POLICY } from "./constants.hl"
+import { ProgressiveFee } from "./ProgressiveFee.hl"
+
+const FEES_PARAMETER_POLICY: MintingPolicyHash = PARAMETER_POLICY
+const FEES_PARAMETER_ASSETCLASS: AssetClass = AssetClass::new(FEES_PARAMETER_POLICY, (4).show().encode_utf8())
+const FEES_PARAMETER_TOKEN: Value      = Value::new(FEES_PARAMETER_ASSETCLASS, 1)
+
+struct NextSuccessFee {
+    duration: Duration
+    fee:      ProgressiveFee
+}
+
+struct Fees {
+    min_mint_rejection_fee: Int // lovelace
+    min_burn_rejection_fee: Int // lovelace
+    min_mint_fee:           Int // lovelace
+    min_burn_fee:           Int // lovelace
+    rel_mint_fee:           Real
+    rel_burn_fee:           Real
+    rel_mgmt_fee:           Real
+    next_success_fee:       NextSuccessFee
+
+    func from_inputs(inputs: []TxInput) -> Fees {
+        Fees::from_data(
+            inputs.find((input: TxInput) -> {
+                input.output.value.get_safe(FEES_PARAMETER_ASSETCLASS) == 1
+            }).output.datum.get_inline_data()
+        )
+    }
+
+    func subtract_mint_fee(self, lovelace: Int) -> Int {
+        fee: Int = (self.rel_mint_fee * lovelace.to_real()).floor().bound_min(self.min_mint_fee);
+
+        (lovelace - fee).bound_min(0)
+    }
+
+    func subtract_burn_fee(self, lovelace: Int) -> Int {
+        fee: Int = (self.rel_burn_fee * lovelace.to_real()).floor().bound_min(self.min_burn_fee);
+
+        (lovelace - fee).bound_min(0)
+    }
+
+    func calc_max_mint_rejection_fee(self, customer_requested_max_rejection_fee: Int) -> Value {
+        Value::lovelace(customer_requested_max_rejection_fee.bound_min(self.min_mint_rejection_fee))
+    }
+
+    func calc_max_burn_rejection_fee(self, customer_requested_max_rejection_fee: Int) -> Value {
+        Value::lovelace(customer_requested_max_rejection_fee.bound_min(self.min_burn_rejection_fee))
+    }
+    
+    func calc_management_fee(self, total_pbgs: Int) -> Int {
+        f: Real = self.rel_mgmt_fee;
+        ((f * total_pbgs.to_real())/(1.0 - f)).floor()
+    }
+}

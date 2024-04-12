@@ -1,0 +1,16 @@
+spending treasury
+
+/**
+ * Role: protect treasury funds, which is the entire income of the protocol
+ *
+ * Validation rules:
+ *   * must be signed by majority of owner keys (eg. 2 out of 3)
+ */
+ 
+import {
+    Keys
+} from "./common/Keys.hl"
+
+func main(_, _, ctx: ScriptContext) -> Bool {
+    Keys::is_signed_by_majority_of_owners(ctx.tx)
+}

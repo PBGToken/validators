@@ -1,0 +1,109 @@
+module common_SuccessFeeCycle
+
+import { PARAMETER_POLICY } from "./constants"
+import { Price } from "./Price"
+import { ProgressiveFee } from "./ProgressiveFee"
+
+const SUCCESS_FEE_CYCLE_POLICY: MintingPolicyHash = PARAMETER_POLICY
+const SUCCESS_FEE_CYCLE_ASSETCLASS: AssetClass = AssetClass::new(SUCCESS_FEE_CYCLE_POLICY, (6).show().encode_utf8())
+const SUCCESS_FEE_CYCLE_TOKEN: Value = Value::new(SUCCESS_FEE_CYCLE_ASSETCLASS, 1)
+
+struct SuccessFeeCycle {
+    id:          Int
+    start_time:  Time
+    duration:    Duration
+    prev_price:  Price
+    start_price: Price
+    fee:         ProgressiveFee
+
+    func from_inputs(inputs: []TxInput) -> SuccessFeeCycle {
+        SuccessFeeCycle::from_data(
+            inputs.find((input: TxInput) -> {
+                //print(input.value.show());
+                input.value.get_safe(SUCCESS_FEE_CYCLE_ASSETCLASS) == 1
+            }).output.datum.get_inline_data()
+        )
+    }
+
+    // during user burning
+    func calc_equivalent_success_fee(self, start_price: Price, current_price: Price, n_pbgs: Int) -> Int {
+        ratio: Real = current_price.calc_ratio(start_price);
+
+        if (ratio <= 1.0) {
+            0
+        } else {
+            improvement: Real = ratio - 1.0; 
+            
+            fee: Real = self.fee.apply(improvement);
+
+            prop: Real = fee/ratio; // proportion of pbg count that should go to the owners
+ 
+            (prop * n_pbgs).floor() // calculation if we are going to extract as fee
+        }
+    }
+
+    func calc_minted_success_fee(self, start_price: Price, current_price: Price, n_pbgs: Int) -> Int {
+        ratio: Real = current_price.calc_ratio(start_price);
+
+        //print("CURRENT_PRICE: " + current_price.to_real().show());
+        //print("START_PRICE: " + start_price.to_real().show());
+        //print("RATIO: " + ratio.show());
+
+        if (ratio <= 1.0) {
+            0
+        } else {
+            improvement: Real = ratio - 1.0; 
+            
+            fee: Real = self.fee.apply(improvement);
+
+            prop: Real = fee/ratio; // proportion of pbg count that should go to the owners
+
+            ((prop/(1.0 - prop))*n_pbgs).floor() // calculation if we are going to mint
+        }
+    }
+
+    // during the year (burning)
+    // returns a number of Pbgs
+    func calc_success_fee(self, current_price: Price, n_pbgs: Int) -> Int {
+        self.calc_equivalent_success_fee(self.start_price, current_price, n_pbgs)
+    }
+
+    // during the year (burning)
+    func calc_success_fee_reimbursement(self, mint_price: Price, current_price: Price, n_pbgs: Int) -> Int {
+        owed: Int = self.calc_equivalent_success_fee(mint_price, current_price, n_pbgs);
+        charged: Int = self.calc_success_fee(current_price, n_pbgs);
+
+        if (owed < charged) {
+            charged - owed
+        } else {
+            0
+        }
+    }
+
+    // end of the year
+    func calc_final_success_fee(self, price: Price) -> Int {
+        self.calc_minted_success_fee(self.start_price, price, price.total_asset)
+    }
+
+    // end of the year
+    func calc_success_fee_cycle_end_reimbursement(self, mint_price: Price, n_pbgs: Int) -> Int {
+        owed: Int = self.calc_minted_success_fee(mint_price, self.start_price, n_pbgs);
+        charged: Int = self.calc_minted_success_fee(self.prev_price, self.start_price, n_pbgs);
+
+        if (owed < charged) {
+            charged - owed
+        } else {
+            0
+        }
+    }
+
+    func calc_end_time(self) -> Time {
+        self.start_time + self.duration
+    }
+
+    func is_consumed(tx: Tx) -> Bool {
+        tx.inputs.any((input: TxInput) -> {
+            input.output.value.get_safe(SUCCESS_FEE_CYCLE_ASSETCLASS) == 1
+        })
+    }
+}

@@ -1,0 +1,24 @@
+module common_AssetsCounterRedeemer
+
+enum AssetsCounterRedeemer {
+    Count{
+        assetclass: AssetClass
+    }
+    BurnDuplicate
+    BurnEmpty
+}
+
+func get_counter_token_name(value: Value) -> ByteArray {
+    map: Map[MintingPolicyHash]Map[ByteArray]Int = value.get_assets().to_map();
+
+    assert(map.length == 1, "expected 1 token");
+    assert(map.head_key == Scripts::assets_counter_policy, "expected only asset counter token");
+    assert(map.head_value.length == 1, "expected 1 token");
+
+    token_name: ByteArray  = map.head_value.head_key;
+    qty:        Int        = map.head_value.head_value;
+
+    assert(qty == 1, "expected only 1 token");
+
+    token_name
+}

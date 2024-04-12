@@ -1,0 +1,32 @@
+module common_PbgCountDatum
+
+import {
+    PBG_COUNTER_ASSETCLASS
+} from "./constants"
+
+struct PbgCountDatum {
+    total_pbgs:     Int
+    total_vouchers: Int
+
+    func is_consumed(tx: Tx) -> Bool {
+        tx.inputs.any((input: TxInput) -> {
+            input.output.value.get_safe(PBG_COUNTER_ASSETCLASS) == 1
+        })
+    }
+    
+    func from_inputs(inputs: []TxInput) -> PbgCountDatum {
+        PbgCountDatum::from_data(
+            inputs.find((input: TxInput) -> {
+                input.output.value.get_safe(PBG_COUNTER_ASSETCLASS) == 1
+            }).output.datum.get_inline_data()
+        )
+    }
+
+    func from_outputs(outputs: []TxOutput) -> PbgCountDatum {
+        PbgCountDatum::from_data(
+            outputs.find((output: TxOutput) -> {
+                output.value.get_safe(PBG_COUNTER_ASSETCLASS) == 1
+            }).datum.get_inline_data()
+        )
+    }
+}

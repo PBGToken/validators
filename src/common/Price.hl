@@ -1,0 +1,68 @@
+module common_Price
+
+import { PARAMETER_POLICY } from "./constants"
+
+const PRICE_PARAMETER_POLICY: MintingPolicyHash = PARAMETER_POLICY
+const PRICE_PARAMETER_ASSETCLASS: AssetClass    = AssetClass::new(PRICE_PARAMETER_POLICY, (0).show().encode_utf8())
+const PRICE_PARAMETER_TOKEN: Value              = Value::new(PRICE_PARAMETER_ASSETCLASS, 1)
+
+struct Price {
+    total_lovelace: Int
+    total_asset:    Int
+    timestamp:      Time
+
+    const ZERO: Price = Price{0, 0, Time::new(0)}
+
+    /**
+     * p: lovelace per asset
+     */
+    func from_real(p: Real, ctx: ContractContext) -> Price {
+        Price{
+            total_lovelace: (p*1000000).floor(),
+            total_asset: 1000000,
+            timestamp: ctx.now()
+        }
+    }
+    
+    func from_inputs(inputs: []TxInput) -> Price {
+        Price::from_data(
+            inputs.find((input: TxInput) -> {
+                input.output.value.get_safe(PRICE_PARAMETER_ASSETCLASS) == 1
+            }).output.datum.get_inline_data()
+        )
+    }
+
+    func asset(self) -> Int {
+        self.total_asset.bound_min(1)
+    }
+
+    func convert_lovelace_to_asset(self, lovelace: Int) -> Int {
+        (lovelace*self.asset())/self.total_lovelace
+    }
+
+    func convert_asset_to_lovelace(self, asset: Int) -> Int {
+        (asset*self.total_lovelace)/self.asset()
+    }
+
+    func gt(self, other: Price) -> Bool {
+        self.total_lovelace*other.asset() > other.total_lovelace*self.asset()
+    }
+
+    func is_recent(self, now: Time, max_age: Duration) -> Bool {
+        (now - self.timestamp) <= max_age
+    }
+
+    func calc_ratio(self, old: Price) -> Real {
+        top: Real = (self.total_lovelace*old.asset()).to_real();
+        bottom: Real = (self.asset()*old.total_lovelace).to_real();
+        top/bottom
+    }
+
+    func to_real(self) -> Real {
+        self.total_lovelace.to_real()/self.asset().to_real()
+    }
+
+    func show(self) -> String {
+        self.total_lovelace.show() + "/" + self.total_asset.show()
+    }
+}

@@ -1,0 +1,9 @@
+module common_BurnRequestRedeemer
+
+enum BurnRequestRedeemer {
+    Cancel
+    Burn{
+        vouchers: []ByteArray // token names of voucher ownership tokens
+    }
+    Reject
+}

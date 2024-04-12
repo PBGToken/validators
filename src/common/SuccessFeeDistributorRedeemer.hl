@@ -1,0 +1,7 @@
+module common_SuccessFeeDistributorRedeemer
+
+enum SuccessFeeDistributorRedeemer {
+    Reimburse
+    Extract
+    Upgrade
+}

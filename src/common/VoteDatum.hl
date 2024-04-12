@@ -1,0 +1,35 @@
+module common_VoteDatum
+
+import {
+    VOTE_INTENT_ASSETCLASS,
+    VOTE_DURATION
+} from "./constants"
+
+enum VoteDatumPayload {
+    Update {
+        marker: AssetClass
+        data:   Data
+    }
+    Upgrade {
+        address: Address
+    }
+}
+
+struct VoteDatum {
+    valid_after: Time
+    payload:     VoteDatumPayload
+
+    func from_inputs(inputs: []TxInput) -> VoteDatum {
+        VoteDatum::from_data(
+            inputs.filter((input: TxInput) -> Bool {
+                input.output.value.get_safe(VOTE_INTENT_ASSETCLASS) == 1
+            }).get_singleton().datum.get_inline_data()
+        )
+    }
+
+    func get_time_range(self) -> TimeRange {
+        t: Time = self.valid_after;
+
+        TimeRange::new(t, t + VOTE_DURATION)
+    }
+}

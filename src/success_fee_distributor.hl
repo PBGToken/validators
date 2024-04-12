@@ -1,0 +1,101 @@
+spending success_fee_distributor
+
+/**
+ * Role: reimburse PBGs to remaining unburned vouchers
+ *
+ * General validation rules:
+ *   * tx is signed by master key
+ *   * current input isn't the marker
+ * 
+ * Reimburse
+ *   * pbg counter must be consumed
+ *   * address diff <= whatever is sent to voucher holders
+ *
+ * Extract
+ *   * voucher count in ref input must be 0
+ */
+
+import { SUCCESS_FEE_DISTRIBUTOR_ADDR } from "./common/addresses"
+import { Keys } from "./common/Keys"
+import { PbgCountDatum } from "./common/PbgCountDatum"
+import { SuccessFeeCycle } from "./common/SuccessFeeCycle"
+import { SuccessFeeDistributorDatum, SUCCESS_FEE_DISTRIBUTOR_MARKER_ASSETCLASS } from "./common/SuccessFeeDistributorDatum"
+import { SuccessFeeDistributorRedeemer } from "./common/SuccessFeeDistributorRedeemer"
+import { Voucher } from "./common/Voucher"
+import { Wiring, CURRENT_VERSION } from "./common/Wiring"
+
+func calc_diff(tx: Tx, a: Address) -> Value {
+    d = SuccessFeeDistributorDatum::Asset;
+
+    in: Value = tx.inputs.fold((prev: Value, input: TxInput) -> {
+        if (input.output.address == a && SuccessFeeDistributorDatum::from_data(input.output.datum.get_inline_data()) == d) {
+            prev + input.output.value
+        } else {
+            prev
+        }
+    }, Value::ZERO);
+
+    out: Value = tx.outputs.fold((prev: Value, output: TxOutput) -> {
+        if (output.address == a && SuccessFeeDistributorDatum::from_data(output.datum.get_inline_data()) == d) {
+            prev + output.value
+        } else {
+            prev
+        }
+    }, Value::ZERO);
+    
+    in - out
+}
+
+func main(datum: SuccessFeeDistributorDatum, redeemer: SuccessFeeDistributorRedeemer, ctx: ScriptContext) -> Bool {
+    tx: Tx = ctx.tx;
+    ref_inputs: []TxInput = tx.ref_inputs;
+
+	keys = Keys::from_inputs(ref_inputs);
+    
+    keys.is_signed_by_master_key(tx).trace("signed by master: ")
+    && redeemer.switch{
+        Upgrade => {
+            wiring = Wiring::from_ref_inputs(ref_inputs);
+    
+            assert(!datum.is_asset(), "can only upgrade marker");
+
+            output: TxOutput = tx.outputs.find((o: TxOutput) -> {
+                o.value.get_safe(SUCCESS_FEE_DISTRIBUTOR_MARKER_ASSETCLASS) == 1
+            });
+
+            wiring.version > CURRENT_VERSION
+            && output.address == wiring.success_fee_distributor
+            && SuccessFeeDistributorDatum::from_data(output.datum.get_inline_data()) == datum
+        },
+        Reimburse => {
+            assert(datum.is_asset(), "can't spend marker");
+
+            //print("looking for cycle");
+            cycle = SuccessFeeCycle::from_inputs(ref_inputs);
+
+            assert(PbgCountDatum::is_consumed(tx), "pbg counter isn't consumed");
+
+            diff: Value = calc_diff(tx, SUCCESS_FEE_DISTRIBUTOR_ADDR);
+
+            pbgs_reimbursed: Int = tx.inputs.fold((prev: Int, input: TxInput) -> {
+                if (input.value.get_safe(AssetClass::new(Scripts::voucher_policy, #)) >= 1) {
+                    voucher = Voucher::from_data(input.datum.get_inline_data());
+
+                    reimbursement: Int = cycle.calc_success_fee_cycle_end_reimbursement(voucher.mint_price, voucher.pbgs);
+
+                    prev + reimbursement
+                } else {
+                    prev
+                }
+            }, 0);
+
+            (diff.get_safe(AssetClass::new(Scripts::pbg_policy, #))*(-1) <= pbgs_reimbursed).trace("didn't take out more than reimbursement: ")
+        },
+        Extract => {
+            assert(datum.is_asset(), "can't spend marker");
+
+            PbgCountDatum{_, total_vouchers} = PbgCountDatum::from_inputs(ref_inputs);
+            (total_vouchers == 0).trace("all vouchers reimbursed: ")
+        }
+    }
+}

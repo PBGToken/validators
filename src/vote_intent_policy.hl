@@ -1,0 +1,71 @@
+minting vote_intent_policy
+
+/**
+ * Role: create a vote
+ *
+ * Mint validation rules:
+ *   * must be signed by majority of owner keys
+ *   * only one is minted
+ *   * token name is empty
+ *   * the token is sent to the vote validator address
+ *   * valid_after is set to end of current time_range + 2 weeks
+ * 
+ * Burn validation rules:
+ *   * tx is signed by master key
+ *   * exactly one is burned
+ *   * valid_after is before time_range.start - 1 WEEK
+ */
+
+import {
+    VOTE_VALIDATOR_ADDRESS,
+    VOTE_DELAY,
+	VOTE_DURATION
+} from "./common/constants.hl"
+
+import {
+    Keys
+} from "./common/Keys.hl"
+
+import {
+    VoteDatum
+} from "./common/VoteDatum.hl"
+
+enum Redeemer {
+    Mint
+    Burn
+}
+
+func main(redeemer: Redeemer, ctx: ScriptContext) -> Bool {
+    tx: Tx = ctx.tx;
+    ref_inputs: []TxInput = tx.ref_inputs;
+    keys = Keys::from_inputs(ref_inputs);
+    mph: MintingPolicyHash = Scripts::vote_intent_policy;
+    asset_class = AssetClass::new(mph, #);
+
+    redeemer.switch{
+        Mint => {
+            policy_output: TxOutput = tx.outputs.find((output: TxOutput) -> {
+                output.value.get_safe(asset_class) > 0
+            });
+
+            datum = VoteDatum::from_data(policy_output.datum.get_inline_data());
+
+            Keys::is_signed_by_majority_of_owners(tx)
+            && tx.minted.get(asset_class) == 1
+            && tx.minted.get_policy(mph).length == 1
+            && policy_output.address == VOTE_VALIDATOR_ADDRESS
+            && datum.valid_after > tx.time_range.end + VOTE_DELAY
+        },
+        Burn => {
+            policy_input: TxInput = tx.inputs.find((input: TxInput) -> {
+                input.output.value.get_safe(asset_class) > 0
+            });
+
+            datum = VoteDatum::from_data(policy_input.output.datum.get_inline_data());
+
+            keys.is_signed_by_master_key(tx)
+            && tx.minted.get(asset_class) == -1
+            && datum.valid_after < tx.time_range.start - VOTE_DURATION
+        }
+    }
+}

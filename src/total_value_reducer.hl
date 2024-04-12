@@ -1,0 +1,101 @@
+spending total_value_reducer
+
+/**
+ * Role: calculate equivalent lovelace value of the vault
+ *
+ * General validation rules:
+ *   * tx is signed by master key
+ *   * counter token is sent back to same address
+ * 
+ * Reset validation rules:
+ *   * datum of containing token is zeroed (count==0 and running_hash==#)
+ *   * datum timestamp is older than current time
+ *
+ * Sum validation rules:
+ *   * for each price_feed in the redeemer:
+ *       * sum lovelace using that price (taken from the ref inputs)
+ *       * asset counter timestamp is older than datum timestamp
+ *   * output datum count must be old datum plus counter lovelace
+ *   * output datum running hash must be updated
+ *   * output datum timestamp is unchanged
+ *
+ */
+
+import { TOTAL_VALUE_COUNT_ASSETCLASS } from "./common/constants"
+import { TOTAL_VALUE_REDUCER_ADDR }  from "./common/addresses"
+import { AssetsCounter } from "./common/AssetsCounter"
+import { AssetsCounterDatum } from "./common/AssetsCounterDatum"
+import { Keys } from "./common/Keys"
+import { Price } from "./common/Price"
+import { PriceFeed } from "./common/PriceFeed"
+import { TotalValueDatum } from "./common/TotalValueDatum"
+import { TotalValueRedeemer } from "./common/TotalValueRedeemer"
+import { Wiring, CURRENT_VERSION } from "./common/Wiring" 
+
+func main(datum: TotalValueDatum, redeemer: TotalValueRedeemer, ctx: ScriptContext) -> Bool {
+    tx: Tx = ctx.tx;
+    ref_inputs: []TxInput = tx.ref_inputs;
+    //print("looking for keys input");
+    keys = Keys::from_inputs(ref_inputs);
+
+    //print("looking for returning output");
+    output: TxOutput = tx.outputs.find((output: TxOutput) -> {
+        output.value.get_safe(TOTAL_VALUE_COUNT_ASSETCLASS) == 1
+    });
+    output_datum = TotalValueDatum::from_data(output.datum.get_inline_data());
+
+    keys.is_signed_by_master_key(tx).trace("signed by master: ")
+    && redeemer.switch{
+        Upgrade => {
+            wiring = Wiring::from_ref_inputs(ref_inputs);
+
+            wiring.version > CURRENT_VERSION
+            && output.address == wiring.total_value_reducer
+            && output_datum == datum
+        },
+        else => {
+            Wiring::is_same_version(ref_inputs)
+            && output.address == TOTAL_VALUE_REDUCER_ADDR
+            && redeemer.switch{
+                Reset => {
+                    (output_datum.lovelace == 0)
+                    && (output_datum.running_hash == #)
+                    && (output_datum.timestamp < tx.time_range.start)
+                },
+                Sum{price_feeds} => {
+                    //print("looking for assetscounter");
+                    assets_counter = AssetsCounter::from_ref_inputs(ref_inputs);
+        
+                    (lovelace: Int, running_hash: ByteArray) = price_feeds.fold((prev: () -> (Int, ByteArray), price_feed: PriceFeed) -> {
+                        (prev_lovelace: Int, prev_hash: ByteArray) = prev();
+        
+                        assert(price_feed.verify(tx), "price feed too old");
+        
+                        assetclass: AssetClass = price_feed.get_assetclass();
+                        price:      Price      = price_feed.get_price();
+                        
+                        derived_token_name: ByteArray = assetclass.serialize().blake2b();
+                        (n_asset: Int, last_update: Time) = assets_counter.get_count(tx, assetclass);
+        
+                        assert(last_update < datum.timestamp, "can't update asset counters during total value reduction (" + last_update.show() + " not before  datum.timestamp)");
+        
+                        lovelace: Int = price.convert_asset_to_lovelace(n_asset);
+        
+                        next_hash: ByteArray = (prev_hash + derived_token_name).blake2b();
+                        next_lovelace: Int = prev_lovelace + lovelace;
+        
+                        () -> {
+                            (next_lovelace, next_hash)
+                        }
+                    }, () -> {(datum.lovelace, datum.running_hash)})();
+        
+                    keys.is_signed_by_oracles(tx)
+                    && output_datum.lovelace == lovelace
+                    && output_datum.running_hash == running_hash
+                    && output_datum.timestamp == datum.timestamp
+                },
+                else => error("unexpected")
+            }
+        }
+    }
+}

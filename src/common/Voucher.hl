@@ -1,0 +1,49 @@
+module common_Voucher
+
+import { Price } from "./Price"
+
+// controlled by VoucherOwnership
+struct Voucher {
+    address:    Address
+    pbgs:       Int
+    mint_price: Price
+    token_name: ByteArray // also used to datum tag
+    cycle_id:   Int
+
+    func new(address: Address, pbgs: Int, mint_price: Price, token_name: ByteArray, cycle_id: Int) -> Voucher {
+        Voucher{address, pbgs, mint_price, token_name, cycle_id}
+    }
+
+    func find(mph: MintingPolicyHash, tx: Tx, token_name: ByteArray) -> Voucher {
+        Voucher::from_data(
+            tx.inputs.find((input: TxInput) -> {
+                qty: Int = input.output.value.get_safe(AssetClass::new(mph, #));
+
+                if (qty == 0) {
+                    false
+                } else {
+                    assert(qty == 1, "expected max 1 voucher per utxo");
+                    Voucher::from_data(input.output.datum.get_inline_data()).token_name == token_name
+                }
+            }).output.datum.get_inline_data()
+        )
+    }
+
+    func get_owner_asset_class(self, mph: MintingPolicyHash) -> AssetClass {
+        AssetClass::new(mph, self.token_name)
+    }
+
+    func count_spent_vouchers(mph: MintingPolicyHash, tx: Tx) -> Int {
+        tx.inputs.fold((prev: Int, input: TxInput) -> {
+            qty: Int = input.output.value.get_safe(AssetClass::new(mph, #));
+    
+            if (qty == 0) {
+                prev 
+            } else {
+                assert(qty == 1, "expected max 1 voucher per utxo");
+    
+                prev + 1
+            }
+        }, 0)
+    }
+}

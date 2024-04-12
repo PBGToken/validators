@@ -1,0 +1,79 @@
+spending voucher_validator
+
+/**
+ * Role: protect customer voucher
+ *
+ * General validation rules:
+ *   * tx is signed by master key 
+ *   * current input contains 1 voucher token
+ *   * all input voucher tokens are burned
+ *
+ * Burn validation rules:
+ *   * voucher ownership token (external voucher) is burned
+ * 
+ * ReimburseSuccessFee:
+ *   * current time is after success fee cycle end
+ *   * reimbursement is sent to original minter
+ */
+
+import {
+    SuccessFeeCycle
+} from "./common/SuccessFeeCycle.hl"
+
+import { 
+    Keys
+} from "./common/Keys.hl"
+
+import { Voucher } from "./common/Voucher.hl"
+import { VoucherRedeemer } from "./common/VoucherRedeemer.hl"
+
+
+func count_input_vouchers(tx: Tx, ac: AssetClass) -> Int {
+    tx.inputs.fold((prev: Int, input: TxInput) -> {
+        qty: Int = input.output.value.get_safe(ac);
+
+        if (qty == 0) {
+            prev 
+        } else {
+            assert(qty == 1, "expected 1");
+
+            prev + 1
+        }
+    }, 0)
+}
+
+func main(datum: Voucher, redeemer: VoucherRedeemer, ctx: ScriptContext) -> Bool {
+    tx: Tx                 = ctx.tx;
+    ref_inputs: []TxInput  = tx.ref_inputs;
+    keys                   = Keys::from_inputs(ref_inputs);
+    current_input: TxInput = ctx.get_current_input();
+    ac                     = AssetClass::new(Scripts::voucher_policy, #);
+    n_input_vouchers: Int  = Voucher::count_spent_vouchers(Scripts::voucher_policy, tx);
+
+    keys.is_signed_by_master_key(tx)
+    && current_input.output.value.get(ac) == 1
+    && tx.minted.get(ac) == -n_input_vouchers
+    && redeemer.switch{
+        Burn => {
+            tx.minted.get(datum.get_owner_asset_class(Scripts::voucher_policy)) == -1
+        },
+        ReimburseSuccessFee => {
+            cycle = SuccessFeeCycle::from_inputs(ref_inputs);
+            minter_address: Address = datum.address;
+            
+            tx.time_range.start >= cycle.start_time
+            && if (datum.cycle_id == (cycle.id-1)) {
+                reimbursement: Int = cycle.calc_success_fee_cycle_end_reimbursement(datum.mint_price, datum.pbgs);
+
+                if (reimbursement > 0) {
+                    // datum.token_name is a unique piece to avoid double satisfaction
+                    tx.value_paid_to(minter_address, datum.token_name).get_safe(AssetClass::new(Scripts::pbg_policy, #)) >= reimbursement
+                } else {
+                    true
+                }
+            } else {
+                true
+            }
+        }
+    }
+}

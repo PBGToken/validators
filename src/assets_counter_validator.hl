@@ -1,0 +1,110 @@
+spending assets_counter_validator
+
+/**
+ * Role: count all assets in vault and assure there are no duplicate counters
+ *
+ * Count validation rules
+ *   * tx is signed by master key
+ *   * output has enough collateral
+ *   * output has correct datum:
+ *       * count is updated
+ *       * timestamp is set to after current time
+ *   * input contains token that corresponds to currently counted asset class (and nothing else)
+ * 
+ * BurnDuplicate validation rules
+ *   * burned amount is precisely 1 negative token
+ *   * one of the ref inputs contains the same token
+ * 
+ * BurnEmpty validation rules
+ *    * tx is signed by master key
+ *    * burned amount is precisely 1 negative token
+ *    * count is zero
+ */
+
+import { 
+    MIN_ASSET_COUNTER_COLLATERAL
+} from "./common/constants"
+import { Keys } from "./common/Keys"
+import { Vault } from "./common/Vault"
+import { AssetsCounterDatum } from "./common/AssetsCounterDatum"
+import { AssetsCounterRedeemer, get_counter_token_name } from "./common/AssetsCounterRedeemer"
+
+func precisely_one_burned(ctx: ScriptContext) -> Bool {
+    current_input_value: Value = ctx.get_current_input().output.value;
+    current_input_tokens: Map[ByteArray]Int = current_input_value.get_policy(Scripts::assets_counter_policy);
+
+    assert(current_input_tokens.tail.is_empty(), "asset counter utxo can only contain one non-lovelace asset");
+    assert(current_input_tokens.head_value == 1, "the counter quantity can only be 1");
+
+    derived_token_name: ByteArray = current_input_tokens.head_key;
+    derived_asset_class = AssetClass::new(Scripts::assets_counter_policy, derived_token_name);
+
+    ctx.tx.minted == Value::new(derived_asset_class, -1)
+}
+
+func calc_vault_diff(tx: Tx, asset_class: AssetClass) -> Int {
+    //print("looking for Vault ref input");
+    vault = Vault::from_inputs(tx.ref_inputs);
+    diff: Value = vault.calc_diff(tx);
+    diff.get(asset_class)
+}
+
+func main(datum: AssetsCounterDatum, redeemer: AssetsCounterRedeemer, ctx: ScriptContext) -> Bool {
+    tx: Tx = ctx.tx;
+    ref_inputs: []TxInput = tx.ref_inputs;
+    AssetsCounterDatum{current_count, _} = datum;
+
+    redeemer.switch{
+        Count{assetclass} => {
+            //print("looking for keys input");
+            keys = Keys::from_inputs(ref_inputs);
+            //print("calculating vault diff");
+            diff: Int = calc_vault_diff(tx, assetclass);
+
+            //print("getting current input");
+            current_input_value: Value = ctx.get_current_input().output.value;
+
+            derived_token_name: ByteArray = assetclass.serialize().blake2b();
+            derived_asset_class = AssetClass::new(Scripts::assets_counter_policy, derived_token_name);
+
+            //print("looking for counter output");
+            output: TxOutput = tx.outputs.find((output: TxOutput) -> {
+                output.value.get_safe(derived_asset_class) >= 1
+            });
+            new_datum = AssetsCounterDatum::from_data(output.datum.get_inline_data());
+
+            print("current_count: " + current_count.show());
+            print("diff: " + diff.show());
+            print("new datum: " + new_datum.show());
+
+            keys.is_signed_by_master_key(tx).trace("signed by master: ")
+            && (get_counter_token_name(current_input_value) == derived_token_name).trace("correct token name: ")
+            && (new_datum.count == current_count + diff).trace("count updated: ")
+            && (new_datum.timestamp >= tx.time_range.end).trace("timestamp updated: ")
+            && output.value.get_lovelace() >= MIN_ASSET_COUNTER_COLLATERAL
+        },
+        BurnDuplicate => {
+            tokens: Map[ByteArray]Int = ctx.tx.minted.get_policy(Scripts::assets_counter_policy);
+
+            derived_token_name: ByteArray = get_counter_token_name(ctx.get_current_input().output.value);
+            derived_asset_class = AssetClass::new(Scripts::assets_counter_policy, derived_token_name);
+
+            assert(tokens.tail.is_empty() && tokens.head_value == -1 && tokens.head_key == derived_token_name, "burned token isn't exactly -1");
+
+            tx.ref_inputs.any((input: TxInput) -> {
+                input.output.value.get_safe(derived_asset_class) >= 1
+            })
+        },
+        BurnEmpty => {
+            keys = Keys::from_inputs(ref_inputs);
+
+            tokens: Map[ByteArray]Int = ctx.tx.minted.get_policy(Scripts::assets_counter_policy);
+            derived_token_name: ByteArray = get_counter_token_name(ctx.get_current_input().output.value);
+
+            assert(tokens.tail.is_empty() && tokens.head_value == -1 && tokens.head_key == derived_token_name, "burned token isn't exactly -1");
+            
+            keys.is_signed_by_master_key(tx).trace("signed by master: ")
+            && current_count == 0
+        }
+    }
+}

@@ -1,0 +1,10 @@
+module common_PbgCounterRedeemer
+
+enum PbgCounterRedeemer {
+    Mint
+    Burn
+    MintManagementFee
+    MintSuccessFee
+    Vouchers
+    Upgrade
+}

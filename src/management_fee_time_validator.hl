@@ -1,0 +1,50 @@
+spending management_fee_time_validator
+
+/**
+ * Role: make sure we can only mint management fee once per day
+ *
+ * Validation rules:
+ *   * tx is signed by master key
+ *   * datum timestamp must be updated by 1 DAY
+ *   * new datum timestamp must be in the past
+ *   * utxo must be sent back to same address
+ */
+
+import { MANAGEMENT_FEE_CYCLE_ASSETCLASS } from "./common/constants"
+
+import { MANAGEMENT_FEE_TIME_ADDR } from "./common/addresses" 
+
+import { Keys } from "./common/Keys"
+
+import { ManagementFeeTimeDatum } from "./common/ManagementFeeTimeDatum"
+import { ManagementFeeTimeRedeemer } from "./common/ManagementFeeTimeRedeemer"
+import { Wiring, CURRENT_VERSION } from "./common/Wiring"
+
+func main(datum: ManagementFeeTimeDatum, redeemer: ManagementFeeTimeRedeemer, ctx: ScriptContext) -> Bool {
+    tx: Tx = ctx.tx;
+    ref_inputs: []TxInput = tx.ref_inputs;
+    keys = Keys::from_inputs(ref_inputs);
+
+    output: TxOutput = tx.outputs.find((output: TxOutput) -> Bool {
+        output.value.get_safe(MANAGEMENT_FEE_CYCLE_ASSETCLASS) == 1
+    });
+
+    new_datum = ManagementFeeTimeDatum::from_data(output.datum.get_inline_data());
+
+    keys.is_signed_by_master_key(tx)
+    && redeemer.switch{
+        Update => {            
+            Wiring::is_same_version(ref_inputs)
+            && output.address == MANAGEMENT_FEE_TIME_ADDR
+            && new_datum.timestamp >= datum.timestamp + Duration::DAY
+            && new_datum.timestamp <= tx.time_range.start
+        },
+        Upgrade => {
+            wiring = Wiring::from_ref_inputs(ref_inputs);
+
+            wiring.version > CURRENT_VERSION
+            && output.address == wiring.management_fee_time_validator
+            && new_datum == datum
+        }
+    }
+}

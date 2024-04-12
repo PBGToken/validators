@@ -1,0 +1,68 @@
+spending success_fee_time_validator
+
+/**
+ * Role: make sure we can only mint success fee once per year, update the next start_price
+ *
+ * Validation rules:
+ *   * must be signed by master key
+ *   * price must be recent
+ *   * token is sent back to same address
+ *   * start of current time range must be after datum.start_time + datum.duration
+ *   * new datum must contain latest price
+ *   * new datum must contain next cycle success fee
+ *   * new datum duration must be >= next cycle success fee interval
+ *   * cycle id must be incremented by 1
+ */
+
+import { MAX_PRICE_AGE } from "./common/constants"
+import { SUCCESS_FEE_TIME_ADDR } from "./common/addresses"
+import { Fees, NextSuccessFee } from "./common/Fees"
+import { Keys } from "./common/Keys"
+import { Price } from "./common/Price"
+import { SuccessFeeCycle, SUCCESS_FEE_CYCLE_ASSETCLASS } from "./common/SuccessFeeCycle"
+import { SuccessFeeCycleRedeemer } from "./common/SuccessFeeCycleRedeemer"
+import { Wiring, CURRENT_VERSION } from "./common/Wiring"
+
+func main(datum: SuccessFeeCycle, redeemer: SuccessFeeCycleRedeemer, ctx: ScriptContext) -> Bool {
+    tx: Tx = ctx.tx;
+    ref_inputs: []TxInput = tx.ref_inputs;
+
+    keys = Keys::from_inputs(ref_inputs);
+
+    assert(ctx.get_current_input().output.value.get_safe(SUCCESS_FEE_CYCLE_ASSETCLASS) == 1, "input doesn't contain success fee cycle token");
+
+    output: TxOutput = tx.outputs.find((output: TxOutput) -> {
+        output.value.get_safe(SUCCESS_FEE_CYCLE_ASSETCLASS) == 1 
+    });
+
+    new_datum = SuccessFeeCycle::from_data(output.datum.get_inline_data());
+
+    keys.is_signed_by_master_key(tx).trace("signed by master: ")
+    && redeemer.switch{
+        Update => {
+            price = Price::from_inputs(ref_inputs);
+            fees = Fees::from_inputs(ref_inputs);
+
+            expected_end: Time = datum.calc_end_time();
+            next_success_fee: NextSuccessFee = fees.next_success_fee;
+
+            Wiring::is_same_version(ref_inputs)
+            && output.address == SUCCESS_FEE_TIME_ADDR
+            && price.is_recent(tx.time_range.end, MAX_PRICE_AGE).trace("price is recent: ")
+            && (tx.time_range.start >= expected_end).trace("enough time passed: ")
+            && (new_datum.start_price == price).trace("new cycle start_price correct: ")
+            && new_datum.start_time >= expected_end
+            && new_datum.duration >= next_success_fee.duration
+            && new_datum.fee == next_success_fee.fee
+            && new_datum.prev_price == datum.start_price
+            && new_datum.id == datum.id + 1
+        },
+        Upgrade => {
+            wiring = Wiring::from_ref_inputs(ref_inputs);
+
+            wiring.version > CURRENT_VERSION
+            && output.address == wiring.success_fee_time_validator
+            && new_datum == datum
+        }
+    }
+}

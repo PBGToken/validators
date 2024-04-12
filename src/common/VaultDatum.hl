@@ -1,0 +1,13 @@
+module common_VaultDatum
+
+enum VaultDatum {
+    Marker
+    Asset
+
+    func is_asset(self) -> Bool {
+        self.switch{
+            Asset => true,
+            _ => false
+        }
+    }
+}
