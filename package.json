@@ -1,6 +1,6 @@
 {
   "name": "pbg-token-validators",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "PBG Token contracts validators for Cardano",
   "main": "dist/index.js",
   "scripts": {
