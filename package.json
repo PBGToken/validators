@@ -6,7 +6,8 @@
   "type": "module",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "npx hl2ts --out-dir ./dist"
+    "build": "npx hl2ts --out-dir ./dist",
+    "co:login": "aws codeartifact login --tool npm --repository pbg --domain pbg --domain-owner 198334355085 --profile pbg --region us-east-1"
   },
   "repository": {
     "type": "git",
