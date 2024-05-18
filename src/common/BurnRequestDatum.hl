@@ -73,6 +73,8 @@ struct BurnRequestDatum {
         expected_lovelace:      Int = BurnRequestDatum::calc_return_lovelace_upon_burn(current_input, reimbursement, fees, price, cycle);
         return_lovelace:  Int       = tx.value_paid_to(self.customer, request_id).get_lovelace();
 
+        print("returned lovelace: " + return_lovelace.show());
+        print("expected_lovelace: " + expected_lovelace.show());
         (return_lovelace >= expected_lovelace).trace("returned enough")
         && (expected_lovelace >= self.min_lovelace).trace("returned more than user expected min: ")
     }
