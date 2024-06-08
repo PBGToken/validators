@@ -1,0 +1,44 @@
+module mPortfolioSummary
+
+import Addresses
+import Tokens
+
+enum PortfolioSummaryState {
+    None
+    TotalAssetValue {
+        total: Int // in lovelace
+        oldest_timestamp: Time
+    }
+    Exists {
+        asset_class: AssetClass
+        found: Bool
+    }
+    DoesNotExist {
+        asset_class: AssetClass
+        found: Bool
+    }
+    MaxGroupSize {
+        max_size: Int
+    }
+}
+
+struct PortfolioSummary {
+    n_groups: Int
+    group_iter: Int
+    start_tick: Int
+    state: PortfolioSummaryState
+}
+
+func sum_lovelace(v: Value, inputs: []TxInput, ptrs: []AssetPtr, price_expiry: Time) -> Int {
+    v.flatten().fold_with_list((sum: Int, asset_class: AssetClass, qty: Int, ptr: AssetPtr) -> {
+        if (asset_class == AssetClass::ADA) {
+            sum + qty
+        } else {
+            asset = ptr.resolve(inputs);
+
+            assert(asset.price_timestamp >= price_expiry, "price expired");
+
+            sum + qty * asset.price
+        }
+    }, 0, ptrs)
+}

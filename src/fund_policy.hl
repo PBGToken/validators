@@ -1,0 +1,183 @@
+mixed fund_policy
+
+import Addresses
+import TokenNames
+import Tokens
+
+import { 
+    AssetsConfig,
+    BurnFeeConfig, 
+    Config, 
+    ConfigState,
+    FeesConfig, 
+    GovernanceConfig,
+    ManagementFeeConfig,
+    MintFeeConfig, 
+    SuccessFeeConfig,
+    TokenConfig
+} from mConfig
+import { Metadata } from mMetadata
+import { PortfolioSummary, PortfolioSummaryState } from mPortfolio
+import { Price } from mPrice
+import { SuccessFee, SuccessFeeStep } from mSuccessFee
+import { Supply, SuccessFeeState } from mSupply
+
+
+import { ASSETS_ADDRESS, ASSETS_PREFIX, CONFIG_ADDRESS, CONFIG_ASSET_CLASS, CONFIG_TOKEN_NAME, MPH, STATE_ADDRESS, STATE_ASSET_CLASS, STATE_TOKEN_NAME, UNIQUE_UTXO_ID } from "./constants"
+import { AssetsState, FeesState, FundState, FundStateMode, ManagementFeeState, SuccessFeeState, SuccessFeeYearState, TokenState, VouchersState } from "./state"
+
+const initial_agent: PubKeyHash = PubKeyHash::new(#)
+const initial_benchmark: StakingValidatorHash = StakingValidatorHash::new(#)
+const initial_governance_delegate: StakingValidatorHash = StakingValidatorHash::new(#)
+const initial_oracle: StakingValidatorHash = StakingValidatorHash::new(#)
+const initial_price: Ratio = Ratio{100, 1}
+const initial_tick: Int = 0
+const seed_utxo: TxOutputId = TxOutputId::new(TxId::new(#), 0)
+
+func supply_spent(tx: Tx) -> Bool {
+    tx.spends_asset_class(Tokens::supply)
+}
+
+func all_initial_tokens_minted(tokens: Map[ByteArray]Int) -> Bool {
+    tokens.length == 5
+    && tokens.get(TokenNames::metadata) == 1
+    && tokens.get(TokenNames::config) == 1
+    && tokens.get(TokenNames::portfolio) == 1
+    && tokens.get(TokenNames::price) == 1
+    && tokens.get(TokenNames::supply) == 1
+}
+
+func metadata_initialized(tx: Tx) -> Bool {
+    output = tx.get_output_with_asset_class(Tokens::metadata);
+
+    output.address == Addresses::metadata &&
+    output.datum.inline[Metadata] == Metadata{
+        name: "PBG Token",
+        description: "The first DVP",
+        ticker: "PBG",
+        url: "https://pbg.io",
+        decimals: 6,
+        logo: "https://token.pbg.io/logo.png"
+    }
+}
+
+func config_initialized(tx: Tx) -> Bool {
+    output = tx.get_output_with_asset_class(Tokens::config);
+
+    output.address == Addresses::config &&
+    output.datum.inline[Config] == Config{
+        agent: initial_agent,
+        fees: FeesConfig{
+            mint_fee: MintFeeConfig{
+                relative: 0.005, // 0.5%
+                minimum: 20_000 // 0.02 tokens, equivalent to 2 ADA
+            },
+            burn_fee: BurnFeeConfig{
+                relative: 0.005, // 0.5%
+                minimum: 20_000 // 0.02 tokens, equivalent to 2 ADA
+            },
+            management_fee: ManagementFeeConfig{
+                relative: 0.00011, // 0.011% daily, about 4% annually
+                period: Duration::DAY
+            },
+            success_fee_config: SuccessFeeConfig{
+                fee: SuccessFee{
+                    steps: []SuccessFeeStep{
+                        SuccessFeeStep::First{fee: 0},
+                        SuccessFeeStep::Next{fee: 0.3, lower: 1.05}
+                    }
+                },
+                benchmark: initial_benchmark
+            }
+        },
+        tokens: TokenConfig{
+            max_supply: 100_000_000_000,
+            max_price_age: Duration::DAY
+        },
+        oracle: initial_oracle,
+        assets: AssetsConfig{
+            max_group_size: 3
+        },
+        governance: GovernanceConfig{
+            proposal_timestamp: Time::new(0),
+            update_delay: Duration::WEEK*2,
+            delegate: initial_governance_delegate
+        },
+        state: ConfigState::None
+    }
+}
+
+func portfolio_initialized(tx: Tx) -> Bool {
+    output = tx.get_output_with_asset_class(Tokens::portfolio);
+
+    output.address == Addresses::portfolio &&
+    output.datum.inline[Portfolio] == PortfolioSummary{
+        n_groups: 0,
+        group_iter: 0,
+        start_tick: initial_tick,
+        state: PortfolioSummaryState::None
+    }
+}
+
+func price_initialized(tx: Tx) -> Bool {
+    output = tx.get_output_with_asset_class(Tokens::price);
+
+    output.address == Addresses::price &&
+    output.datum.inline[Price] == Price{
+        value: initial_price,
+        timestamp: Time::new(0)
+    }
+}
+
+func supply_initialized(tx: Tx) -> Bool {
+    output = tx.get_output_with_asset_class(Tokens::supply);
+
+    output.address == Addresses::supply && Supply{
+        tick: initial_tick,
+        n_tokens: 0,
+        n_vouchers: 0,
+        n_lovelace: 0,
+        management_fee_timestamp: Time::new(0),
+        success_fee: SuccessFeeState{
+            period_id: 0,
+            start_time: Time::new(0),
+            period: Duration::WEEK*2,
+            start_price: initial_price
+        }
+    }
+}
+
+// the addresses aren't checked to avoid circular dependencies
+func main(args: MixedArgs, ctx: ScriptContext) -> Bool {
+    tx = ctx.tx;
+
+    args.switch{
+        Spendng => {
+            tx.spends_asset_class(Tokens::supply)
+        },
+        Other => {
+            tokens = tx.minted.get_policy(Tokens::policy);
+
+            if (tx.spends_utxo(seed_utxo)) {
+                // Init
+                all_initial_tokens_minted(tokens)
+                && metadata_initialized(tx)
+                && config_initialized(tx)
+                && portfolio_initialized(tx)
+                && price_initialized(tx)
+                && supply_initialized(tx)
+            } else if (tokens.length == 1
+                && tokens.all((token_name, qty) => {
+                    TokenNames::has_assets_prefix(token_name) 
+                    && qty.abs() == 1
+                })
+            ) {
+                // Mint/burn asset group
+                tx.spends_asset_class(Tokens::portfolio)
+            } else {
+                tx.spends_asset_class(Tokens::supply)
+            }
+        }
+    }
+    
+}

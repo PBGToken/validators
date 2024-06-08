@@ -1,0 +1,34 @@
+spending supply_validator
+
+import Tokens
+
+import { Config, signed_by_agent } from mConfig
+import { Price } from mPrice
+import { Supply } from mSupply
+
+func main(_: Supply, _, ctx: ScriptContext) -> Bool {
+    tx = ctx.tx;
+    
+    // use get_thread for the input as well because it performs some validity checks
+    (supply0: Supply, supply1: Supply) = Supply::get_thread();
+    tokens_minted = tx.minted.get_policy(Tokens::policy);
+
+    D = tokens_minted.get(TokenNames::dvp_token);
+    N0 = supply0.n_tokens;
+    N1 = supply1.n_tokens;
+
+    ttx1 = tx.time_range.end;
+
+    signed_by_agent()
+    && N1 == N0 + D
+    && if (tx.time_range.end > supply0.period_end) {
+        // reward success fee
+
+        Dalpha = supply0.calc_max_success_dilution();
+
+        N1 <= N0 + Dalpha
+        && N1 >= N0
+        && supply1.success_period_start >= tx.time_range.end
+        && price.is_not_expired()
+    }
+}

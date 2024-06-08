@@ -1,0 +1,63 @@
+module common
+
+struct Price {
+    top: Int // lovelace
+    bottom: Int // n asset
+}
+
+enum FundStateMode {
+    Regular
+    Inventory {
+        groups_handled: Int
+    }
+    Reimbursing
+    AddingAsset {
+        asset_class: AssetClass
+        groups_handled: Int
+    }
+    RemovingAsset {
+        asset_class: AssetClass
+        groups_handled: Int
+    }
+}
+
+struct TokenState {
+    supply: Int
+}
+
+struct AssetsState {
+    total_value: Int // lovelace
+    last_update: Time
+    n_groups: Ints
+}
+
+struct ManagementFeeState {
+    last_charge: Time
+}
+
+struct SuccessFeeYearState {
+    start: Time
+    duration: Duration
+}
+
+struct SuccessFeeState {
+    year: SuccessFeeYearState
+    benchmark: Price
+}
+
+struct FeesState {
+    management_fee: ManagementFeeState
+    success_fee: SucessFeeState
+}
+
+struct VouchersState {
+    supply: Int
+}
+
+struct FundState {
+    mode: FundStateMode
+    token: TokenState
+    assets: AssetsState
+    fees: FeesState
+    vouchers: VouchersState
+}

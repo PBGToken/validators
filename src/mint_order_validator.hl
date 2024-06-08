@@ -1,0 +1,51 @@
+spending mint_order_validator
+
+import Addresses
+import TokenNames
+import Tokens
+
+import { deduct_mint_fee, signed_by_agent } from mConfig
+import { MintOrder } from mMintOrder
+import { Price } from mPrice
+import { Supply } from mSupply
+import { Voucher } from mVoucher
+
+enum Redeemer {
+    Cancel
+    Fulfill {
+        ptrs: []AssetPtr // make the 
+    }
+}
+
+func main(order: MintOrder, redeemer: Redeemer) -> Bool {
+    redeemer.switch{
+        Cancel => {
+            tx = ScriptContext::tx;
+
+            tx.is_approved_by(order.return_address.credential),
+        },
+        Fulfill{ptrs} => {
+            price = Price::get();
+            supply = Supply::get_input();
+
+            n_actual = order.returned_tokens;
+            n_expected = deduct_mint_fee((order.value_lovelace(ptrs) / price.value).floor())
+
+            signed_by_agent()
+            && price.is_not_expired(order.price_expiry)
+            && n_actual >= order.min_tokens
+            && n_actual >= n_expected
+            && if (supply.is_successful(price.relative_to_benchmark)) {
+                voucher = Voucher::get_output(order.voucher_id);
+
+                voucher.return_address == order.return_address
+                && voucher.return_datum == order.return_datum
+                && voucher.tokens >= n_expected
+                && voucher.price <= price.relative_to_benchmark
+                && voucher.period_id == supply.period_id
+            } else {
+                true
+            }
+        }
+    }
+}

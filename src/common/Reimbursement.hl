@@ -1,0 +1,13 @@
+module mReimbursement
+
+struct Reimbursement {
+    n_remaining_vouchers: Int
+    start_price: Ratio
+    end_price: Ratio
+
+    func find_output(self, id: Int, min_tokens: Int) -> Reimbursement {
+        tx = ScriptContext::tx;
+
+        tx.get_output_at(Addresses::reimbursement);
+    }
+}

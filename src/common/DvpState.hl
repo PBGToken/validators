@@ -1,0 +1,13 @@
+module common_DvpState
+
+struct TokenState {
+    supply: Int
+}
+
+struct AssetsState {
+    
+}
+
+struct DvpState {
+    token
+}

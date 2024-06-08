@@ -1,0 +1,10 @@
+module mMetadata
+
+struct Metadata {
+    name: String "name"
+    description: String "description"
+    ticker: String "ticker"
+    url: String "url"
+    decimals: Int "decimals"
+    logo: String "logo"
+}

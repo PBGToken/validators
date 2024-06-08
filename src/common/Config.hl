@@ -1,0 +1,160 @@
+module mConfig
+
+import Addresses
+import Tokens
+import { SuccessFee } from mSuccessFee
+
+struct MintFeeConfig {
+    relative: Real
+    minimum: Int
+
+    // the result is a fraction of n
+    func apply(self, n: Int) -> Int {
+        (n*self.relative).floor().bound_min(self.minimum)
+    }
+
+    func deduct(self, n: Int) -> Int {
+        n - self.apply(v)
+    }
+}
+
+struct BurnFeeConfig {
+    relative: Real
+    minimum: Int
+
+    // the result is a fraction of n
+    func apply(self, n: Int) -> Int {
+        (n*self.relative).floor().bound_min(self.minimum)
+    }
+}
+
+struct ManagementFeeConfig {
+    relative: Real
+    period: Duration
+}
+
+struct SuccessFeeConfig {
+    fee: SuccessFee
+    benchmark: StakingValidatorHash
+
+    func get_benchmark_price(self, tx: Tx, lovelace_price: Ratio) -> Ratio {
+        benchmark_price = tx.redeemers.get(ScriptPurpose::new_rewarding(StakingCredential::new_hash(StakingHash::new_validator(self.benchmark)))).as[Ratio];
+
+        lovelace_price*benchmark_price
+    }
+}
+
+struct FeesConfig {
+    mint_fee: MintFeeConfig
+    burn_fee: BurnFeeConfig
+    management_fee: ManagementFeeConfig
+    success_fee: SuccessFeeConfig
+}
+
+struct TokenConfig {
+    max_supply: Int
+    max_price_age: Duration
+}
+
+struct AssetsConfig {
+    max_group_size: Int
+}
+
+struct GovernanceConfig {
+    proposal_timestamp: Time
+    update_delay: Duration
+    delegate: StakingValidatorHash
+}
+
+enum ConfigState {
+    None
+    AddingAssetClass {
+        asset_class: AssetClass
+    }
+    RemovingAssetClass {
+        asset_class: AssetClass
+    }
+    UpdatingSuccessFee {
+        period: Duration
+        benchmark: StakingValidatorHash
+        fee: SuccessFee
+    }
+    IncreasingMaxTokenSupply {
+        max_supply: Int
+    }
+    ChangingAgent {
+        agent: PubKeyHash
+    }
+    ChangingOracle {
+        oracle: StakingValidatorHash
+    }
+    ChangingGovernance {
+        delegate: StakingValidatorHash
+        update_delay: Duration
+    }
+    ChangingMintFee {
+        relative: Real
+        minimum: Int
+    }
+    ChangingBurnFee {
+        relative: Real
+        minimum: Int
+    }
+    ChangingManagementFee {
+        relative: Real
+        period: Duration
+    }
+    ChaningMaxPriceAge {
+        max_price_age: Duration
+    }
+    ChangingMaxGroupSize {
+        max_group_size: Int
+    }
+    ChangingMetadata {
+        metadata_hash: ByteArray
+    }
+}
+
+// first fields are used more often than last fields
+struct Config {
+    agent: PubKeyHash
+    fees: FeesConfig
+    token: TokenConfig
+    oracle: StakingValidatorHash
+    assets: AssetsConfig
+    governance: GovernanceConfig
+    state: ConfigState
+
+    func get_input() -> Config {
+        tx = ScriptContext::tx;
+
+        input = ScriptContext::current_script.switch{
+            config_validator => tx.get_current_input(),
+            mint_order_validator => tx.get_input_at(Addresses::config),
+            burn_order_validator => tx.get_input_at(Addresses::config),
+            else => tx.get_any_input_at(Addresses::config)
+        }
+
+        assert(input.value.get(Tokens::config) == 1, "doesn't contain the config token");
+
+        input.datum.inline.as[Config]
+    }
+}
+
+func deduct_mint_fee(n: Int) -> Int {
+    config = Config::get_input();
+
+    config.fees.mint_fee.deduct(n)
+}
+
+func signed_by_agent() -> Bool {
+    config = Config::get_input();
+
+    ScriptContext::tx.is_signed_by(config.agent)
+}
+
+func price_expiry() -> Time {
+    config = Config::get_input();
+
+    ScriptContext::tx.time_range.end - config.token.max_price_age
+}

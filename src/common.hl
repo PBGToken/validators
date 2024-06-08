@@ -1,0 +1,45 @@
+module common
+
+struct FeesConfig {
+    mint_fee: MintFeeConfig
+    burn_fee: BurnFeeConfig
+    management_fee: ManagementFeeConfig
+    sucess_fee: SuccessFeeConfig
+}
+
+struct FundConfig {
+    agent: PubKeyHash
+    fees: FeesConfig
+    oracle: StakingValidatorHash
+}
+
+struct TokenState {
+    supply: Int
+}
+
+struct AssetsState {
+    total_value: Int // lovelace
+    last_update: Time
+    n_groups: Int
+    max_price_age: Duration
+}
+
+struct ManagementFeeState {
+    last_charge: Time
+}
+
+struct SuccessFeeState {
+    year_start: Time
+    year_duration: Duration
+    
+}
+
+struct FeesState {
+    management_fee: ManagementFeeState
+}
+
+struct FundState {
+    token: TokenState
+    assets: AssetsState
+    fees: FeesState
+}

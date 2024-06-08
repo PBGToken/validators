@@ -1,0 +1,105 @@
+spending burn_order_validator
+
+import TokenNames
+import Tokens
+import { BurnOrder } from mBurnOrder
+import { Config } from mConfig
+import { sum_lovelace } from mPortfolioSummary
+import { Voucher } from mVoucher
+
+enum Redeemer {
+    Cancel
+    Fulfill {
+        ptrs: []AssetPtr
+    }
+}
+
+func calc_provisional_success_fee(
+    config: Config, 
+    price: Price, 
+    supply: Supply, 
+    tx: Tx, 
+    diff: Value, 
+    n_burn: Int
+) -> Int {
+    benchmark_price = config.fees.success_fee.get_benchmark_price(tx, price.ratio);
+    p0 = supply.success_fee.start_price;
+
+    vouchers = diff.get_policy(Tokens::policy).filter((token_name: ByteArray, _) -> {
+        TokenNames::has_voucher_user_nft_prefix(token_name)
+    })
+
+    (delta_vouchers, n_voucher_tokens) = vouchers.fold2((delta_vouchers: Int, n_voucher_tokens: Int, token_name: ByteArray, qty: Int) -> {
+        voucher_id = TokenNames::parse_voucher_user_nft(token_name);
+        assert(qty >= 1, "can't be negative");
+        voucher_ref_input = tx.get_input_with_asset_class(Tokens::voucher_reference(voucher_id));
+        voucher = voucher_ref_input.datum.inline.as[Voucher];
+
+        alpha_voucher = (benchmark_price/voucher.price).to_real();
+        delta_voucher = (voucher.tokens*(config.fees.success_fee.apply(alpha_voucher)/alpha_voucher)).floor();
+
+        (
+            delta_vouchers + delta_voucher, 
+            n_voucher_tokens + voucher.tokens
+        )
+    }, 0, 0)
+
+    alpha = (benchmark_price/p0).to_real();
+    delta_vouchers + ((n_burn - n_voucher_tokens)*config.fees.success_fee.apply(alpha)/alpha).floor()
+}
+
+func main(order: BurnOrder, redeemer: Redeemer, ctx: ScriptContext) -> Bool {
+    tx = ctx.tx;
+
+    {
+        return_address,
+        return_datum,
+        min_return_value,
+        max_price_age
+    } = order;
+
+    redeemer.switch{
+        Cancel => tx.is_approved_by(return_address.credential),
+        Fulfill{ptrs} => {
+            config = Config::fetch();
+            price = Price::fetch();
+            order_input = tx.get_current_input();
+            order_return = tx.outputs.find((output: TxOutput) -> {
+                output.address == return_address
+                && output.datum.inline == return_datum
+            })
+            
+            price_expiry = tx.time_range.end + max_price_age;
+            
+            diff = order_input.value - order_return.value;
+            n_burn = diff.get(Tokens::dvp_token);
+
+            // deduct the fees
+            alpha = (benchmark_price/supply.success_fee.start_price).to_real();
+            delta_alpha = calc_provisional_success_fee(
+                config, 
+                price, 
+                supply,
+                tx,
+                diff,
+                n_burn
+
+            ) 
+            delta_burn = config.fees.burn_fee.apply(n_burn - delta_alpha)
+            n_expected = n_burn - delta_alpha - delta_burn;
+
+            // use actual returned value to calculated a lovelace equivalent, and then calculate a number of equivalent tokens
+            v = diff.remove_policy(Tokens::policy);
+            lovelace_equiv_returned = -sum_lovelace(v, tx.inputs, ptrs, price_expiry);
+            n_actual = (lovelace_equiv_returned/price.value).floor();
+
+            tx.is_signed_by(config.agent)
+            && price.timestamp >= price_expiry
+            && min_return_value.switch{
+                L{lovelace} => lovelace_equiv_returned >= lovelace,
+                V{value} => (-v) >= value
+            }
+            && n_actual >= n_expected
+        }
+    }
+}

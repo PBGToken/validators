@@ -1,49 +1,27 @@
-module common_Voucher
+module mVoucher
 
-import { Price } from "./Price"
+import TokenNames
+import Tokens
 
-// controlled by VoucherOwnership
 struct Voucher {
-    address:    Address
-    pbgs:       Int
-    mint_price: Price
-    token_name: ByteArray // also used to datum tag
-    cycle_id:   Int
+    return_address: Address "owner"
+    return_datum: Data "datum"
+    tokens: Int "tokens"
+    price: Ratio "price"
+    period_id: Int "period"
+    name: String "name"
+    description: String "description"
+    image: String "image"
+    url: String "url"
 
-    func new(address: Address, pbgs: Int, mint_price: Price, token_name: ByteArray, cycle_id: Int) -> Voucher {
-        Voucher{address, pbgs, mint_price, token_name, cycle_id}
-    }
+    func get_output(id: Int) -> Voucher {
+        tx = ScriptContext::tx;
 
-    func find(mph: MintingPolicyHash, tx: Tx, token_name: ByteArray) -> Voucher {
-        Voucher::from_data(
-            tx.inputs.find((input: TxInput) -> {
-                qty: Int = input.output.value.get_safe(AssetClass::new(mph, #));
+        output = tx.get_output_with_asset_class(Tokens::voucher_ref_token(id));
 
-                if (qty == 0) {
-                    false
-                } else {
-                    assert(qty == 1, "expected max 1 voucher per utxo");
-                    Voucher::from_data(input.output.datum.get_inline_data()).token_name == token_name
-                }
-            }).output.datum.get_inline_data()
-        )
-    }
+        assert(output.address == Addresses::vouchers, "voucher not sent to voucher validator address");
+        assert(output.value.get_policy(Tokens::policy).length == 1, "voucher reference UTxO contains other tokens"); // no other tokens
 
-    func get_owner_asset_class(self, mph: MintingPolicyHash) -> AssetClass {
-        AssetClass::new(mph, self.token_name)
-    }
-
-    func count_spent_vouchers(mph: MintingPolicyHash, tx: Tx) -> Int {
-        tx.inputs.fold((prev: Int, input: TxInput) -> {
-            qty: Int = input.output.value.get_safe(AssetClass::new(mph, #));
-    
-            if (qty == 0) {
-                prev 
-            } else {
-                assert(qty == 1, "expected max 1 voucher per utxo");
-    
-                prev + 1
-            }
-        }, 0)
+        output.datum.inline.as[Voucher]
     }
 }
