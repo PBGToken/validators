@@ -9,4 +9,3 @@ PBG Token contract validators for Cardano, written in [Helios](https://www.helio
    - search for "Helios"
    - the description of the plugin should read "Helios language support for VS Code"
 - run `npm run install` inside the repo so the IDE plugin can pick up the correct version of the compiler
-- run `npm run build` and inspect the `./dist` directory to verify that the Helios sources are correctly transpiled into Javascript/Typescript
