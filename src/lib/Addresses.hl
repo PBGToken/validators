@@ -1,0 +1,13 @@
+module Addresses
+
+import Tokens
+
+const metadata:      Address = Address::from_validator(Scripts::metadata_validator)
+const assets:        Address = Address::from_validator(Scripts::assets_validator)
+const config:        Address = Address::from_validator(Scripts::config_validator)
+const portfolio:     Address = Address::from_validator(Scripts::portfolio_validator)
+const price:         Address = Address::from_validator(Scripts::price_validator)
+const reimbursement: Address = Address::from_validator(Scripts::reimbursement_validator)
+const supply:        Address = Address::from_validator(Scripts::supply_validator)
+const vault:         Address = Address::from_validator(ValidatorHash::from_script_hash(Tokens::policy.to_script_hash()))
+const voucher:       Address = Address::from_validator(Scripts::voucher_validator)

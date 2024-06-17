@@ -1,0 +1,224 @@
+spending config_validator
+
+import { AssetGroup } from AssetGroupModule
+import { 
+    BurnFeeConfig, 
+    Config, 
+    ConfigState, 
+    GovernanceConfig, 
+    ManagementFeeConfig,
+    MintFeeConfig,
+    SuccessFeeConfig,
+    signed_by_agent, 
+    witnessed_by_governance, 
+    witnessed_by_oracle,
+    INITIAL_PRICE
+} from ConfigModule
+import { Portfolio } from PortfolioModule
+import { tx } from ScriptContext
+import { Supply } from SupplyModule
+import Tokens
+
+const MIN_FEE_UPPER_LIMIT = (100_000_000/INITIAL_PRICE).ceil() // 100 ADA
+const MANAGEMENT_FEE_PERIOD_UPPER_LIMIT = 366*Duration::DAY
+const SUCCESS_FEE_PERIOD_UPPER_LIMIT = 3660*Duration::DAY
+const MAX_PRICE_AGE_UPPER_LIMIT = 366*Duration::DAY // if no oracle is available, changing the max price age to something very large is the only way of getting mony out of the vault through burning
+const UPDATE_DELAY_UPPER_LIMIT = 366*Duration::DAY
+const MAX_SUPPLY_UPPER_LIMIT = (1_000_000_000_000_000_000_000/INITIAL_PRICE).ceil() // 1000 Trillion ADA
+
+func main(_: Config, _) -> Bool {
+    (config0: Config, config1: Config) = Config::find_thread();
+    
+    old_state = config0.state;
+    new_state = config1.state;
+
+    (old_state, new_state).switch{
+        (Idle, changing: Changing) => {
+            witnessed_by_governance()
+            && config1 == config0.copy(state: new_state)
+            && changing.proposal_timestamp >= tx.time_range.end
+            && changing.proposal_timestamp < tx.time_range.end + Duration::DAY // upper bound
+            && changing.proposal.switch{
+                AddingAssetClass{asset_class} => {
+                    portfolio = Portfolio::find_ref();
+                    DoesNotExist{expected_asset_class} = portfolio.get_reduction_result();
+
+                    asset_class == expected_asset_class
+                },
+                RemovingAssetClass{asset_class} => {
+                    portfolio = Portfolio::find_ref();
+                    Exists{expected_asset_class} = portfolio.get_reduction_result();
+                    
+                    asset_class == expected_asset_class
+                },
+                UpdatingSuccessFee{period, benchmark, fee} => {
+                    supply = Supply::find_ref();
+        
+                    period > Duration::ZERO
+                    && period < SUCCESS_FEE_PERIOD_UPPER_LIMIT
+                    && tx.redeemers.any((key: ScriptPurpose, _) -> {
+                        key == ScriptPurpose::new_rewarding(StakingCredential::new_hash(StakingHash::new_validator(benchmark)))
+                    })
+                    && fee.is_valid()
+                    && (supply.period_end() - tx.time_range.end) >= (config0.governance.update_delay + Duration::DAY)
+                    && (supply.period_end() - tx.time_range.start) < config0.governance.update_delay*2
+                },
+                IncreasingMaxTokenSupply{Nmax} => {
+                    Nmax > config0.token.max_supply
+                    && Nmax < MAX_SUPPLY_UPPER_LIMIT
+                },
+                ChangingAgent{new_agent} => {
+                    signed_by_agent(new_agent)
+                },
+                ChangingOracle{new_oracle} => {
+                    witnessed_by_oracle(new_oracle)
+                },
+                ChangingGovernance{new_governance, tau_gov} => {
+                    witnessed_by_governance(new_governance)
+                    && tau_gov > Duration::ZERO
+                    && tau_gov < UPDATE_DELAY_UPPER_LIMIT
+                },
+                ChangingMintFee{relative, d_min} => {
+                    relative >= 0.0
+                    && relative < 0.1 // 10%
+                    && d_min >= 0
+                    && d_min < MIN_FEE_UPPER_LIMIT
+                },
+                ChangingBurnFee{relative, d_min} => {
+                    relative >= 0.0
+                    && relative < 0.1 // 10%
+                    && d_min >= 0
+                    && d_min < MIN_FEE_UPPER_LIMIT
+                },
+                ChangingManagementFee{relative, tau_mgmt} => {
+                    relative >= 0.0
+                    && relative < 0.1 // 10%
+                    && tau_mgmt > Duration::ZERO
+                    && tau_mgmt < MANAGEMENT_FEE_PERIOD_UPPER_LIMIT
+                },
+                ChangingMaxPriceAge{tau_p} => {
+                    tau_p > Duration::ZERO
+                    && tau_p < MAX_PRICE_AGE_UPPER_LIMIT
+                },
+                ChangingMetadata{hash} => {
+                    hash.length == 32
+                }
+            }   
+        },
+        (changing: Changing, Idle) => {
+            tx.time_range.start >= changing.proposal_timestamp + config0.governance.update_delay
+            && signed_by_agent(config1.agent)
+            && changing.proposal.switch{
+                AddingAssetClass{asset_class} => {
+                    (id: Int, group0: AssetGroup) = AssetGroup::find_single_input();
+                    group1 = AssetGroup::find_output(id);
+
+                    !group0.has_asset(asset_class)
+                    && group1.has_asset(asset_class)
+                    && config1 == config0.copy(state: ConfigState::Idle)
+                },
+                RemovingAssetClass{asset_class} => {
+                    (id: Int, group0: AssetGroup) = AssetGroup::find_single_input();
+                    group1 = AssetGroup::find_output(id);
+
+                    group0.has_asset(asset_class)
+                    && !group1.has_asset(asset_class)
+                    && config1 == config0.copy(state: ConfigState::Idle)
+                },
+                UpdatingSuccessFee{period, benchmark, fee} => {
+                    supply = Supply::find_input();
+
+                    tx.minted.get_safe(Tokens::reimbursement(supply.period_id)) == 1
+                    && config1 == config0.copy(
+                        fees: config0.fees.copy(
+                            success_fee: SuccessFeeConfig{
+                                fee: fee,
+                                benchmark: benchmark
+                            }
+                        ),
+                        state: ConfigState::Idle
+                    )
+                },
+                IncreasingMaxTokenSupply{Nmax} => {
+                    config1 == config0.copy(
+                        token: config0.token.copy(
+                            max_supply: Nmax
+                        ),
+                        state: ConfigState::Idle
+                    )
+                },
+                ChangingAgent{new_agent} => {
+                    config1 == config0.copy(
+                        agent: new_agent,
+                        state: ConfigState::Idle
+                    )
+                },
+                ChangingOracle{new_oracle} => {
+                    config1 == config0.copy(
+                        oracle: new_oracle,
+                        state: ConfigState::Idle
+                    )
+                },
+                ChangingGovernance{gov, tau_gov} => {
+                    config1 == config0.copy(
+                        governance: GovernanceConfig{
+                            delegate: gov,
+                            update_delay: tau_gov
+                        },
+                        state: ConfigState::Idle
+                    )
+                },
+                ChangingMintFee{phi, d_min} => {
+                    config1 == config0.copy(
+                        fees: config0.fees.copy(
+                            mint_fee: MintFeeConfig{
+                                relative: phi,
+                                minimum: d_min
+                            }
+                        ),
+                        state: ConfigState::Idle
+                    )
+                },
+                ChangingBurnFee{phi, d_min} => {
+                    config1 == config0.copy(
+                        fees: config0.fees.copy(
+                            burn_fee: BurnFeeConfig{
+                                relative: phi,
+                                minimum: d_min
+                            }
+                        ),
+                        state: ConfigState::Idle
+                    )
+                },
+                ChangingManagementFee{phi, tau_mgmt} => {
+                    config1 == config0.copy(
+                        fees: config0.fees.copy(
+                            management_fee: ManagementFeeConfig{
+                                relative: phi,
+                                period: tau_mgmt
+                            }
+                        ),
+                        state: ConfigState::Idle
+                    )
+                },
+                ChangingMaxPriceAge{tau_p} => {
+                    config1 == config0.copy(
+                        token: config0.token.copy(
+                            max_price_age: tau_p
+                        ),
+                        state: ConfigState::Idle
+                    )
+                },
+                ChangingMetadata => {
+                    tx.inputs.any((input: TxInput) -> {
+                        input.value.get_safe(Tokens::metadata) == 1
+                    })
+                    && config1 == config0.copy(
+                        state: ConfigState::Idle
+                    )
+                }
+            }
+        },
+        else => error("illegal state change")
+    }
+}

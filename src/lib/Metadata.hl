@@ -1,0 +1,41 @@
+module MetadataModule
+
+import Addresses
+import { tx } from ScriptContext
+import Tokens
+
+struct Metadata {
+    name: String "name"
+    description: String "description"
+    decimals: Int "decimals"
+    ticker: String "ticker"
+    url: String "url"
+    logo: String "logo"
+
+    func find_input() -> Metadata {
+        input = tx.inputs.find((input: TxInput) -> {
+            input.address == Addresses::metadata
+        });
+
+        assert(Tokens::contains_metadata(input), "doesn't contain the metadata token");
+
+        input.datum.inline.as[Metadata]
+    }
+
+    func find_output() -> Metadata {
+        output = tx.outputs.find((output: TxOutput) -> {
+            output.address == Addresses::metadata
+        });
+
+        assert(Tokens::contains_only_metadata(output), "doesn't contain only the metadata token");
+
+        output.datum.inline.as[Metadata]
+    }
+
+    func find_thread() -> (Metadata, Metadata) {
+        (
+            Metadata::find_input(),
+            Metadata::find_output()
+        )
+    }
+}

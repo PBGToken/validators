@@ -1,9 +1,7 @@
 mixed fund_policy
 
-import Addresses
-import TokenNames
-import Tokens
 
+import Addresses
 import { 
     AssetsConfig,
     BurnFeeConfig, 
@@ -15,30 +13,29 @@ import {
     MintFeeConfig, 
     SuccessFeeConfig,
     TokenConfig
-} from mConfig
-import { Metadata } from mMetadata
-import { PortfolioSummary, PortfolioSummaryState } from mPortfolio
-import { Price } from mPrice
-import { SuccessFee, SuccessFeeStep } from mSuccessFee
-import { Supply, SuccessFeeState } from mSupply
+} from ConfigModule
+import { Metadata } from MetadataModule
+import { Portfolio, PortfolioReduction, witnessed_by_portfolio } from PortfolioModule
+import { Price } from PriceModule
+import { tx } from ScriptContext
+import { SuccessFee, SuccessFeeStep } from SuccessFeeModule
+import { Supply, SuccessFeeState, witnessed_by_supply } from SupplyModule
+import TokenNames
+import Tokens
 
-
-import { ASSETS_ADDRESS, ASSETS_PREFIX, CONFIG_ADDRESS, CONFIG_ASSET_CLASS, CONFIG_TOKEN_NAME, MPH, STATE_ADDRESS, STATE_ASSET_CLASS, STATE_TOKEN_NAME, UNIQUE_UTXO_ID } from "./constants"
-import { AssetsState, FeesState, FundState, FundStateMode, ManagementFeeState, SuccessFeeState, SuccessFeeYearState, TokenState, VouchersState } from "./state"
-
-const initial_agent: PubKeyHash = PubKeyHash::new(#)
-const initial_benchmark: StakingValidatorHash = StakingValidatorHash::new(#)
-const initial_governance_delegate: StakingValidatorHash = StakingValidatorHash::new(#)
-const initial_oracle: StakingValidatorHash = StakingValidatorHash::new(#)
-const initial_price: Ratio = Ratio{100, 1}
-const initial_tick: Int = 0
-const seed_utxo: TxOutputId = TxOutputId::new(TxId::new(#), 0)
-
-func supply_spent(tx: Tx) -> Bool {
-    tx.spends_asset_class(Tokens::supply)
+const SEED_ID: TxOutputId = TxOutputId::new(TxId::new(#), 0)
+const INITIAL_AGENT: PubKeyHash = PubKeyHash::new(#)
+const INITIAL_TICK: Int = 0
+const INITIAL_SUCCESS_FEE: SuccessFee = SuccessFee{
+    steps: []SuccessFeeStep{
+        c0: 0,
+        SuccessFeeStep{c: 0.3, sigma: 1.05}
+    }
 }
 
-func all_initial_tokens_minted(tokens: Map[ByteArray]Int) -> Bool {
+func validate_minted_tokens() -> Bool {
+    tokens = Tokens::get_minted();
+    
     tokens.length == 5
     && tokens.get(TokenNames::metadata) == 1
     && tokens.get(TokenNames::config) == 1
@@ -47,11 +44,10 @@ func all_initial_tokens_minted(tokens: Map[ByteArray]Int) -> Bool {
     && tokens.get(TokenNames::supply) == 1
 }
 
-func metadata_initialized(tx: Tx) -> Bool {
-    output = tx.get_output_with_asset_class(Tokens::metadata);
+func validate_initial_metadata() -> Bool {
+    metadata = Metadata::find_output();
 
-    output.address == Addresses::metadata &&
-    output.datum.inline[Metadata] == Metadata{
+    metadata == Metadata{
         name: "PBG Token",
         description: "The first DVP",
         ticker: "PBG",
@@ -61,12 +57,13 @@ func metadata_initialized(tx: Tx) -> Bool {
     }
 }
 
-func config_initialized(tx: Tx) -> Bool {
-    output = tx.get_output_with_asset_class(Tokens::config);
+func validate_initial_config() -> Bool {
+    config = Config::find_output();
 
-    output.address == Addresses::config &&
-    output.datum.inline[Config] == Config{
-        agent: initial_agent,
+    tx.is_signed_by(INITIAL_AGENT)
+    INITIAL_SUCCESS_FEE.is_valid()
+    && config == Config{
+        agent: INITIAL_AGENT,
         fees: FeesConfig{
             mint_fee: MintFeeConfig{
                 relative: 0.005, // 0.5%
@@ -81,59 +78,49 @@ func config_initialized(tx: Tx) -> Bool {
                 period: Duration::DAY
             },
             success_fee_config: SuccessFeeConfig{
-                fee: SuccessFee{
-                    steps: []SuccessFeeStep{
-                        SuccessFeeStep::First{fee: 0},
-                        SuccessFeeStep::Next{fee: 0.3, lower: 1.05}
-                    }
-                },
-                benchmark: initial_benchmark
+                fee: INITIAL_SUCCESS_FEE,
+                benchmark: Scripts::benchmark_delegate
             }
         },
         tokens: TokenConfig{
             max_supply: 100_000_000_000,
             max_price_age: Duration::DAY
         },
-        oracle: initial_oracle,
+        oracle: Scripts::oracle_delegate,
         assets: AssetsConfig{
             max_group_size: 3
         },
         governance: GovernanceConfig{
-            proposal_timestamp: Time::new(0),
             update_delay: Duration::WEEK*2,
-            delegate: initial_governance_delegate
+            delegate: Scripts::governance_delegate
         },
         state: ConfigState::None
     }
 }
 
-func portfolio_initialized(tx: Tx) -> Bool {
-    output = tx.get_output_with_asset_class(Tokens::portfolio);
+func validate_initial_portfolio() -> Bool {
+    portfolio = Portfolio::find_output();
 
-    output.address == Addresses::portfolio &&
-    output.datum.inline[Portfolio] == PortfolioSummary{
+    portfolio == Portfolio{
         n_groups: 0,
-        group_iter: 0,
-        start_tick: initial_tick,
-        state: PortfolioSummaryState::None
+        reduction: PortfolioReduction::Idle
     }
 }
 
-func price_initialized(tx: Tx) -> Bool {
-    output = tx.get_output_with_asset_class(Tokens::price);
+func validate_initial_price() -> Bool {
+    price = Price::find_output();
 
-    output.address == Addresses::price &&
-    output.datum.inline[Price] == Price{
-        value: initial_price,
+    price == Price{
+        value: Config::INITIAL_PRICE,
         timestamp: Time::new(0)
     }
 }
 
-func supply_initialized(tx: Tx) -> Bool {
-    output = tx.get_output_with_asset_class(Tokens::supply);
+func validate_initial_supply() -> Bool {
+    supply = Supply::find_output();
 
-    output.address == Addresses::supply && Supply{
-        tick: initial_tick,
+    supply == Supply{
+        tick: INITIAL_TICK,
         n_tokens: 0,
         n_vouchers: 0,
         n_lovelace: 0,
@@ -141,43 +128,46 @@ func supply_initialized(tx: Tx) -> Bool {
         success_fee: SuccessFeeState{
             period_id: 0,
             start_time: Time::new(0),
-            period: Duration::WEEK*2,
-            start_price: initial_price
+            period: Duration::WEEK*2, // not yet 1 year, so we can test the success fee for a few periods
+            start_price: Config::INITIAL_PRICE
         }
     }
 }
 
-// the addresses aren't checked to avoid circular dependencies
-func main(args: MixedArgs, ctx: ScriptContext) -> Bool {
-    tx = ctx.tx;
+func validate_initialization() -> Bool {
+    validate_minted_tokens()
+    && validate_initial_metadata()
+    && validate_initial_config()
+    && validate_initial_portfolio()
+    && validate_initial_price()
+    && validate_initial_supply()
+}
 
+func validate_vault_spending() -> Bool {
+    witnessed_by_supply()
+}
+
+func validate_mint_or_burn_asset_groups() -> Bool {
+    witnessed_by_portfolio()
+}
+
+func validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement() -> Bool {
+    witnessed_by_supply()
+}
+
+func main(args: MixedArgs) -> Bool {
     args.switch{
-        Spendng => {
-            tx.spends_asset_class(Tokens::supply)
+        Spending => {
+            validate_vault_spending()
         },
         Other => {
-            tokens = tx.minted.get_policy(Tokens::policy);
-
-            if (tx.spends_utxo(seed_utxo)) {
-                // Init
-                all_initial_tokens_minted(tokens)
-                && metadata_initialized(tx)
-                && config_initialized(tx)
-                && portfolio_initialized(tx)
-                && price_initialized(tx)
-                && supply_initialized(tx)
-            } else if (tokens.length == 1
-                && tokens.all((token_name, qty) => {
-                    TokenNames::has_assets_prefix(token_name) 
-                    && qty.abs() == 1
-                })
-            ) {
-                // Mint/burn asset group
-                tx.spends_asset_class(Tokens::portfolio)
+            if (tx.inputs.any((input: TxInput) -> {input.output_id == SEED_ID})) {
+                validate_initialization()
+            } else if (Tokens::get_minted().any_key(TokenNames::has_assets_prefix)) {
+                validate_mint_or_burn_asset_groups()
             } else {
-                tx.spends_asset_class(Tokens::supply)
+                validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement()
             }
         }
-    }
-    
+    }   
 }

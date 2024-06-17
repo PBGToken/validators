@@ -1,0 +1,14 @@
+spending metadata_validator
+
+import { Config } from mConfig
+import { Metadata } from mMetadata
+
+func main(_: Metadata, _) -> Bool {
+    config0 = Config::find_input();
+    metadata1 = Metadata::find_output();
+
+    Changing{_, proposal} = config0.state;
+    ChangingMetadata{metadata_hash} == proposal;
+
+    metadata_hash == metadata1.serialize().blake2b()
+}

@@ -1,0 +1,67 @@
+module BurnOrderModule
+
+import { sum_lovelace } from PortfolioModule
+import { current_script, get_current_input, tx } from ScriptContext
+import Tokens
+
+enum BurnOrderReturnValue {
+    L {
+        lovelace: Int
+    }
+    V {
+        value: Value
+    }
+}
+
+struct BurnOrder {
+    return_address: Address
+    return_datum: Datum
+    min_return_value: BurnOrderReturnValue
+    max_price_age: Duration
+
+    func find_return(self) -> TxOuput {
+        tx.outputs.find((output: TxOutput) -> {
+            output.address == self.return_address
+            && output.datum.inline == self.return_datum
+        })
+    }
+
+    func diff(self) -> Value {
+        input = current_script.switch{
+            burn_order_validator => get_current_input(),
+            else => error("unexpected")
+        };
+            
+        return = self.find_return();
+
+        input.value - return.value;
+    }
+
+    func value(self) -> Value {
+        -self.diff().remove_policy(Tokens::policy)
+    }
+
+    func value_lovelace(self, ptrs: []AssetPtr) -> Int {
+        sum_lovelace(
+            self.value(), 
+            tx.inputs, 
+            ptrs, 
+            self.price_expiry()
+        )
+    }
+
+    func burned_tokens(self) -> Int {
+        self.diff().get(Tokens::dvp_token)
+    }
+
+    func price_expiry(self) -> Time {
+        tx.time_range.end - self.max_price_age
+    }
+
+    func returned_enough(self, ptrs: []AssetPtr) -> Bool {
+        self.min_return_value.switch{
+            L{lovelace} => self.value_lovelace(ptrs) >= lovelace,
+            V{value} => self.value() >= value
+        }
+    }
+}

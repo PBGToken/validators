@@ -1,0 +1,47 @@
+module AssetPtrModule
+
+import { Asset } from AssetModule
+import TokenNames
+
+struct AssetPtr {
+    group_index: Int
+    asset_class_index: Int
+
+    // throws an error if not found
+    func resolve_input(self, inputs: []TxInput, mph: MintingPolicyHash, asset_class: AssetClass) -> Asset {
+        input = inputs.get(self.group_index);
+
+        tokens = input.value.get_policy(mph);
+
+        assert(tokens.any((token_name: ByteArray, _) -> {
+            TokenNames::has_assets_prefix(token_name)
+        }), "assets token not found");
+
+        assets = input.datum.inline[[]Asset];
+
+        asset = assets.get(self.asset_class_index)
+
+        assert(asset.asset_class == asset_class, "unexpected asset class");
+
+        asset
+    }
+
+    // throws an error if not found
+    func resolve_output(self, outputs: []TxOutput, mph: MintingPolicyHash, asset_class: AssetClass) -> Asset {
+        output = outputs.get(self.group_index);
+
+        tokens = output.value.get_policy(mph);
+
+        assert(tokens.any((token_name: ByteArray, _) -> {
+            TokenNames::has_assets_prefix(token_name)
+        }), "assets token not found");
+
+        assets = output.datum.inline[[]Asset];
+
+        asset = assets.get(self.asset_class_index);
+
+        assert(asset.asset_class == asset_class, "unexpected asset class");
+
+        asset
+    }
+}

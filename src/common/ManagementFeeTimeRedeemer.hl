@@ -1,6 +1,0 @@
-module common_ManagementFeeTimeRedeemer
-
-enum ManagementFeeTimeRedeemer {
-    Update
-    Upgrade
-}

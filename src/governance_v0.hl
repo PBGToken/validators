@@ -1,7 +1,0 @@
-spending governance
-
-const key: PubKeyHash = PubKeyHash::new(#80edfa909a3d40a54fca4c3ee852c7ba2a79391738911dc363580dc2)
-
-func main(_, _, ctx: ScriptContext) -> Bool {
-    ctx.tx.is_signed_by(key)
-}

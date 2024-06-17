@@ -1,8 +1,0 @@
-spending vault_validator
-
-import { STATE_ASSET_CLASS } from "./constants"
-
-// all validations of vault spending are deferred to STATE
-func main(_, _, ctx: ScriptContext) -> Bool {
-    ctx.tx.inputs.any((input: TxInput) -> {input.value.get_safe(STATE_ASSET_CLASS) == 1})
-}

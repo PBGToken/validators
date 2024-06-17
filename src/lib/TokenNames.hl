@@ -1,0 +1,73 @@
+module TokenNames
+
+const metadata = Cip67::reference_token_label
+const dvp_token = Cip67::fungible_token_label
+
+const assets_prefix: ByteArray = "assets ".encode_utf8()
+
+func assets(group_id: Int) -> ByteArray {
+    assets_prefix + group_id.show().encode_utf8()
+}
+
+// throws an error if the group id doesn't have the correct format
+// Note: although it doesn't matter here: IDs should be one-base
+func parse_series(prefix: ByteArray, token_name: ByteArray) -> Option[Int] {
+    if (token_name.starts_with(prefix)) {
+        id = token_name.slice(prefix.length, token_name.length);
+        Int::parse(id.decode_utf8())
+    } else {
+        Option[Int]::None
+    }
+}
+
+func parse_assets(token_name: ByteArray) -> Option[Int] {
+    parse_series(assets_prefix, token_name)
+}
+
+func has_assets_prefix(token_name: ByteArray) -> Bool {
+    token_name.starts_with(assets_prefix)
+}
+
+const config: ByteArray = "config".encode_utf8()
+const portfolio: ByteArray = "portfolio".encode_utf8()
+const price: ByteArray = "price".encode_utf8()
+
+const reimbursement_prefix: ByteArray = "reimbursement ".encode_utf8()
+
+func parse_reimbursement(token_name: ByteArray) -> Option[Int] {
+    parse_series(reimbursement_prefix, token_name)
+}
+
+func reimbursement(id: Int) -> ByteArray {
+    reimbursement_prefix + id.show().encode_utf8()
+}
+
+const supply: ByteArray = "supply".encode_utf8()
+
+const voucher_infix = "voucher ".encode_utf8()
+const voucher_ref_prefix: ByteArray = Cip67::reference_token_label + voucher_infix
+const voucher_nft_prefix: ByteArray = Cip67::user_nft_label + voucher_infix
+
+func parse_voucher_ref(token_name: ByteArray) -> Option[Int] {
+    parse_series(voucher_ref_prefix, token_name)
+}
+
+func parse_voucher_nft(token_name: ByteArray) -> Option[Int] {
+    parse_series(voucher_nft_prefix, token_name)
+}
+
+func has_voucher_ref_prefix(token_name: ByteArray) -> Bool {
+    token_name.starts_with(voucher_ref_prefix)
+}
+
+func has_voucher_nft_prefix(token_name: ByteArray) -> Bool {
+    token_name.starts_with(voucher_nft_prefix)
+}
+
+func voucher_ref(id: Int) -> ByteArray {
+    voucher_ref_prefix + id.show().encode_utf8()
+}
+
+func voucher_nft(id: Int) -> ByteArray {
+    voucher_nft_prefix + id.show().encode_utf8()
+}

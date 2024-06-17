@@ -1,7 +1,0 @@
-module common_AssetsCounterDatum
-
-struct AssetsCounterDatum {
-    count: Int
-    timestamp: Time // last update event
-    // sadly we can't add fields because that would change the contract hashes
-}

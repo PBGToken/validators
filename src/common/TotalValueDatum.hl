@@ -1,7 +1,0 @@
-module common_TotalValueDatum
-
-struct TotalValueDatum {
-    lovelace:     Int
-    running_hash: ByteArray
-    timestamp:    Time
-}

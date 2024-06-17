@@ -1,80 +1,18 @@
 spending price_validator
 
-/**
- * Role: calculate Lovelace/PBG price
- *
- * Validation rules:
- *   * tx is signed by master key
- *   * new datum contains timestamp of the total value token
- *   * new datum contains pbg count and total value count
- *   * running hash of total value reducer corresponds to running hash in parameters
- */
+import { signed_by_agent } from ConfigModule
+import { Portfolio, PortfolioReductionMode } from PortfolioModule
+import { Price } from PriceModule
+import { Supply } from SupplyModule
 
-import { 
-    TOTAL_VALUE_COUNT_ASSETCLASS,
-    PBG_COUNTER_ASSETCLASS
-} from "./common/constants"
-import { PRICE_VALIDATOR_ADDR } from "./common/addresses"
+func main(_: Price, _) -> Bool {
+    portfolio = Portfolio::find_ref();
+    supply = Supply::find_ref();
+    price1 = Price::find_output(); // input doesn't matter
 
-import { Keys } from "./common/Keys"
-import { Price, PRICE_PARAMETER_ASSETCLASS } from "./common/Price"
-import { PriceRedeemer } from "./common/PriceRedeemer"
-import { TotalValueDatum } from "./common/TotalValueDatum"
-import { PbgCountDatum } from "./common/PbgCountDatum"
-import { Wiring, CURRENT_VERSION } from "./common/Wiring"
+    PortfolioReductionMode::TotalAssetValue{V, tp} = portfolio.get_reduction_result();
 
-func main(datum: Price, redeemer: PriceRedeemer, ctx: ScriptContext) -> Bool {
-    tx: Tx = ctx.tx;
-    ref_inputs: []TxInput = tx.ref_inputs;
-
-    keys = Keys::from_inputs(ref_inputs);
-    //print("found keys");
-  
-    output: TxOutput = tx.outputs.find((output: TxOutput) -> {
-        output.value.get_safe(PRICE_PARAMETER_ASSETCLASS) == 1
-    });
-
-    new_datum = Price::from_data(output.datum.get_inline_data());
-
-    keys.is_signed_by_master_key(tx).trace("signed by master: ")
-    && redeemer.switch{
-        Update => {
-            //print("here");
-            total_value_datum = TotalValueDatum::from_data(
-                ref_inputs.find((input: TxInput) -> {
-                    input.output.value.get_safe(TOTAL_VALUE_COUNT_ASSETCLASS) == 1
-                }).output.datum.get_inline_data()
-            );
-            //print("got total value datum");
-
-            pbg_count = PbgCountDatum::from_data(
-                ref_inputs.find((input: TxInput) -> {
-                    input.output.value.get_safe(PBG_COUNTER_ASSETCLASS) == 1
-                }).output.datum.get_inline_data()
-            );
-
-            expected_output_datum = Price{
-                if (pbg_count.total_pbgs == 0) {
-                    datum.total_lovelace
-                } else {
-                    total_value_datum.lovelace
-                },
-                pbg_count.total_pbgs,
-                total_value_datum.timestamp
-            };
-
-            Wiring::is_same_version(ref_inputs).trace("wirig is same version: ")
-            && (new_datum == expected_output_datum).trace("datum correct: ")
-            && output.address == PRICE_VALIDATOR_ADDR
-            && (keys.running_hash == total_value_datum.running_hash).trace("running hash match: ")
-        },
-        Upgrade => {
-            //print("here2");
-            wiring = Wiring::from_ref_inputs(ref_inputs);
-
-            wiring.version > CURRENT_VERSION
-            && new_datum == datum
-            && output.address == wiring.price_validator
-        }
-    }
+    signed_by_agent()
+    && price1.value == Ratio::new(V, supply.n_tokens)
+    && price1.timestamp == tp
 }

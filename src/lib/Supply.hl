@@ -1,0 +1,118 @@
+module SupplyModule
+
+import Addresses
+import { Config } from ConfigModule
+import { current_script, tx } from ScriptContext
+import Tokens
+
+struct SuccessFeeState {
+    period_id: Int
+    start_time: Time
+    period: Duration
+    start_price: Ratio
+}
+
+struct Supply {
+    tick: Int
+    n_tokens: Int
+    n_vouchers: Int
+    n_lovelace: Int
+    management_fee_timestamp: Time
+    success_fee: SuccessFeeState
+
+    func find_input() -> Supply {
+        input = current_script.switch{
+            config_validator => tx.inputs.find(Tokens::contains_supply),
+            else => {
+                input = tx.inputs.find((input: TxInput) -> {input.address == Addresses::supply});
+
+                assert(Tokens::contains_supply(input), "doesn't contain the supply token");
+
+                input
+            }
+        }
+
+        input.datum.inline.as[Supply]
+    }
+
+    func find_output() -> Supply {
+        output = tx.outputs.find((output: TxOutput) -> {
+            output.address == Addresses::supply
+        });
+
+        assert(Tokens::contains_only_supply(output), "doesn't contain only the supply token");
+
+        output.datum.inline.as[Supply]
+    }
+
+    /**
+     * Looks for the supply UTxO using the supply token asset class only
+     * Can't use the supply validator address because that would create a circular hash dependency
+     */
+    func find_ref() -> Supply {
+        input = tx.ref_inputs.find(Tokens::contains_supply);
+
+        input.datum.inline.as[Supply]
+    }
+
+    func find_thread() -> (Supply, Supply) {
+        (
+            Supply::find_input(),
+            Supply::find_output()
+        )
+    }
+
+    func calc_management_fee_dilution(self) -> Int {
+        config = Config::find_ref();
+
+        f = config.fees.management_fee.relative;
+        N = self.n_tokens;
+
+        (N*f/(1.0 - f)).floor()
+    }
+
+    func calc_success_fee_dilution(self, end_price: Ratio) -> Int {
+        config = Config::find_ref();
+
+        N = self.n_tokens;
+
+        alpha = (end_price/self.success.start_price).to_real();
+
+        phi_alpha = config.fees.success_fee.fee.apply(alpha);
+
+        // guard against the edge case where phi_alpha is very bad
+        if (phi_alpha > 0 && phi_alpha < alpha) {
+            (N*phi_alpha/(alpha - phi_alpha)).floor()
+        } else {
+            0
+        }
+    }
+
+    func is_successful(self, price_relative_to_benchmark: Ratio) -> Bool {
+        price_relative_to_benchmark > self.success_fee.start_price
+    }
+
+    func period_end(self) -> Time {
+        self.success_fee.start_time + self.success_fee.period
+    }
+    
+    func period_id(self) -> Int {
+        self.success_fee.period_id
+    }
+}
+
+func witnessed_by_supply() -> Bool {
+    current_script.switch{
+        assets_validator => {
+            tx.inputs.any((input: TxInput) -> {
+                input.value.get_safe(Tokens::supply) == 1
+            })
+        },
+        else => {
+            tx.inputs.any((input: TxInput) -> {
+                input.address == Addresses::supply
+                && input.value.get(Tokens::supply) == 1
+            })
+        }
+    }
+}

@@ -1,0 +1,106 @@
+module Vault
+
+import Addresses
+import { Asset } from AssetModule
+import { AssetPtr } from AssetPtrModule
+import { price_expiry } from ConfigModule
+import { tx } from ScriptContext
+import TokenNames
+
+const VAULT_DATUM: ByteArray = #
+
+func nothing_spent() -> Bool {
+    tx.inputs.all((input: TxInput) -> Bool {
+        input.address.credential != Addresses::vault.credential
+        && input.address.credential != Addresses::assets.credential
+    })
+}
+
+// positive: vault increases in value
+// negative: vault decreases in value
+func diff() -> Value {
+    addr = Addresses::vault;
+
+    // vault outputs are transaction inputs and simply match the vault credential 
+    //  (validate as many UTxOs taken out of the vault as possible)
+    out = tx.inputs.fold((prev: Value, input: TxInput) -> {
+        if (input.address.credential == addr.credential) {
+            prev + input.value
+        } else {
+            prev
+        }
+    }, Value::ZERO);
+
+    // vault inputs are transaction outputs and must match the address and datum exactly
+    //  (be as restrictive as possible when sending UTxOs to the vault)
+    in = tx.outputs.fold((prev: Value, output: TxOutput) -> {
+        if (output.address == addr && output.datum.inline.as[ByteArray] == VAULT_DATUM) {
+            prev + output.value
+        } else {
+            prev
+        }
+    }, Value::ZERO);
+
+    in - out
+}
+
+// positive: vault increases in value
+// negative: vault decreases in value
+func diff_lovelace(ptrs: []AssetPtr) -> Int {
+    d = diff();
+
+    sum_lovelace(d, tx.inputs, ptrs, price_expiry())
+}
+
+func diff_counted(d_lovelace: Int, expected_tick: Int) -> Value {
+    m: Map[AssetClass]Int = tx.inputs.fold((m: Map[AssetClass]Int, input: TxInput) -> {
+        if (input.address == Addresses::assets) {
+            // extract the token
+            tokens = input.value.get_policy(Tokens::policy);
+
+            (token_name: ByteArray, qty: Int) = tokens.find((token_name: ByteArray, _) -> Bool {
+                TokenNames::has_assets_prefix(token_name)
+            });
+
+            assert(qty > 0, "not a positive number of assets tokens");
+
+            Some{id} = TokenNames::parse_assets(token_name);
+
+            output = tx.outputs.find((output: TxOutput) -> {
+                output.address == Addresses::assets
+                && output.value.get_safe(token_name) == 1
+            });
+            
+            assets0 = input.datum.inline.as[[]Asset];
+            assets1 = output.datum.inline.as[[]Asset];
+
+            assets0.zip(assets1).fold((m: Map[AssetClass]Int, a: Asset, b: Asset) -> {
+                assert(
+                    b.asset_class == a.asset_class
+                    && b.count_tick == tick
+                    && b.price == a.price
+                    && b.price_timestamp == a.price_timestamp,
+                    "invalid asset change"
+                );
+
+                m.append(a.asset_class, b.count - a.count)
+            }, m)
+        } else {
+            m
+        }
+    }, Map[AssetClass]Int{});
+
+    m = m.append(AssetClass::ADA, d_lovelace);
+
+    // this function sorts the assetclass to make it easier to detect duplicates
+    Value::from_flat_map(m)
+}
+
+/**
+ * This is an expensive function
+ */
+func counters_are_consistent(d_lovelace: Int, tick: Int) -> Bool {
+    d = diff().sort();
+    dc = diff_counted(d_lovelace, tick);
+    d == dc
+}

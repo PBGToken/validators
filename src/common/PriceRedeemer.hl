@@ -1,6 +1,0 @@
-module common_PriceRedeemer
-
-enum PriceRedeemer {
-    Update
-    Upgrade
-}

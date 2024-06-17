@@ -1,0 +1,25 @@
+spending assets_validator
+
+import { AssetGroup } from AssetGroupModule
+import { tx } from ScriptContext
+import Tokens
+
+enum Action {
+    Count {
+        supply_ptr: Int
+    }
+    Other {
+        portfolio_ptr: Int
+    }
+}
+
+func main(_: AssetGroup, action: Action) -> Bool {
+    action.switch{
+        Count{supply_ptr} => {
+            tx.inputs.get(supply_ptr).value.get(Tokens::supply) == 1
+        },
+        Other{portfolio_ptr} => {
+            tx.inputs.get(portfolio_ptr).value.get(Tokens::portfolio) == 1
+        }
+    }
+}

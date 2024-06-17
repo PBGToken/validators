@@ -1,0 +1,130 @@
+module PortfolioModule
+
+import Addresses
+import { AssetPtr } from AssetPtrModule
+import { current_script, tx } from ScriptContext
+import Tokens
+
+enum PortfolioReductionMode {
+    TotalAssetValue {
+        total: Int // in lovelace
+        oldest_timestamp: Time
+    }
+    Exists {
+        asset_class: AssetClass
+        found: Bool
+    }
+    DoesNotExist {
+        asset_class: AssetClass
+    }
+}
+
+enum PortfolioReduction {
+    Idle
+    Reducing {
+        group_iter: Int
+        start_tick: Int
+        mode: PortfolioReductionMode
+    }
+
+    func is_idle(self) -> Bool {
+        self.switch{
+            Idle => true,
+            else => false
+        }
+    }
+}
+
+struct Portfolio {
+    n_groups: Int
+    reduction: PortfolioReduction
+
+    func find_input() -> Portfolio {
+        input = tx.inputs.find((input: TxInput) -> {
+            input.address == Addresses::portfolio
+        });
+
+        assert(Tokens::contains_portfolio(input), "doesn't contain the portfolio token");
+
+        input.datum.inline.as[Portfolio]
+    }
+
+    func find_output() -> Portfolio {
+        output = tx.outputs.find((output: TxOutput) -> {
+            output.address == Addresses::portfolio
+        })
+
+        assert(Tokens::contains_only_portfolio(output), "doesn't contain only the portfolio token");
+
+        output.datum.inline.as[Portfolio]
+    }
+
+    func find_ref() -> Portfolio {
+        input = current_script.switch{
+            config_validator => {
+                tx.ref_inputs.find(Tokens::contains_portfolio)
+            },
+            else => {
+                input = tx.ref_inputs.find((input: TxInput) -> {
+                    input.address == Addresses::portfolio
+                });
+        
+                assert(Tokens::contains_portfolio(input), "doesn't contain the portfolio token");
+
+                input
+            }
+        };
+
+        input.datum.inline.as[Portfolio]
+    }
+
+    func find_thread() -> (Portfolio, Portfolio) {
+        (
+            Portfolio::find_input(),
+            Portfolio::find_output()
+        )
+    }
+
+    /**
+     * Throws an error if Idle
+     * Throws an error if n_groups != group_iter
+     */
+    func get_reduction_result(self) -> PortfolioReductionMode {
+        self.reduction.switch{
+            Idle => error("expected Reducing"),
+            Reducing{ig, _, mode} => {
+                assert(ig == self.n_groups, "reduction is incomplete");
+
+                mode
+            }
+        }
+    }
+}
+
+func sum_lovelace(v: Value, inputs: []TxInput, ptrs: []AssetPtr, price_expiry: Time) -> Int {
+    v.flatten().fold_with_list((sum: Int, asset_class: AssetClass, qty: Int, ptr: AssetPtr) -> {
+        if (asset_class == AssetClass::ADA) {
+            sum + qty
+        } else {
+            asset = ptr.resolve(inputs);
+
+            assert(asset.price_timestamp >= price_expiry, "price expired");
+
+            sum + qty * asset.price
+        }
+    }, 0, ptrs)
+}
+
+func witnessed_by_portfolio() -> Bool {    
+    current_script.switch{
+        assets_validator => {
+            tx.inputs.any(Tokens::contains_portfolio)
+        },
+        else => {
+            tx.inputs.any((input: TxInput) -> {
+                input.address == Addresses::portfolio
+                && input.value.get(Tokens::portfolio) == 1
+            })
+        }
+    }
+}

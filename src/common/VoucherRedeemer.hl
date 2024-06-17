@@ -1,6 +1,0 @@
-module common_VoucherRedeemer
-
-enum VoucherRedeemer {
-    Burn
-    ReimburseSuccessFee
-}

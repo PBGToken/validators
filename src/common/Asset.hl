@@ -1,9 +1,0 @@
-module mAsset
-
-struct Asset {
-    asset_class: AssetClass
-    count: Int
-    count_tick: Int
-    price: Ratio // TODO: build this into the language
-    price_timestamp: Time
-}

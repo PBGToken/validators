@@ -1,0 +1,66 @@
+module ReimbursementModule
+
+import Addresses
+import { current_script, get_current_input, tx } from ScriptContext
+import TokenNames
+import Tokens
+
+struct Reimbursement {
+    n_remaining_vouchers: Int
+    start_price: Ratio
+    end_price: Ratio
+    success_fee: SuccessFee
+
+    func find_input() -> (Int, Reimbursement, Int) {
+        input = current_script.switch{
+            reimbursement_validator => get_current_input(),
+            else => tx.inputs.find((input: TxInput) -> {
+                input.address == Addresses::reimbursement
+            });
+        };
+
+        id = Tokens::parse_reimbursement(input);
+
+        (
+            id, 
+            input.datum.inline.as[Reimbursement], 
+            input.value.get_safe(Tokens::dvp_token)
+        )
+    }
+
+    func find_output(id: Int, min_tokens: Int) -> (Reimbursement, Int) {
+        output = tx.outputs.find((output: TxOutput) -> {
+            output.address == Addresses::reimbursement
+        });
+
+        tokens = output.value.get_policy(Tokens::policy);
+        n_dvp_tokens = tokens.get_safe(TokenNames::dvp_token);
+
+        assert(tokens.get(TokenNames::reimbursement(id) == 1), "output doesnt contain reimbursement token");
+        assert(n_dvp_tokens >= min_tokens, "output doesnt contain enough dvp tokens");
+        assert(tokens.length <= 2, "output contains unexpected tokens");
+        assert(output.value.remove_lovelace().to_map().length == 1, "output contains unexpected token policies");
+
+        (output.datum.inline.as[Reimbursement], n_dvp_tokens)
+    }
+
+    func find_thread() -> (Int, Reimbursement, Int, Reimbursement, Int) {
+        (id: Int, r0: Reimbursement, n0: Int) = Reimbursement::find_input();
+
+        (r1: Reimbursement, n1: Int) = Reimbursement::find_output(id, 0);
+    
+        (id, r0, n0, r1, n1)
+    }
+
+    func calc_alpha(self, end_price: Ratio = self.end_price) -> Real {
+        (end_price/self.start_price).to_real();
+    }
+
+    func calc_phi_alpha_ratio(self, end_price: Ratio = self.end_price) -> Real {
+        alpha = self.calc_alpha(end_price);
+
+        phi_alpha = self.success_fee.apply(alpha);
+
+        phi_alpha/(alpha - phi_alpha)
+    }
+}

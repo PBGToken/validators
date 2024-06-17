@@ -1,0 +1,64 @@
+spending reimbursement_validator
+
+import Addresses
+import { signed_by_agent } from ConfigModule
+import { Reimbursement } from ReimbursementModule
+import { tx } from ScriptContext
+import TokenNames
+import Tokens
+import { Voucher } from VoucherModule
+
+/**
+ * Counts the number of vouchers burned, and the token amount sent to the vouchers
+ * Each voucher is also validated
+ * Each spent voucher ref token
+ */
+func validate_burned_vouchers(period_id: Int, reim: Reimbursement) -> (Int, Int) {
+    minted_tokens = Tokens::get_minted();
+    main_phi_alpha_ratio = reim.calc_phi_alpha_ratio();
+
+    tx.inputs.fold2((n_vouchers_burned: Int, n_tokens_reimbursed: Int, input: TxInput) -> (Int, Int) {
+        if (input.address == Addresses::voucher) {
+            id = Tokens::parse_voucher(input);
+
+            assert(minted_tokens.get(TokenNames::voucher_ref(id)) == -1, "voucher ref not burned");
+
+            voucher = input.datum.inline.as[Voucher];
+
+            // voucher period id is checked by voucher_validator
+
+            return = voucher.find_return();
+            reimbursed_tokens = return.value.get_safe(Tokens::policy);
+            voucher_phi_alpha_ratio = reim.calc_phi_alpha_ratio(voucher.price);
+            expected_reimbursed_tokens = (voucher.tokens*(main_phi_alpha_ratio - voucher_phi_alpha_ratio)).floor().bound_min(0);
+            
+            assert(reimbursed_tokens == expected_reimbursed_tokens, "can only reimburse precisely the expected amount");
+
+            (
+                n_vouchers_burned + 1,
+                n_tokens_reimbursed + expected_reimbursed_tokens
+            )
+        } else {
+            (n_vouchers_burned, n_tokens_reimbursed)
+        }
+    }, 0, 0)
+}
+
+func main(_: Reimbursement, _) -> Bool {
+    (id: Int, reim0: Reimbursement, n0: Int) = Reimbursement::find_input();
+    
+    (n_vouchers_burned: Int, n_tokens_reimbursed: Int) = validate_burned_vouchers(reim0);
+
+    signed_by_agent()
+    && if (n_vouchers_burned >= reim0.n_remaining_vouchers) {
+        // the reimbursement token itself must be burned, output isn't validated
+        Tokens::get_minted().get(TokenNames::reimbursement(id)) == -1
+    } else {
+        (reim1: Reimbursement, n1: Int) = Reimbursement::find_output(id);
+
+        n1 == n0 - n_tokens_reimbursed
+        && reim1 == reim0.copy(
+            n_remaining_vouchers: reim0.n_remaining_vouchers - n_vouchers_burned
+        )
+    }
+} 

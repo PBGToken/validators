@@ -1,0 +1,55 @@
+module SuccessFeeModule
+
+struct SuccessFeeStep {
+    sigma: Real
+    c: Real
+}
+
+func apply_internal(self, alpha: Real, sigma: Real, c: Real, next: []SuccessFeeStep) -> Real {
+    if (alpha < sigma) {
+        0.0
+    } else if (next.is_empty()) {
+        (alpha - sigma)*c
+    } else {
+        {sigma_next, c_next} = next.head;
+        
+        (Int::min(alpha, sigma_next) - sigma)*c 
+        + apply_internal(alpha, sigma_next, c_next, next.tail)
+    }
+}
+
+func is_valid_internal(sigma: Real, c: Real, next: []SuccessFeeStep) -> Bool {
+    if (sigma < 1.0) {
+        false
+    } else if (c < 0.0) {
+        false
+    } else if (c >= 1.0) {
+        false
+    } else if (next.is_empty()) {
+        true
+    } else {
+        SuccessFeeStep{sigma_next, c_next} = next.head;
+
+        if (sigma_next <= sigma) {
+            false
+        } else {
+            is_valid_internal(sigma_next, c_next, next.tail)
+        }
+    }
+}
+
+struct SuccessFee {
+    c0: Real
+    steps: []SuccessFeeStep
+
+    const MAX_SUCCESS_FEE_STEPS: Int = 10
+
+    func apply(self, alpha: Real) -> Real {
+        self.apply_internal(alpha, 1.0, self.c0, self.steps)
+    }   
+
+    func is_valid(self) -> Bool {
+        self.steps.length <= SuccessFee::MAX_SUCCESS_FEE_STEPS
+        && is_valid_internal(1.0, self.c0, self.steps)
+    }
+}

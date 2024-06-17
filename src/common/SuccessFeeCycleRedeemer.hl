@@ -1,6 +1,0 @@
-module common_SuccessFeeCycleRedeemer
-
-enum SuccessFeeCycleRedeemer {
-    Update
-    Upgrade
-}

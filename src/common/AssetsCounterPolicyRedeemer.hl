@@ -1,6 +1,0 @@
-module common_AssetsCounterPolicyRedeemer
-
-enum AssetsCounterPolicyRedeemer {
-    Mint
-    Burn
-}

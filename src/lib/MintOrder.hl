@@ -1,0 +1,66 @@
+module MintOrderModule
+
+import { AssetPtr } from AssetPtrModule
+import { sum_lovelace } from PortfolioModule
+import { current_script, get_current_input, tx } from ScriptContext
+import TokenNames
+import Tokens
+
+struct MintOrder {
+    return_address: Address
+    return_datum: Data
+    min_tokens: Int
+    max_price_age: Duration
+
+    func find_return(self) -> TxOutput {
+        tx.outputs.find((output: TxOutput) -> {
+            output.address == self.return_address 
+            && output.datum.inline == self.return_datum
+        })
+    }
+
+    func diff(self) -> Value {
+        input: TxInput = current_script.switch{
+            mint_order_validator => get_current_input(),
+            else => error("unexpected")
+        };
+
+        return = self.find_return();
+
+        input.value - return.value
+    }
+
+    func price_expiry(self) -> Time {
+        tx.time_range.end - self.max_price_age
+    }
+
+    func returned_tokens(self) -> Int {
+        (-1) * self.diff().get(Tokens::dvp_token)
+    }
+
+    func value(self) -> Value {
+        self.diff().remove_policy(Tokens::policy)
+    }
+
+    func value_lovelace(self, ptrs: []AssetPtr) -> Int {
+        sum_lovelace(
+            self.value(), 
+            tx.inputs, 
+            ptrs, 
+            self.price_expiry()
+        )
+    }
+
+    func voucher_id(self) -> Int {
+         // check returned voucher
+         (voucher_nft_name: ByteArray, qty: Int) = self.diff().get_policy(Tokens::policy).find((token_name: ByteArray, _) -> {
+            TokenNames::has_voucher_nft_prefix(token_name)
+        });
+
+        assert(qty >= 1, "expected at least one token");
+
+        Some{voucher_id} = TokenNames::parse_voucher_nft(voucher_nft_name);
+
+        voucher_id
+    }
+}

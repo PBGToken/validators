@@ -1,0 +1,200 @@
+module AssetGroupModule
+
+import Addresses
+import { Asset } from AssetModule
+import { current_script, tx } from ScriptContext
+import TokenNames
+import Tokens
+
+struct AssetGroup {
+    assets: []Asset
+
+    const MAX_SIZE: Int = 3
+
+    func find_current() -> (Int, AssetGroup) {
+        input = tx.get_current_input();
+
+        id = Tokens::parse_assets(input);
+
+        (id, input.datum.inline.as[AssetGroup])
+    }
+
+    func find_output(id: Int) -> AssetGroup {
+        assets_token = Tokens::assets(id);
+    
+        output = tx.outputs.find((output: TxOutput) -> {
+            output.address == Addresses::assets
+            && Tokens::contains_only(output, assets_token)
+        });
+    
+        output.datum.inline.as[AssetGroup]
+    }
+
+    func find_output_asset(asset_class: AssetClass) -> Asset {
+        result: Option[Asset] = tx.outputs.fold_lazy((output: TxOutput, next: () -> Option[Asset]) -> {
+            if (output.address == Addresses::assets) {
+                assert(Tokens::contains_only_any_assets(output), "doesn't only contain assets token");
+
+                group = output.datum.inline.as[AssetGroup];
+
+                group.find_asset(asset_class)
+            } else {
+                next()
+            }
+        }, Option[Asset]::None);
+
+        result.switch{
+            Some{asset} => asset,
+            None => error("asset not found")
+        }
+    }
+
+    func find_input_asset(asset_class: AssetClass) -> Asset {
+        result: Option[Asset] = tx.inputs.fold_lazy((input: TxInput, next: () -> Option[Asset]) -> {
+            if (input.address == Addresses::assets) {
+                assert(Tokens::contains_only_any_assets(input), "doesn't only contain assets token");
+
+                group = input.datum.inline.as[AssetGroup];
+
+                group.find_asset(asset_class)
+            } else {
+                next()
+            }
+        }, Option[Asset]::None);
+
+        result.switch{
+            Some{asset} => asset,
+            None => error("asset not found")
+        }
+    }
+
+    /**
+     * Throws an error if more than 1 input is spent from the assets_validator address
+     * Throws an error if the assets input contains any other tokens
+     */
+    func find_single_input() -> (Int, AssetGroup) {
+        input = current_script.switch{
+            config_validator => {
+                tx.inputs.filter((input: TxInput) -> {
+                    policy_tokens = input.value.get_policy(Tokens::policy);
+
+                    policy_tokens.any_key((token_name: ByteArray) -> {
+                        TokenNames::has_assets_prefix(token_name)
+                    })
+                }).get_singleton()
+            },
+            else => tx.inputs.filter((input: TxInput) -> {
+                input.address == Addresses::assets
+            }).get_singleton()
+        };
+
+        id = Tokens::parse_assets(input);
+
+        (id, input.datum.inline.as[AssetGroup])
+    }
+
+    func is_burned(id: Int) -> Bool {
+        tokens_burned = tx.minted.get_policy(Tokens::policy);
+
+        // only one can be burned at a time, nothing else can be minted
+        tokens_burned.get(TokenNames::assets(id)) == -1 // can fail
+        && tokens_burned.length == 1
+    }
+
+    func find_asset(self, asset_class: AssetClass) -> Option[Asset] {
+        self.assets.find_safe((asset: Asset) -> {asset.asset_class == asset_class})
+    }
+
+    func has_asset(self, asset_class: AssetClass) -> Bool {
+        self.assets.any((asset: Asset) -> {asset.asset_class == asset_class})
+    }
+
+    func is_empty(self) -> Bool {
+        self.assets.length == 0
+    }
+
+    func is_not_overfull(self) -> Bool {
+        self.assets.length <= AssetGroup::MAX_SIZE
+    }
+
+    func nothing_spent() -> Bool {
+        tx.inputs.all((input: TxInput) -> Bool {
+            input.address != Addresses::asset
+        })
+    }
+}
+
+/**
+ * This function is used by the portfolio validator
+ */
+func search_for_asset_class(asset_class: AssetClass, group_ptrs: []Int, first_id: Int) -> Bool {
+    ref_inputs = tx.ref_inputs;
+
+    (_, found: Bool) = group_ptrs.fold2((expected_id: Int, found: Bool, ptr: Int) -> (Int, Bool) {
+        input = ref_inputs.get(ptr);
+        id = Tokens::parse_assets(input);
+        assert(input.address == Addresses::assets, "asset group not at correct address");
+        assert(id == expected_id, "assets id doesn't match expected id (asset groups not iterated in order)");
+
+        (
+            expected_id+1,
+            if (found) {
+                // no need to loop over the assets in the group
+                true
+            } else {
+                group = input.datum.inline.as[AssetGroup];
+
+                group.assets.fold_lazy((asset: Asset, next: () -> Bool) -> {
+                    if (asset_class == asset.asset_class) {
+                        true
+                    } else {
+                        next()
+                    }
+                }, false)
+            }
+        )
+    }, first_id, false);
+
+    found
+}
+
+/**
+ * This function is used by the portfolio validator
+ */
+func sum_total_asset_value(group_ptrs: []Int, first_id: Int, max_tick: Int) -> (Int, Time) {
+    ref_inputs = tx.ref_inputs;
+
+    (_, tp: Option[Time], dV: Int) = group_ptrs.fold3((expected_id: Int, tp: Option[Time], dV: Int, ptr: Int) -> (Int, Option[Time], Int) {
+        input = ref_inputs.get(ptr);
+        id = Tokens::parse_assets(input);
+        assert(input.address == Addresses::assets, "asset group not at correct address");
+        assert(id == expected_id, "assets id doesn't match expected id (asset groups not iterated in order)");
+
+        group = input.datum.inline.as[AssetGroup];
+
+        (tp: Option[Time], dV: Int) = group.assets.fold2((tp: Option[Time], dV: Int, asset: Asset) -> {
+            assert(asset.count_tick <= max_tick, "asset changed count after reduction start");
+
+            (
+                tp.switch{
+                    None => Option[Time]::Some{asset.price_timestamp},
+                    Some{tp_old} => Option[Time]::Some{if (asset.price_timestamp < tp_old) {asset.price_timestamp} else {tp_old}}
+                },
+                dV + asset.calc_value()
+            )
+        }, tp, dV);
+
+        (
+            expected_id+1,
+            tp,
+            dV
+        )
+    }, first_id, Option[Time]::None, 0);
+
+    /**
+     * Fails if no asset group is referenced
+     */
+    Some{tp_time} = tp_check;
+
+    (tp_time, dV)
+}

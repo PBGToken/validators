@@ -1,0 +1,266 @@
+spending portfolio_validator
+
+import { AssetGroup, search_for_asset_class, sum_total_asset_value } from AssetGroupModule
+import { Config, signed_by_agent, witnessed_by_oracle } from ConfigModule
+import { Portfolio, PortfolioReductionMode } from PortfolioModule
+import { tx } from ScriptContext
+import TokenNames
+import Tokens
+
+enum Action {
+    AddAssetClass
+    RemoveAssetClass
+    UpdatePrices
+    MoveAssets
+    Reset
+    Reduce{
+        group_ptrs: []Int // ref input indices, in the correct order (eg. [ptr<assets 4>, ptr<assets 5>, ptr<assets 6>])
+    }
+    AddOrRemoveAssetGroup // ignored, but included here for completeness
+}
+
+func validate_add_asset_group(portfolio0: Portfolio, portfolio1: Portfolio, added_id: Int) -> Bool {
+    added_group = AssetGroup::find_output(added_id);
+        
+    AssetGroup::nothing_spent()
+    && portfolio0.reduction.is_idle()
+    && portfolio1.reduction.is_idle()
+    && portfolio1.n_groups == added_id
+    && portfolio1.n_groups == portfolio0.n_groups + 1
+    && added_group.is_empty()
+}
+
+func validate_remove_asset_group(portfolio0: Portfolio, portfolio1: Portfolio, removed_id: Int) -> Bool {
+    removed_group = AssetGroup::find_single_input(removed_id);
+                    
+    portfolio0.reduction.is_idle()
+    && portfolio1.reduction.is_idle()
+    && portfolio0.n_groups == removed_id
+    && portfolio1.n_groups == portfolio0.n_groups - 1
+    && removed_group.is_empty()
+}
+
+
+func validate_start_reduction(
+    ig1: Int, kp1: Int, mode1: PortfolioReductionMode,
+    group_ptrs: []Int
+) -> Bool {
+    supply = Supply::find_ref();
+    n_groups = group_ptrs.length;
+
+    AssetGroup::nothing_spent()
+    && kp1 == supply.tick
+    && mode1.switch{
+        TotalAssetValue{V1, tp1} => {
+            (tp_oldest: Time, dV: Int) = sum_total_asset_value(group_ptrs, 1, kp1);
+
+            V1 == dV
+            && tp1 == tp_oldest
+            && ig1 == n_groups
+        },
+        Exists{asset_class, found1} => {
+            found = search_for_asset_class(asset_class, group_ptrs, 1);
+
+            ig1 == n_groups
+            && found1 == found
+        },
+        DoesNotExist{asset_class} => {
+            found = search_for_asset_class(asset_class, group_ptrs, 1);
+
+            ig1 == n_groups
+            && !found
+        }
+    }
+}
+
+func validate_continue_reduction(
+    ig0: Int, kp0: Int, mode0: PortfolioReductionMode,
+    ig1: Int, kp1: Int, mode1: PortfolioReductionMode,
+    group_ptrs: []Int
+) -> Bool {
+    n_groups = group_ptrs.length;
+    next_id = ig0+1;
+
+    AssetGroup::nothing_spent()
+    && kp1 == kp0
+    && (mode0, mode1).switch{
+        (TotalAssetValue{V0, tp0}, TotalAssetValue{V1, tp1}) => {
+            (tp_oldest: Time, dV: Int) = sum_total_asset_value(group_ptrs, next_id, kp1);
+
+            V1 == V0 + dV
+            && tp1 == if (tp_oldest < tp0) {tp_oldest} else {tp0}
+            && ig1 == ig0 + n_groups
+
+        },
+        (Exists{asset_class0, found0}, Exists{asset_class1, found1}) => {
+            found = search_for_asset_class(asset_class, group_ptrs, next_id);
+
+            asset_class0 == asset_class1
+            && ig1 == ig0 + n_groups
+            && found1 == (found0 || found)
+        },
+        (DoesNotExist{asset_class0}, DoesNotExist{asset_class1}) => {
+            found = search_for_asset_class(asset_class, group_ptrs, next_id);
+
+            asset_class0 == asset_class1
+            && ig1 == ig0 + n_groups
+            && !found
+        },
+        else => false
+    }
+}
+
+func validate_add_asset_class(config0: Config, config_is_spent: Bool, portfolio0: Portfolio, portfolio1: Portfolio) -> Bool {
+    (id: Int, group0: AssetGroup) = AssetGroup::find_single_input();
+    group1 = AssetGroup::find_output(id);
+
+    DoesNotExist{asset_class} = portfolio0.get_reduction_result();
+    AddingAssetClass{expected_asset_class} = config0.state.get_proposal();
+
+    group1.assets == group0.assets.append(Asset::new(asset_class))
+    && group1.is_not_overfull()
+    && asset_class == expected_asset_class
+    && config_is_spent
+    && Tokens::nothing_minted()
+}
+
+func validate_remove_asset_class(config0: Config, config_is_spent: Bool, portfolio0: Portfolio, portfolio1: Portfolio) -> Bool {
+    (id: Int, group0: AssetGroup) = AssetGroup::find_single_input();
+    group1 = AssetGroup::find_output(id);
+
+    Exists{asset_class, found} = portfolio0.get_reduction_result();
+    RemovingAssetClass{expected_asset_class} = config0.state.get_proposal();
+    
+    asset = group0.assets.filter((asset: Asset) -> {
+        asset.asset_class == asset_class
+    }).get_singleton();
+
+    found
+    && asset.count == 0
+    && group1.assets == group0.assets.filter((asset: Asset) -> {asset.asset_class != asset_class})
+    && asset_class == expected_asset_class
+    && config_is_spent
+    && Tokens::nothing_minted()
+}
+
+func validate_update_prices(portfolio0: Portfolio) -> Bool {
+    portfolio0.reduction.is_idle()
+    && witnessed_by_oracle()
+    && tx.inputs.all((input: TxInput) -> {
+        if (input.address == Addresses::assets) {
+            id = Tokens::parse_assets(input);
+
+            group0 = input.datum.inline.as[AssetGroup];
+            group1 = AssetGroup::find_output(id);
+
+            // zip() fails of the first and second list don't have the same length
+            group0.assets.zip(group1.assets).all((asset0: Asset, asset1: Asset) -> {
+                asset1.asset_class == asset0.asset_class
+                && asset1.count == asset0.count
+                && asset1.count_tick == asset0.count_tick
+            })
+        } else {
+            true
+        }
+    })
+}
+
+func validate_move_assets(portfolio0: Portfolio) -> Bool {
+    /**
+     * Each asset class in inputs must also be found in outputs
+     */
+    n_assets_in_inputs = tx.inputs.fold((n_assets: Int, input: TxInput) -> {
+        if (input.address == Addresses::assets) {
+            assert(Tokens::contains_only_any_assets(input), "doesn't contain only 1 assets token");
+
+            group = input.datum.inline.as[AssetGroup];
+
+            group.assets.fold((n_assets: Int, asset0: Asset) -> {
+                // look for asset somewhere in output
+                asset1 = AssetGroup::find_output_asset(asset0.asset_class);
+
+                // asset can only move, but content can't change
+                assert(asset1 == asset0, "asset can't change");
+
+                n_assets + 1
+            }, n_assets)
+        } else {
+            n_assets
+        }
+    }, 0);
+
+    /**
+     * Each asset class in outputs must also be found in inputs
+     */
+    n_assets_in_outputs = tx.outputs.fold((n_assets: Int, output: TxInput) -> {
+        if (output.address == Addresses::assets) {
+            assert(Tokens::contains_only_any_assets(output), "doesn't contain only 1 assets token");
+            
+            group = output.datum.inline.as[AssetGroup];
+
+            assert(group.is_not_overfull(), "output assetgroup is overfull");
+
+            group.assets.fold((n_assets: Int, asset1: Asset) -> {
+                // look for asset somewhere in output
+                asset0 = AssetGroup::find_input_asset(asset1.asset_class);
+
+                assert(asset0 == asset1, "asset can't change");
+
+                n_assets + 1
+            }, n_assets)
+        } else {
+            n_assets
+        }
+    }, 0);
+
+    portfolio0.reduction.is_idle()
+    && n_assets_in_inputs == n_assets_in_outputs
+}
+
+func validate_reset_reduction(portfolio0: Portfolio) -> Bool {
+    !portfolio0.reduction.is_idle()
+    && AssetGroup::nothing_spent()
+}
+
+func main(_: Portfolio, action: Action) -> Bool {
+    (config0: Config, config_is_spent: Bool) = Config::find();
+    (portfolio0: Portfolio, portfolio1: Portfolio) = Portfolio::find_thread();
+    minted_tokens = Tokens::get_minted();
+    
+    signed_by_agent()
+    && if (!minted_tokens.is_empty()) {
+        assert(minted_tokens.length == 1, "only a single asset counter can be minted or burned");
+        (token_name: ByteArray, qty: Int) = minted_tokens.head;
+        Some{id} = TokenNames::parse_assets(token_name);
+
+        if (qty == 1) {
+            validate_add_asset_group(portfolio0, portfolio1, id)
+        } else if (qty == -1) {
+            validate_remove_asset_group(portfolio0, portfolio1, id)
+        } else {
+            false
+        }
+    } else {
+        portfolio1.n_groups == portfolio0.n_groups
+        && (portfolio0.reduction, portfolio1.reduction).switch{
+            (Idle, Reducing{ig1, kp1, mode1}) => {
+                Reduce{ptrs} = action;
+                validate_start_reduction(ig1, kp1, mode1, ptrs)
+            },
+            (Reducing{ig0, kp0, mode0}, Reducing{ig1, kp1, mode1}) => {
+                Reduce{ptrs} = action;
+                validate_continue_reducing(ig0, kp0, mode0, ig1, kp1, mode1, ptrs)
+            },
+            (_, Idle) => {
+                action.switch{
+                    AddAssetClass => validate_add_asset_class(config0, config_is_spent, portfolio0, portfolio1),
+                    RemoveAssetClass => validate_remove_asset_class(config0, config_is_spent, portfolio0, portfolio1),
+                    UpdatePrices => validate_update_price(portfolio0),
+                    MoveAssets => validate_move_assets(portfolio0),
+                    Reset => validate_reset_reduction(portfolio0),
+                    else => error("invalid action during Idle state")
+                }
+            }
+        }
+    }
+}

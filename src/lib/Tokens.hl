@@ -1,0 +1,188 @@
+module Tokens
+
+import { current_script, tx } from ScriptContext
+import TokenNames
+
+const direct_policy = MintingPolicyHash::from_script_hash(Scripts::fund_policy)
+
+// as a function because it can fail
+func indirect_policy() -> MintingPolicyHash {
+    input = tx.get_current_input();
+    
+    // ignores ADA
+    input.value.get_singleton_asset_class().mph // this is why it is important that these UTxOs only contain a single policy
+}
+
+const policy: MintingPolicyHash = current_script.switch{
+    fund_policy => direct_policy,
+    mint_order_validator => direct_policy,
+    burn_order_validator => direct_policy,
+    supply_validator => indirect_policy(),
+    assets_validator => indirect_policy(),
+    portfolio_validator => indirect_policy(),
+    price_validator => indirect_policy(),
+    reimbursement_validator => {
+        input = tx.get_current_input();
+        input.value.to_map().delete(MintingPolicyHash::new(#)).get_singleton().first
+    },
+    voucher_validator => indirect_policy(),
+    config_validator => indirect_policy(),
+    metadata_validator => indirect_policy(),
+    oracle_delegate => direct_policy,
+    benchmark_delegate => direct_policy,
+    governance_delegate => direct_policy
+}
+
+const dvp_token: AssetClass = AssetClass::new(policy, TokenNames::dvp_token)
+const metadata:  AssetClass = AssetClass::new(policy, TokenNames::metadata)
+const config:    AssetClass = AssetClass::new(policy, TokenNames::config)
+const portfolio: AssetClass = AssetClass::new(policy, TokenNames::portfolio)
+const price:     AssetClass = AssetClass::new(policy, TokenNames::price)
+const supply:    AssetClass = AssetClass::new(policy, TokenNames::supply)
+
+func reimbursement(id: Int) -> AssetClass {
+    AssetClass::new(policy, TokenNames::reimbursement(id))
+}
+
+func voucher_ref_token(id: Int) -> AssetClass {
+    AssetClass::new(policy, TokenNames::voucher_reference(id))
+}
+
+func voucher_user_nft(id: Int) -> AssetClass {
+    AssetClass::new(policy, TokenNames::voucher_user_nft(id))
+}
+
+func get_minted() -> Map[ByteArray]Int {
+    tx.minted.get_policy(policy)
+}
+
+func contains[V: Valuable](v: V, asset_class: AssetClass) -> Bool {
+    v.value.get_safe(asset_class) > 0
+} 
+
+func contains_assets[V: Valuable](v: V, id: Int) -> Bool {
+    contains(v, assets(id))
+}
+
+func contains_metadata[V: Valuable](v: V) -> Bool {
+    contains(v, metadata)
+}
+
+func contains_portfolio[V: Valuable](v: V) -> Bool {
+    contains(v, portfolio)
+}
+
+func contains_price[V: Valuable](v: V) -> Bool {
+    contains(v, price)
+}
+
+func contains_reimbursement(id: Int) -> [V: Valuable](v: V) -> Bool {
+    [V: Valuable](v: V) -> {
+        contains(v, reimbursement(id))
+    }
+}
+
+func contains_supply[V: Valuable](v: V) -> Bool {
+    contains(v, supply)
+}
+
+func contains_voucher_ref[V: Valuable](v: V, id: Int) -> Bool {
+    contains(v, voucher_ref_token(id))
+}
+
+// being able to retrieve a specific DVP policy depends on state UTxOs only contain a single policy type
+func contains_only[V: Valuable](v: V, asset_class: AssetClass) -> Bool {
+    v.value.remove_lovelace() == Value::new(asset_class, 1)
+}
+
+
+func contains_only_assets[V: Valuable](v: V, id: Int) -> Bool {
+    contains_only(v, assets(id))
+}
+
+func contains_only_metadata[V: Valuable](v: V) -> Bool {
+    contains_only(v, metadata)
+}
+
+func contains_only_portfolio[V: Valuable](v: V) -> Bool {
+    contains_only(v, portfolio)
+}
+
+func contains_only_price[V: Valuable](v: V) -> Bool {
+    contains_only(v, price)
+}
+
+func contains_only_reimbursement[V: Valuable](v: V, id: Int) -> Bool {
+    contains_only(v, reimbursement(id))
+}
+
+func contains_only_supply[V: Valuable](v: V) -> Bool {
+    contains_only(v, supply)
+}
+
+func contains_only_voucher_ref[V: Valuable](v: V, id: Int) -> Bool {
+    contains_only(v, voucher_ref_token(id))
+}
+
+func contains_only_any_assets[V: Valuable](v: V) -> Bool {
+    tokens = v.value.get_policy(policy);
+
+    if (tokens.length != 1) {
+        false
+    } else {
+        (token_name: ByteArray, qty: Int) = tokens.head;
+
+        if (qty != 1) {
+            "expected only 1 assets token"
+        } else {
+            TokenNames::parse_assets(token_name).switch{
+                Some => true,
+                None => false
+            }
+        }
+    }
+}
+
+/**
+ * Throws an error if the value contains other tokens
+ */
+func parse_assets[V: Valuable](v: V) -> Int {
+    tokens = v.value.get_policy(policy);
+
+    assert(tokens.length == 1, "can only contain one assets token");
+
+    (token_name: ByteArray, qty: Int) = tokens.head;
+
+    assert(qty == 1, "expected only 1 assets token");
+
+    Some{id} = TokenNames::parse_assets(token_name);
+
+    id
+}
+
+func parse_voucher_ref[V: Valuable](v: V) -> Int {
+    tokens = v.value.get_policy(policy);
+
+    assert(tokens.length == 1, "can only contain one voucher ref token");
+
+    (token_name: ByteArray, qty: Int) = tokens.head;
+
+    assert(qty == 1, "expected only 1 voucher ref token");
+
+    Some{id} = TokenNames::parse_voucher_ref(token_name);
+
+    id
+}
+
+func nothing_minted() -> Bool {
+    get_minted().is_empty()
+}
+
+func minted_only_dvp_tokens() -> Bool {
+    tokens = get_minted();
+
+    tokens.length <= 1
+    && tokens.all_keys((token_name: ByteArray) -> {
+        token_name == TokenNames::dvp_token
+    })
+}

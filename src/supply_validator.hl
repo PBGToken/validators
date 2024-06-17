@@ -1,34 +1,150 @@
 spending supply_validator
 
+import { AssetPtr } from AssetPtrModule
+import { Config, ConfigChangeProposal, signed_by_agent } from ConfigModule
+import { Price } from PriceModule
+import { tx } from ScriptContext
+import { Supply } from SupplyModule
+import TokenNames
 import Tokens
+import Vault
+import { validate_burned_vouchers, validate_minted_vouchers } from VoucherModule
 
-import { Config, signed_by_agent } from mConfig
-import { Price } from mPrice
-import { Supply } from mSupply
+func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> Bool {
+    price = Price::find_ref();
 
-func main(_: Supply, _, ctx: ScriptContext) -> Bool {
-    tx = ctx.tx;
-    
-    // use get_thread for the input as well because it performs some validity checks
-    (supply0: Supply, supply1: Supply) = Supply::get_thread();
-    tokens_minted = tx.minted.get_policy(Tokens::policy);
+    end_price = price.relative_to_benchmark();
+    Dalpha = supply0.calc_success_fee_dilution(end_price);
+    reimbursement = Reimbursement::find_output(supply0.period_id(), Dalpha);
+    (config0: Config, is_updated: Bool) = Config::find();
+    tokens_minted = Tokens::get_minted();
 
-    D = tokens_minted.get(TokenNames::dvp_token);
-    N0 = supply0.n_tokens;
-    N1 = supply1.n_tokens;
+    D == Dalpha
+    && D >= 0
+    && price.is_not_expired()
+    && supply1.success_fee.start_time == supply0.success_fee.start_time + supply0.success_fee.period
+    && supply1.success_fee.period_id == supply0.period_id + 1
+    && supply1.n_vouchers == 0
+    && supply1.n_lovelace == supply0.n_lovelace
+    && supply1.management_fee_timestamp == supply0.management_fee_timestamp
+    && reimbursement.n_remaining_vouchers == supply0.n_vouchers
+    && reimbursement.start_price == supply0.success_fee.start_price
+    && reimbursement.end_price == end_price
+    && if (is_updated) {
+        ConfigChangeProposal::UpdatingSuccessFee{period, _, _} = config0.state;
 
-    ttx1 = tx.time_range.end;
+        config1 = Config::find_output();
+        new_price = config1.fees.success_fee.get_benchmark_price(price.value);
+
+        supply1.success_fee.start_price == new_price
+        && supply1.success_fee.period == period
+    } else {
+        config0.state.switch{
+            UpdatingSuccessFee => error("config must be spent"),
+            else => {
+                supply1.success_fee.start_price == end_price
+                && supply1.success_fee.period == supply0.success_fee.period
+            }
+        }
+    }
+    && tokens_minted.all((token_name: ByteArray, qty: Int) -> {
+        token_name == TokenNames::dvp_token
+        || (token_name == TokenNames::reimbursement(supply0.success_fee.period_id) && qty == 1)
+    })
+    && Vault::nothing_spent()
+}
+
+func validate_reward_management(supply0: Supply, supply1: Supply, D: Int) -> Bool {
+    Dmgmt = supply0.calc_management_fee_dilution();
+
+    D <= Dmgmt
+    && D >= 0
+    && supply0.management_fee_timestamp <= tx.time_range.start - config.fees.management_fee.period
+    && supply1.management_fee_timestamp >= tx.time_range.end
+    && supply1.management_fee_timestamp < tx.time_range.end + config.fees.management_fee.period
+    && supply1.n_vouchers == supply0.n_vouchers
+    && supply1.n_lovelace == supply0.n_lovelace
+    && supply1.success_fee == supply0.success_fee
+    && Tokens::minted_only_dvp_tokens()
+    && Vault::nothing_spent()
+}
+
+func validate_mint_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: []AssetPtr) -> Bool {
+    price = Price::find_ref();
+    config = Config::find_ref();
+    dV = Vault::diff_lovelace(ptrs);
+
+    // validate_minted_vouchers() also asserts no other token types are minted
+    n_vouchers_minted = validate_minted_vouchers(
+        price.relative_to_benchmark(), 
+        supply0.period_id()
+    );
+
+    price.is_not_expired()
+    && dV >= (price.value * D).floor()
+    && supply1.n_tokens <= config.token.max_supply;
+    && supply1.n_vouchers == supply0.n_vouchers + n_vouchers_minted
+    && supply1.management_fee_timestamp == supply0.management_fee_timestamp
+    && supply1.success_fee == supply0.success_fee
+    && Vault::counters_are_consistent(
+        supply1.n_lovelace - supply0.n_lovelace, 
+        supply1.tick
+    )
+}
+
+func validate_burn_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: []AssetPtr) -> Bool {
+    price = Price::find_ref();
+    dV = Vault::diff_lovelace(ptrs);
+
+    n_vouchers_burned = validate_burned_vouchers(
+        supply0.period_id()
+    );
+
+    price.is_not_expired()
+    && dV >= (price.value * D).floor()
+    && supply1.n_vouchers == supply0.n_vouchers - n_vouchers_burned
+    && supply1.management_fee_timestamp == supply0.management_fee_timestamp
+    && supply1.success_fee == supply0.success_fee
+    && Vault::counters_are_consistent(
+        supply1.n_lovelace - supply0.n_lovelace,
+        supply1.tick
+    )
+}
+
+func validate_swap(supply0: Supply, supply1: Supply, ptrs: []AssetPtr) -> Bool {
+    dV = Vault::diff_lovelace(ptrs);
+
+    dV >= 0
+    && supply1.n_vouchers == supply0.n_vouchers
+    && supply1.management_fee_timestamp == supply0.management_fee_timestamp
+    && supply1.success_fee == supply0.success_fee
+    && Tokens::nothing_minted()
+    && Vault::counters_are_consistent(
+        supply1.n_lovelace - supply0.n_lovelace,
+        supply1.tick
+    )
+}
+
+func main(_: Supply, ptrs: []AssetPtr) -> Bool {
+    // supply0 is taken from Supply::find_thread() instead of from the current datum because this function performs more validity checks
+    (supply0: Supply, supply1: Supply) = Supply::find_thread();
+    tokens_minted = Tokens::get_minted();
+
+    D = tokens_minted.get_safe(TokenNames::dvp_token);
 
     signed_by_agent()
-    && N1 == N0 + D
-    && if (tx.time_range.end > supply0.period_end) {
-        // reward success fee
-
-        Dalpha = supply0.calc_max_success_dilution();
-
-        N1 <= N0 + Dalpha
-        && N1 >= N0
-        && supply1.success_period_start >= tx.time_range.end
-        && price.is_not_expired()
+    && supply1.tick == supply0.tick + 1
+    && supply1.n_tokens == supply0.n_tokens + D
+    && tx.time_range.end - tx.time_range.start < Duration::DAY
+    && if (tx.time_range.end > supply0.period_end()) {
+        validate_reward_success(supply0, supply1, D)
+    } else if (supply1.management_fee_timestamp != supply0.management_fee_timestamp) {
+        validate_reward_management(supply0, supply1, D)
+    } else if (D > 0) {
+        validate_mint_user_tokens(supply0, supply1, D, ptrs)
+    } else if (D < 0) {
+        validate_burn_user_tokens(supply0, supply1, D, ptrs)
+    } else {
+        validate_swap(supply0, supply1, ptrs)
     }
 }
