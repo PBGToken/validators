@@ -27,7 +27,7 @@ struct Voucher {
     func find_output(id: Int) -> Voucher {
         output = tx.outputs.find((output: TxOutput) -> {
             output.address == Addresses::voucher
-            && Tokens::contains_only_voucher_ref(id)
+            && Tokens::contains_only_voucher_ref(output, id)
         });
 
         output.datum.inline.as[Voucher]
@@ -44,11 +44,12 @@ struct Voucher {
 /**
  * Returns the total number of tokens mentioned in the vouchers
  * Asserts that token_name is either dvp token or voucher
+ * Assets that each minted voucher has a unique id
  */
-func validate_minted_vouchers(price: Ratio, period_id: Int) -> Int {
+func validate_minted_vouchers(price: Ratio, period_id: Int, n_vouchers_0: Int) -> Int {
     tokens_minted = Tokens::get_minted();
 
-    tokens_minted.fold((n_vouchers: Int, token_name: ByteArray, qty: Int) -> {
+    n_vouchers_minted = tokens_minted.fold((n_vouchers: Int, token_name: ByteArray, qty: Int) -> {
         if (token_name == TokenNames::dvp_token) {
             n_vouchers
         } else {
@@ -59,7 +60,7 @@ func validate_minted_vouchers(price: Ratio, period_id: Int) -> Int {
                     // assure the user nft is minted
                     assert(tokens_minted.get(Tokens::voucher_user_nft(id)) == 1, "not exactly one user nft minted");
     
-                    voucher = Voucher::get_output(id);
+                    voucher = Voucher::find_output(id);
 
                     // return_address and return_datum are checked by the mint_order_validator
                     assert(
@@ -82,7 +83,20 @@ func validate_minted_vouchers(price: Ratio, period_id: Int) -> Int {
                 }
             }
         }
-    }, 0)
+    }, 0);
+
+    // assert each voucher has a unique id
+    last_voucher_id = tx.outputs.fold((prev_id: Int, output: TxOutput) -> {
+        if (output.address == Addresses::voucher) {
+            id = prev_id + 1;
+            assert(Tokens::contains_only_voucher_ref(output, id), "voucher doesn't have expected id");
+            id
+        } else {
+            prev_id
+        }
+    }, last_voucher_id);
+
+    (n_vouchers_minted, last_voucher_id)
 }
 
 /**

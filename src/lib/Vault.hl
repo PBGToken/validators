@@ -16,8 +16,10 @@ func nothing_spent() -> Bool {
     })
 }
 
-// positive: vault increases in value
-// negative: vault decreases in value
+/**
+ * Positive entries in the returned Value mean the vault increases in that asset class
+ * Negative entries in the returned Value mean the vault decreases in that asset class
+ */
 func diff() -> Value {
     addr = Addresses::vault;
 
@@ -31,10 +33,14 @@ func diff() -> Value {
         }
     }, Value::ZERO);
 
-    // vault inputs are transaction outputs and must match the address and datum exactly
+    // vault inputs are transaction outputs that must match the address and datum exactly, and can only contain a single asset class in addition to ADA
     //  (be as restrictive as possible when sending UTxOs to the vault)
     in = tx.outputs.fold((prev: Value, output: TxOutput) -> {
-        if (output.address == addr && output.datum.inline.as[ByteArray] == VAULT_DATUM) {
+        if (
+            output.address == addr 
+            && output.datum.inline.as[ByteArray] == VAULT_DATUM 
+            && output.value.remove_lovelace().flatten().length == 1
+        ) {
             prev + output.value
         } else {
             prev

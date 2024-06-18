@@ -21,9 +21,11 @@ func apply_internal(self, alpha: Real, sigma: Real, c: Real, next: []SuccessFeeS
 func is_valid_internal(sigma: Real, c: Real, next: []SuccessFeeStep) -> Bool {
     if (sigma < 1.0) {
         false
+    } else if (sigma > 10.0) { // sigma_max of 10 is a reasonable upper limit
+        false
     } else if (c < 0.0) {
         false
-    } else if (c >= 1.0) {
+    } else if (c > 1.0) {
         false
     } else if (next.is_empty()) {
         true

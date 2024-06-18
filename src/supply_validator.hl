@@ -24,6 +24,7 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> Bool {
     && price.is_not_expired()
     && supply1.success_fee.start_time == supply0.success_fee.start_time + supply0.success_fee.period
     && supply1.success_fee.period_id == supply0.period_id + 1
+    && supply1.last_voucher_id == 0
     && supply1.n_vouchers == 0
     && supply1.n_lovelace == supply0.n_lovelace
     && supply1.management_fee_timestamp == supply0.management_fee_timestamp
@@ -63,6 +64,7 @@ func validate_reward_management(supply0: Supply, supply1: Supply, D: Int) -> Boo
     && supply1.management_fee_timestamp >= tx.time_range.end
     && supply1.management_fee_timestamp < tx.time_range.end + config.fees.management_fee.period
     && supply1.n_vouchers == supply0.n_vouchers
+    && supply1.last_voucher_id == supply0.last_voucher_id
     && supply1.n_lovelace == supply0.n_lovelace
     && supply1.success_fee == supply0.success_fee
     && Tokens::minted_only_dvp_tokens()
@@ -75,15 +77,17 @@ func validate_mint_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: [
     dV = Vault::diff_lovelace(ptrs);
 
     // validate_minted_vouchers() also asserts no other token types are minted
-    n_vouchers_minted = validate_minted_vouchers(
+    (n_vouchers_minted: Int, last_voucher_id: Int) = validate_minted_vouchers(
         price.relative_to_benchmark(), 
-        supply0.period_id()
+        supply0.period_id(),
+        supply0.last_voucher_id
     );
 
     price.is_not_expired()
     && dV >= (price.value * D).floor()
     && supply1.n_tokens <= config.token.max_supply;
     && supply1.n_vouchers == supply0.n_vouchers + n_vouchers_minted
+    && supply1.last_voucher_id == last_voucher_id
     && supply1.management_fee_timestamp == supply0.management_fee_timestamp
     && supply1.success_fee == supply0.success_fee
     && Vault::counters_are_consistent(
@@ -103,6 +107,7 @@ func validate_burn_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: [
     price.is_not_expired()
     && dV >= (price.value * D).floor()
     && supply1.n_vouchers == supply0.n_vouchers - n_vouchers_burned
+    && supply1.last_voucher_id == supply0.last_voucher_id
     && supply1.management_fee_timestamp == supply0.management_fee_timestamp
     && supply1.success_fee == supply0.success_fee
     && Vault::counters_are_consistent(
@@ -116,6 +121,7 @@ func validate_swap(supply0: Supply, supply1: Supply, ptrs: []AssetPtr) -> Bool {
 
     dV >= 0
     && supply1.n_vouchers == supply0.n_vouchers
+    && supply1.last_voucher_id == supply0.last_voucher_id
     && supply1.management_fee_timestamp == supply0.management_fee_timestamp
     && supply1.success_fee == supply0.success_fee
     && Tokens::nothing_minted()

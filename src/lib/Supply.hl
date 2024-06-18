@@ -16,6 +16,7 @@ struct Supply {
     tick: Int
     n_tokens: Int
     n_vouchers: Int
+    last_voucher_id: Int
     n_lovelace: Int
     management_fee_timestamp: Time
     success_fee: SuccessFeeState

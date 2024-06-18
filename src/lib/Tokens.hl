@@ -95,7 +95,6 @@ func contains_only[V: Valuable](v: V, asset_class: AssetClass) -> Bool {
     v.value.remove_lovelace() == Value::new(asset_class, 1)
 }
 
-
 func contains_only_assets[V: Valuable](v: V, id: Int) -> Bool {
     contains_only(v, assets(id))
 }
