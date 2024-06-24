@@ -1,16 +1,16 @@
-module mConfig
+module ConfigModule
 
-import { current_script, tx } from ScriptContext
 import Addresses
-import Tokens
+import { current_script, tx } from ScriptContext
 import { SuccessFee } from SuccessFeeModule
+import Tokens
 
 // defined here so we can use to determine sane upper bounds for minimum mint and burn fees
 const INITIAL_PRICE: Ratio = Ratio::new(100, 1)
 
 struct MintFeeConfig {
     relative: Real
-    minimum: Int
+    minimum:  Int
 
     // the result is a fraction of n
     func apply(self, n: Int) -> Int {
@@ -24,7 +24,7 @@ struct MintFeeConfig {
 
 struct BurnFeeConfig {
     relative: Real
-    minimum: Int
+    minimum:  Int
 
     // the result is a fraction of n
     func apply(self, n: Int) -> Int {
@@ -38,14 +38,18 @@ struct BurnFeeConfig {
 
 struct ManagementFeeConfig {
     relative: Real
-    period: Duration
+    period:   Duration
 }
 
 struct SuccessFeeConfig {
-    fee: SuccessFee
+    fee:       SuccessFee
     benchmark: StakingValidatorHash
 
-    func get_benchmark_price(self, lovelace_price: Ratio, benchmark: StakingValidatorHash = self.benchmark) -> Ratio {
+    func get_benchmark_price(
+        self, 
+        lovelace_price: Ratio, 
+        benchmark: StakingValidatorHash = self.benchmark
+    ) -> Ratio {
         benchmark_price = tx.redeemers.get(ScriptPurpose::new_rewarding(StakingCredential::new_hash(StakingHash::new_validator(benchmark)))).as[Ratio];
 
         lovelace_price*benchmark_price
@@ -53,14 +57,14 @@ struct SuccessFeeConfig {
 }
 
 struct FeesConfig {
-    mint_fee: MintFeeConfig
-    burn_fee: BurnFeeConfig
+    mint_fee:       MintFeeConfig
+    burn_fee:       BurnFeeConfig
     management_fee: ManagementFeeConfig
-    success_fee: SuccessFeeConfig
+    success_fee:    SuccessFeeConfig
 }
 
 struct TokenConfig {
-    max_supply: Int
+    max_supply:    Int
     max_price_age: Duration
 }
 
@@ -77,9 +81,9 @@ enum ConfigChangeProposal {
         asset_class: AssetClass
     }
     UpdatingSuccessFee {
-        period: Duration
+        period:    Duration
         benchmark: StakingValidatorHash
-        fee: SuccessFee
+        fee:       SuccessFee
     }
     IncreasingMaxTokenSupply {
         max_supply: Int
@@ -91,20 +95,20 @@ enum ConfigChangeProposal {
         oracle: StakingValidatorHash
     }
     ChangingGovernance {
-        delegate: StakingValidatorHash
+        delegate:     StakingValidatorHash
         update_delay: Duration
     }
     ChangingMintFee {
         relative: Real
-        minimum: Int
+        minimum:  Int
     }
     ChangingBurnFee {
         relative: Real
-        minimum: Int
+        minimum:  Int
     }
     ChangingManagementFee {
         relative: Real
-        period: Duration
+        period:   Duration
     }
     ChangingMaxPriceAge {
         max_price_age: Duration
@@ -141,26 +145,26 @@ enum ConfigState {
 
 // first fields are used more often than last fields
 struct Config {
-    agent: PubKeyHash
-    fees: FeesConfig
-    token: TokenConfig
-    oracle: StakingValidatorHash
+    agent:      PubKeyHash
+    fees:       FeesConfig
+    token:      TokenConfig
+    oracle:     StakingValidatorHash
     governance: GovernanceConfig
-    state: ConfigState
+    state:      ConfigState
 
     func find() -> (Config, Bool) {
-        (input: TxInput, is_spent: Bool) = current_script.switch{
+        (input, is_spent) = current_script.switch{
             config_validator => (tx.get_current_input(), true),
-            mint_order_validator => tx.get_ref_input_at(Addresses::config),
-            burn_order_validator => tx.get_ref_input_at(Addresses::config),
+            mint_order_validator => (tx.get_ref_input_at(Addresses::config), false),
+            burn_order_validator => (tx.get_ref_input_at(Addresses::config), false),
             else => {
                 ref_input = tx.get_ref_input_at_safe(Addresses::config).switch{
                     Some{ref_input} => (ref_input, false),
                     else => (tx.get_input_at(Addresses::config), true)
-                }
+                };
                 tx.get_any_input_at(Addresses::config)
             }
-        }
+        };
 
         assert(Tokens::contains_config(input), "doesn't contain the config token");
 
@@ -197,7 +201,11 @@ struct Config {
         )
     }
 
-    func get_benchmark_price(self, lovelace_price: Ratio, benchmark: StakingValidatorHash = self.fees.success_fee.benchmark) -> Ratio {
+    func get_benchmark_price(
+        self, 
+        lovelace_price: Ratio, 
+        benchmark: StakingValidatorHash = self.fees.success_fee.benchmark
+    ) -> Ratio {
         self.fees.success_fee.get_benchmark_price(lovelace_price)
     }
 }
@@ -220,11 +228,15 @@ func price_expiry() -> Time {
     tx.time_range.end - config.token.max_price_age
 }
 
-func signed_by_agent(agent: PubKeyHash = Config::find_input().agent) -> Bool {
+func signed_by_agent(
+    agent: PubKeyHash = Config::find_input().agent
+) -> Bool {
     tx.is_signed_by(agent)
 }
 
-func witnessed_by_oracle(oracle: StakingValidatorHash = Config::find_input().oracle) -> Bool {
+func witnessed_by_oracle(
+    oracle: StakingValidatorHash = Config::find_input().oracle
+) -> Bool {
     tx.withdrawals.any((scred: StakingCredential, _) -> {
         scred.switch{
             Hash{h} => {
@@ -238,7 +250,9 @@ func witnessed_by_oracle(oracle: StakingValidatorHash = Config::find_input().ora
     })
 }
 
-func witnessed_by_governance(governance: StakingValidatorHash = Config::find_input().governance.delegate) -> Bool {    
+func witnessed_by_governance(
+    governance: StakingValidatorHash = Config::find_input().governance.delegate
+) -> Bool {    
     tx.withdrawals.any((scred: StakingCredential, _) -> {
         scred.switch{
             Hash{h} => {

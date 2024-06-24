@@ -7,9 +7,9 @@ import Tokens
 
 struct Reimbursement {
     n_remaining_vouchers: Int
-    start_price: Ratio
-    end_price: Ratio
-    success_fee: SuccessFee
+    start_price:          Ratio
+    end_price:            Ratio
+    success_fee:          SuccessFee
 
     func find_input() -> (Int, Reimbursement, Int) {
         input = current_script.switch{
@@ -45,9 +45,8 @@ struct Reimbursement {
     }
 
     func find_thread() -> (Int, Reimbursement, Int, Reimbursement, Int) {
-        (id: Int, r0: Reimbursement, n0: Int) = Reimbursement::find_input();
-
-        (r1: Reimbursement, n1: Int) = Reimbursement::find_output(id, 0);
+        (id, r0, n0) = Reimbursement::find_input();
+        (r1, n1) = Reimbursement::find_output(id, 0);
     
         (id, r0, n0, r1, n1)
     }

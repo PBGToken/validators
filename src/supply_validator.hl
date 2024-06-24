@@ -1,7 +1,7 @@
 spending supply_validator
 
 import { AssetPtr } from AssetPtrModule
-import { Config, ConfigChangeProposal, signed_by_agent } from ConfigModule
+import { Config, signed_by_agent } from ConfigModule
 import { Price } from PriceModule
 import { tx } from ScriptContext
 import { Supply } from SupplyModule
@@ -16,7 +16,7 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> Bool {
     end_price = price.relative_to_benchmark();
     Dalpha = supply0.calc_success_fee_dilution(end_price);
     reimbursement = Reimbursement::find_output(supply0.period_id(), Dalpha);
-    (config0: Config, is_updated: Bool) = Config::find();
+    (config0, is_updated) = Config::find();
     tokens_minted = Tokens::get_minted();
 
     D == Dalpha
@@ -32,7 +32,7 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> Bool {
     && reimbursement.start_price == supply0.success_fee.start_price
     && reimbursement.end_price == end_price
     && if (is_updated) {
-        ConfigChangeProposal::UpdatingSuccessFee{period, _, _} = config0.state;
+        UpdatingSuccessFee{period, _, _} = config0.state;
 
         config1 = Config::find_output();
         new_price = config1.fees.success_fee.get_benchmark_price(price.value);
@@ -77,7 +77,7 @@ func validate_mint_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: [
     dV = Vault::diff_lovelace(ptrs);
 
     // validate_minted_vouchers() also asserts no other token types are minted
-    (n_vouchers_minted: Int, last_voucher_id: Int) = validate_minted_vouchers(
+    (n_vouchers_minted, last_voucher_id) = validate_minted_vouchers(
         price.relative_to_benchmark(), 
         supply0.period_id(),
         supply0.last_voucher_id
@@ -133,7 +133,7 @@ func validate_swap(supply0: Supply, supply1: Supply, ptrs: []AssetPtr) -> Bool {
 
 func main(_: Supply, ptrs: []AssetPtr) -> Bool {
     // supply0 is taken from Supply::find_thread() instead of from the current datum because this function performs more validity checks
-    (supply0: Supply, supply1: Supply) = Supply::find_thread();
+    (supply0, supply1) = Supply::find_thread();
     tokens_minted = Tokens::get_minted();
 
     D = tokens_minted.get_safe(TokenNames::dvp_token);

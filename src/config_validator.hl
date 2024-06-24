@@ -110,7 +110,7 @@ func main(_: Config, _) -> Bool {
             && signed_by_agent(config1.agent)
             && changing.proposal.switch{
                 AddingAssetClass{asset_class} => {
-                    (id: Int, group0: AssetGroup) = AssetGroup::find_single_input();
+                    (id, group0) = AssetGroup::find_single_input();
                     group1 = AssetGroup::find_output(id);
 
                     !group0.has_asset(asset_class)
@@ -118,7 +118,7 @@ func main(_: Config, _) -> Bool {
                     && config1 == config0.copy(state: ConfigState::Idle)
                 },
                 RemovingAssetClass{asset_class} => {
-                    (id: Int, group0: AssetGroup) = AssetGroup::find_single_input();
+                    (id, group0) = AssetGroup::find_single_input();
                     group1 = AssetGroup::find_output(id);
 
                     group0.has_asset(asset_class)

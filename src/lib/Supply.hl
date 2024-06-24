@@ -6,20 +6,20 @@ import { current_script, tx } from ScriptContext
 import Tokens
 
 struct SuccessFeeState {
-    period_id: Int
-    start_time: Time
-    period: Duration
+    period_id:   Int
+    start_time:  Time
+    period:      Duration
     start_price: Ratio
 }
 
 struct Supply {
-    tick: Int
-    n_tokens: Int
-    n_vouchers: Int
-    last_voucher_id: Int
-    n_lovelace: Int
+    tick:                     Int
+    n_tokens:                 Int
+    n_vouchers:               Int
+    last_voucher_id:          Int
+    n_lovelace:               Int
     management_fee_timestamp: Time
-    success_fee: SuccessFeeState
+    success_fee:              SuccessFeeState
 
     func find_input() -> Supply {
         input = current_script.switch{
@@ -31,7 +31,7 @@ struct Supply {
 
                 input
             }
-        }
+        };
 
         input.datum.inline.as[Supply]
     }
@@ -76,9 +76,7 @@ struct Supply {
         config = Config::find_ref();
 
         N = self.n_tokens;
-
         alpha = (end_price/self.success.start_price).to_real();
-
         phi_alpha = config.fees.success_fee.fee.apply(alpha);
 
         // guard against the edge case where phi_alpha is very bad

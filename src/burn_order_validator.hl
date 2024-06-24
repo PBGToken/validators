@@ -29,14 +29,17 @@ func calc_provisional_success_fee(
         TokenNames::has_voucher_nft_prefix(token_name)
     });
 
-    (delta_vouchers: Int, n_voucher_tokens: Int) = vouchers.fold2((delta_vouchers: Int, n_voucher_tokens: Int, token_name: ByteArray, qty: Int) -> {
+    (delta_vouchers, n_voucher_tokens) = vouchers.fold2((delta_vouchers: Int, n_voucher_tokens: Int, token_name: ByteArray, qty: Int) -> {
         voucher_id = TokenNames::parse_voucher_nft(token_name);
+
         assert(qty >= 1, "can't be negative");
+
         voucher_ref_token = Tokens::voucher_reference(voucher_id);
         voucher_ref_input = tx.inputs.find((input: TxInput) -> {
             input.address == Addresses::voucher
             && input.value.get_safe(voucher_ref_token) == 1
         });
+
         voucher = voucher_ref_input.datum.inline.as[Voucher];
 
         alpha_voucher = (benchmark_price/voucher.price).to_real();
@@ -49,6 +52,7 @@ func calc_provisional_success_fee(
     }, 0, 0);
 
     alpha = (benchmark_price/p0).to_real();
+    
     delta_vouchers + ((n_burn - n_voucher_tokens)*config.fees.success_fee.apply(alpha)/alpha).floor()
 }
 

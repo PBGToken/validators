@@ -62,10 +62,7 @@ struct AssetGroup {
             }
         }, Option[Asset]::None);
 
-        result.switch{
-            Some{asset} => asset,
-            None => error("asset not found")
-        }
+        result.unwrap()
     }
 
     /**
@@ -130,9 +127,10 @@ struct AssetGroup {
 func search_for_asset_class(asset_class: AssetClass, group_ptrs: []Int, first_id: Int) -> Bool {
     ref_inputs = tx.ref_inputs;
 
-    (_, found: Bool) = group_ptrs.fold2((expected_id: Int, found: Bool, ptr: Int) -> (Int, Bool) {
+    (_, found) = group_ptrs.fold2((expected_id: Int, found: Bool, ptr: Int) -> (Int, Bool) {
         input = ref_inputs.get(ptr);
         id = Tokens::parse_assets(input);
+
         assert(input.address == Addresses::assets, "asset group not at correct address");
         assert(id == expected_id, "assets id doesn't match expected id (asset groups not iterated in order)");
 
@@ -161,12 +159,13 @@ func search_for_asset_class(asset_class: AssetClass, group_ptrs: []Int, first_id
 /**
  * This function is used by the portfolio validator
  */
-func sum_total_asset_value(group_ptrs: []Int, first_id: Int, max_tick: Int) -> (Int, Time) {
+func sum_total_asset_value(group_ptrs: []Int, first_id: Int, max_tick: Int) -> (Time, Int) {
     ref_inputs = tx.ref_inputs;
 
     (_, tp: Option[Time], dV: Int) = group_ptrs.fold3((expected_id: Int, tp: Option[Time], dV: Int, ptr: Int) -> (Int, Option[Time], Int) {
         input = ref_inputs.get(ptr);
         id = Tokens::parse_assets(input);
+
         assert(input.address == Addresses::assets, "asset group not at correct address");
         assert(id == expected_id, "assets id doesn't match expected id (asset groups not iterated in order)");
 
@@ -191,10 +190,5 @@ func sum_total_asset_value(group_ptrs: []Int, first_id: Int, max_tick: Int) -> (
         )
     }, first_id, Option[Time]::None, 0);
 
-    /**
-     * Fails if no asset group is referenced
-     */
-    Some{tp_time} = tp_check;
-
-    (tp_time, dV)
+    (tp.unwrap(), dV)
 }

@@ -64,13 +64,13 @@ func diff_counted(d_lovelace: Int, expected_tick: Int) -> Value {
             // extract the token
             tokens = input.value.get_policy(Tokens::policy);
 
-            (token_name: ByteArray, qty: Int) = tokens.find((token_name: ByteArray, _) -> Bool {
+            (token_name, qty) = tokens.find((token_name: ByteArray, _) -> Bool {
                 TokenNames::has_assets_prefix(token_name)
             });
 
             assert(qty > 0, "not a positive number of assets tokens");
 
-            Some{id} = TokenNames::parse_assets(token_name);
+            id = TokenNames::parse_assets(token_name).unwrap();
 
             output = tx.outputs.find((output: TxOutput) -> {
                 output.address == Addresses::assets

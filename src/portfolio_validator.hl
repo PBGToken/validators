@@ -52,7 +52,7 @@ func validate_start_reduction(
     && kp1 == supply.tick
     && mode1.switch{
         TotalAssetValue{V1, tp1} => {
-            (tp_oldest: Time, dV: Int) = sum_total_asset_value(group_ptrs, 1, kp1);
+            (tp_oldest, dV) = sum_total_asset_value(group_ptrs, 1, kp1);
 
             V1 == dV
             && tp1 == tp_oldest
@@ -85,7 +85,7 @@ func validate_continue_reduction(
     && kp1 == kp0
     && (mode0, mode1).switch{
         (TotalAssetValue{V0, tp0}, TotalAssetValue{V1, tp1}) => {
-            (tp_oldest: Time, dV: Int) = sum_total_asset_value(group_ptrs, next_id, kp1);
+            (tp_oldest, dV) = sum_total_asset_value(group_ptrs, next_id, kp1);
 
             V1 == V0 + dV
             && tp1 == if (tp_oldest < tp0) {tp_oldest} else {tp0}
@@ -111,7 +111,7 @@ func validate_continue_reduction(
 }
 
 func validate_add_asset_class(config0: Config, config_is_spent: Bool, portfolio0: Portfolio, portfolio1: Portfolio) -> Bool {
-    (id: Int, group0: AssetGroup) = AssetGroup::find_single_input();
+    (id, group0) = AssetGroup::find_single_input();
     group1 = AssetGroup::find_output(id);
 
     DoesNotExist{asset_class} = portfolio0.get_reduction_result();
@@ -125,7 +125,7 @@ func validate_add_asset_class(config0: Config, config_is_spent: Bool, portfolio0
 }
 
 func validate_remove_asset_class(config0: Config, config_is_spent: Bool, portfolio0: Portfolio, portfolio1: Portfolio) -> Bool {
-    (id: Int, group0: AssetGroup) = AssetGroup::find_single_input();
+    (id, group0) = AssetGroup::find_single_input();
     group1 = AssetGroup::find_output(id);
 
     Exists{asset_class, found} = portfolio0.get_reduction_result();
@@ -223,15 +223,15 @@ func validate_reset_reduction(portfolio0: Portfolio) -> Bool {
 }
 
 func main(_: Portfolio, action: Action) -> Bool {
-    (config0: Config, config_is_spent: Bool) = Config::find();
-    (portfolio0: Portfolio, portfolio1: Portfolio) = Portfolio::find_thread();
+    (config0, config_is_spent) = Config::find();
+    (portfolio0, portfolio1) = Portfolio::find_thread();
     minted_tokens = Tokens::get_minted();
     
     signed_by_agent()
     && if (!minted_tokens.is_empty()) {
         assert(minted_tokens.length == 1, "only a single asset counter can be minted or burned");
-        (token_name: ByteArray, qty: Int) = minted_tokens.head;
-        Some{id} = TokenNames::parse_assets(token_name);
+        (token_name, qty) = minted_tokens.head;
+        id = TokenNames::parse_assets(token_name).unwrap();
 
         if (qty == 1) {
             validate_add_asset_group(portfolio0, portfolio1, id)

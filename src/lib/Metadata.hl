@@ -5,12 +5,12 @@ import { tx } from ScriptContext
 import Tokens
 
 struct Metadata {
-    name: String "name"
+    name:        String "name"
     description: String "description"
-    decimals: Int "decimals"
-    ticker: String "ticker"
-    url: String "url"
-    logo: String "logo"
+    decimals:    Int    "decimals"
+    ticker:      String "ticker"
+    url:         String "url"
+    logo:        String "logo"
 
     func find_input() -> Metadata {
         input = tx.inputs.find((input: TxInput) -> {

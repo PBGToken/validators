@@ -18,14 +18,14 @@ enum Redeemer {
 func main(order: MintOrder, redeemer: Redeemer) -> Bool {
     redeemer.switch{
         Cancel => {
-            tx.is_approved_by(order.return_address.credential),
+            tx.is_approved_by(order.return_address.credential)
         },
         Fulfill{ptrs} => {
             price = Price::find_ref();
             supply = Supply::find_input();
 
             n_actual = order.returned_tokens();
-            n_expected = deduct_mint_fee((order.value_lovelace(ptrs) / price.value).floor())
+            n_expected = deduct_mint_fee((order.value_lovelace(ptrs) / price.value).floor());
 
             signed_by_agent()
             && price.is_not_expired(order.price_expiry())

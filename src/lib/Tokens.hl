@@ -14,23 +14,23 @@ func indirect_policy() -> MintingPolicyHash {
 }
 
 const policy: MintingPolicyHash = current_script.switch{
-    fund_policy => direct_policy,
+    fund_policy          => direct_policy,
     mint_order_validator => direct_policy,
     burn_order_validator => direct_policy,
-    supply_validator => indirect_policy(),
-    assets_validator => indirect_policy(),
-    portfolio_validator => indirect_policy(),
-    price_validator => indirect_policy(),
+    supply_validator     => indirect_policy(),
+    assets_validator     => indirect_policy(),
+    portfolio_validator  => indirect_policy(),
+    price_validator      => indirect_policy(),
     reimbursement_validator => {
         input = tx.get_current_input();
         input.value.to_map().delete(MintingPolicyHash::new(#)).get_singleton().first
     },
-    voucher_validator => indirect_policy(),
-    config_validator => indirect_policy(),
-    metadata_validator => indirect_policy(),
-    oracle_delegate => direct_policy,
-    benchmark_delegate => direct_policy,
-    governance_delegate => direct_policy
+    voucher_validator    => indirect_policy(),
+    config_validator     => indirect_policy(),
+    metadata_validator   => indirect_policy(),
+    oracle_delegate      => direct_policy,
+    benchmark_delegate   => direct_policy,
+    governance_delegate  => direct_policy
 }
 
 const dvp_token: AssetClass = AssetClass::new(policy, TokenNames::dvp_token)
@@ -129,10 +129,10 @@ func contains_only_any_assets[V: Valuable](v: V) -> Bool {
     if (tokens.length != 1) {
         false
     } else {
-        (token_name: ByteArray, qty: Int) = tokens.head;
+        (token_name, qty) = tokens.head;
 
         if (qty != 1) {
-            "expected only 1 assets token"
+            error("expected only 1 assets token")
         } else {
             TokenNames::parse_assets(token_name).switch{
                 Some => true,
@@ -150,13 +150,11 @@ func parse_assets[V: Valuable](v: V) -> Int {
 
     assert(tokens.length == 1, "can only contain one assets token");
 
-    (token_name: ByteArray, qty: Int) = tokens.head;
+    (token_name, qty) = tokens.head;
 
     assert(qty == 1, "expected only 1 assets token");
 
-    Some{id} = TokenNames::parse_assets(token_name);
-
-    id
+    TokenNames::parse_assets(token_name).unwrap()
 }
 
 func parse_voucher_ref[V: Valuable](v: V) -> Int {
@@ -164,13 +162,11 @@ func parse_voucher_ref[V: Valuable](v: V) -> Int {
 
     assert(tokens.length == 1, "can only contain one voucher ref token");
 
-    (token_name: ByteArray, qty: Int) = tokens.head;
+    (token_name, qty) = tokens.head;
 
     assert(qty == 1, "expected only 1 voucher ref token");
 
-    Some{id} = TokenNames::parse_voucher_ref(token_name);
-
-    id
+    TokenNames::parse_voucher_ref(token_name).unwrap()
 }
 
 func nothing_minted() -> Bool {

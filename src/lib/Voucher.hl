@@ -73,7 +73,7 @@ func validate_minted_vouchers(price: Ratio, period_id: Int, n_vouchers_0: Int) -
                     n_vouchers + 1
                 },
                 else => {
-                    Some{id} = TokenNames::parse_voucher_user_nft(token_name);
+                    id = TokenNames::parse_voucher_user_nft(token_name).unwrap();
     
                     // make sure the ref token was minted
                     assert(tokens_minted.get(Tokens::voucher_ref_token(id)) == 1, "not exactly one ref token minted");
@@ -89,7 +89,9 @@ func validate_minted_vouchers(price: Ratio, period_id: Int, n_vouchers_0: Int) -
     last_voucher_id = tx.outputs.fold((prev_id: Int, output: TxOutput) -> {
         if (output.address == Addresses::voucher) {
             id = prev_id + 1;
+
             assert(Tokens::contains_only_voucher_ref(output, id), "voucher doesn't have expected id");
+
             id
         } else {
             prev_id
@@ -122,7 +124,7 @@ func validate_burned_vouchers(period_id: Int) -> Int {
                     n_vouchers + 1
                 },
                 else => {
-                    Some{id} = TokenNames::parse_voucher_user_nft(token_name);
+                    id = TokenNames::parse_voucher_user_nft(token_name).unwrap();
 
                     assert(tokens_minted.get(Tokens::voucher_ref_token(id)) == -1, "not exactly one ref token burned");
 

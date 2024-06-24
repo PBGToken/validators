@@ -6,7 +6,7 @@ import Tokens
 import { Voucher } from VoucherModule
 
 func main(_: Voucher, _) -> Bool {
-    (id: Int, voucher: Voucher) = Voucher::get_current();
+    (id, voucher) = Voucher::get_current();
 
     if (tx.minted.get_safe(Tokens::voucher_nft(id)) == -1) {
         signed_by_agent()

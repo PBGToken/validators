@@ -2,7 +2,7 @@ module SuccessFeeModule
 
 struct SuccessFeeStep {
     sigma: Real
-    c: Real
+    c:     Real
 }
 
 func apply_internal(self, alpha: Real, sigma: Real, c: Real, next: []SuccessFeeStep) -> Real {
@@ -11,7 +11,7 @@ func apply_internal(self, alpha: Real, sigma: Real, c: Real, next: []SuccessFeeS
     } else if (next.is_empty()) {
         (alpha - sigma)*c
     } else {
-        {sigma_next, c_next} = next.head;
+        SuccessFeeStep{sigma_next, c_next} = next.head;
         
         (Int::min(alpha, sigma_next) - sigma)*c 
         + apply_internal(alpha, sigma_next, c_next, next.tail)
@@ -41,7 +41,7 @@ func is_valid_internal(sigma: Real, c: Real, next: []SuccessFeeStep) -> Bool {
 }
 
 struct SuccessFee {
-    c0: Real
+    c0:    Real
     steps: []SuccessFeeStep
 
     const MAX_SUCCESS_FEE_STEPS: Int = 10

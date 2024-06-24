@@ -6,7 +6,7 @@ import { current_script, tx } from ScriptContext
 import Tokens
 
 struct Price {
-    value: Ratio
+    value:     Ratio
     timestamp: Time
 
     func find() -> Price {
@@ -60,13 +60,16 @@ struct Price {
         )
     }
 
-    func is_not_expired(self, expiry: Time = price_expiry()) -> Bool {
+    func is_not_expired(
+        self, 
+        expiry: Time = price_expiry()
+    ) -> Bool {
         self.timestamp >= expiry
     }
 
     func relative_to_benchmark(self) -> Ratio {
         config = Config::find();
 
-        config.fees.success_fee.get_benchmark_price(self.value);
+        config.fees.success_fee.get_benchmark_price(self.value)
     }
 }

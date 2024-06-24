@@ -7,12 +7,12 @@ import Tokens
 
 enum PortfolioReductionMode {
     TotalAssetValue {
-        total: Int // in lovelace
+        total:            Int // in lovelace
         oldest_timestamp: Time
     }
     Exists {
         asset_class: AssetClass
-        found: Bool
+        found:       Bool
     }
     DoesNotExist {
         asset_class: AssetClass
@@ -24,7 +24,7 @@ enum PortfolioReduction {
     Reducing {
         group_iter: Int
         start_tick: Int
-        mode: PortfolioReductionMode
+        mode:       PortfolioReductionMode
     }
 
     func is_idle(self) -> Bool {
@@ -52,7 +52,7 @@ struct Portfolio {
     func find_output() -> Portfolio {
         output = tx.outputs.find((output: TxOutput) -> {
             output.address == Addresses::portfolio
-        })
+        });
 
         assert(Tokens::contains_only_portfolio(output), "doesn't contain only the portfolio token");
 

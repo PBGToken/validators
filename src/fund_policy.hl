@@ -1,6 +1,5 @@
 mixed fund_policy
 
-
 import Addresses
 import { 
     AssetsConfig,
@@ -48,12 +47,12 @@ func validate_initial_metadata() -> Bool {
     metadata = Metadata::find_output();
 
     metadata == Metadata{
-        name: "PBG Token",
+        name:        "PBG Token",
         description: "The first DVP",
-        ticker: "PBG",
-        url: "https://pbg.io",
-        decimals: 6,
-        logo: "https://token.pbg.io/logo.png"
+        ticker:      "PBG",
+        url:         "https://pbg.io",
+        decimals:    6,
+        logo:        "https://token.pbg.io/logo.png"
     }
 }
 
@@ -61,29 +60,29 @@ func validate_initial_config() -> Bool {
     config = Config::find_output();
 
     tx.is_signed_by(INITIAL_AGENT)
-    INITIAL_SUCCESS_FEE.is_valid()
+    && INITIAL_SUCCESS_FEE.is_valid()
     && config == Config{
         agent: INITIAL_AGENT,
         fees: FeesConfig{
             mint_fee: MintFeeConfig{
                 relative: 0.005, // 0.5%
-                minimum: 20_000 // 0.02 tokens, equivalent to 2 ADA
+                minimum:  20_000 // 0.02 tokens, equivalent to 2 ADA
             },
             burn_fee: BurnFeeConfig{
                 relative: 0.005, // 0.5%
-                minimum: 20_000 // 0.02 tokens, equivalent to 2 ADA
+                minimum:  20_000 // 0.02 tokens, equivalent to 2 ADA
             },
             management_fee: ManagementFeeConfig{
                 relative: 0.00011, // 0.011% daily, about 4% annually
-                period: Duration::DAY
+                period:   Duration::DAY
             },
             success_fee_config: SuccessFeeConfig{
-                fee: INITIAL_SUCCESS_FEE,
+                fee:       INITIAL_SUCCESS_FEE,
                 benchmark: Scripts::benchmark_delegate
             }
         },
         tokens: TokenConfig{
-            max_supply: 100_000_000_000,
+            max_supply:    100_000_000_000,
             max_price_age: Duration::DAY
         },
         oracle: Scripts::oracle_delegate,
@@ -92,7 +91,7 @@ func validate_initial_config() -> Bool {
         },
         governance: GovernanceConfig{
             update_delay: Duration::WEEK*2,
-            delegate: Scripts::governance_delegate
+            delegate:     Scripts::governance_delegate
         },
         state: ConfigState::None
     }
@@ -102,7 +101,7 @@ func validate_initial_portfolio() -> Bool {
     portfolio = Portfolio::find_output();
 
     portfolio == Portfolio{
-        n_groups: 0,
+        n_groups:  0,
         reduction: PortfolioReduction::Idle
     }
 }
@@ -111,7 +110,7 @@ func validate_initial_price() -> Bool {
     price = Price::find_output();
 
     price == Price{
-        value: Config::INITIAL_PRICE,
+        value:     Config::INITIAL_PRICE,
         timestamp: Time::new(0)
     }
 }
@@ -120,15 +119,15 @@ func validate_initial_supply() -> Bool {
     supply = Supply::find_output();
 
     supply == Supply{
-        tick: INITIAL_TICK,
-        n_tokens: 0,
+        tick:       INITIAL_TICK,
+        n_tokens:   0,
         n_vouchers: 0,
         n_lovelace: 0,
         management_fee_timestamp: Time::new(0),
         success_fee: SuccessFeeState{
-            period_id: 0,
-            start_time: Time::new(0),
-            period: Duration::WEEK*2, // not yet 1 year, so we can test the success fee for a few periods
+            period_id:   0,
+            start_time:  Time::new(0),
+            period:      Duration::WEEK*2, // not yet 1 year, so we can test the success fee for a few periods
             start_price: Config::INITIAL_PRICE
         }
     }

@@ -8,9 +8,9 @@ import Tokens
 
 struct MintOrder {
     return_address: Address
-    return_datum: Data
-    min_tokens: Int
-    max_price_age: Duration
+    return_datum:   Data
+    min_tokens:     Int
+    max_price_age:  Duration
 
     func find_return(self) -> TxOutput {
         tx.outputs.find((output: TxOutput) -> {
@@ -53,14 +53,12 @@ struct MintOrder {
 
     func voucher_id(self) -> Int {
          // check returned voucher
-         (voucher_nft_name: ByteArray, qty: Int) = self.diff().get_policy(Tokens::policy).find((token_name: ByteArray, _) -> {
+         (voucher_nft_name, qty) = self.diff().get_policy(Tokens::policy).find((token_name: ByteArray, _) -> {
             TokenNames::has_voucher_nft_prefix(token_name)
         });
 
         assert(qty >= 1, "expected at least one token");
 
-        Some{voucher_id} = TokenNames::parse_voucher_nft(voucher_nft_name);
-
-        voucher_id
+        TokenNames::parse_voucher_nft(voucher_nft_name).unwrap()
     }
 }

@@ -1,6 +1,8 @@
 module TokenNames
 
-const metadata = Cip67::reference_token_label
+import Cip67
+
+const metadata  = Cip67::reference_token_label
 const dvp_token = Cip67::fungible_token_label
 
 const assets_prefix: ByteArray = "assets ".encode_utf8()
@@ -44,7 +46,7 @@ func reimbursement(id: Int) -> ByteArray {
 
 const supply: ByteArray = "supply".encode_utf8()
 
-const voucher_infix = "voucher ".encode_utf8()
+const voucher_infix: ByteArray = "voucher ".encode_utf8()
 const voucher_ref_prefix: ByteArray = Cip67::reference_token_label + voucher_infix
 const voucher_nft_prefix: ByteArray = Cip67::user_nft_label + voucher_infix
 
