@@ -1,8 +1,8 @@
 mixed fund_policy
 
 import Addresses
-import { 
-    AssetsConfig,
+import {
+    INITIAL_PRICE,
     BurnFeeConfig, 
     Config, 
     ConfigState,
@@ -26,8 +26,8 @@ const SEED_ID: TxOutputId = TxOutputId::new(TxId::new(#), 0)
 const INITIAL_AGENT: PubKeyHash = PubKeyHash::new(#)
 const INITIAL_TICK: Int = 0
 const INITIAL_SUCCESS_FEE: SuccessFee = SuccessFee{
+    c0: 0.0,
     steps: []SuccessFeeStep{
-        c0: 0,
         SuccessFeeStep{c: 0.3, sigma: 1.05}
     }
 }
@@ -76,24 +76,21 @@ func validate_initial_config() -> Bool {
                 relative: 0.00011, // 0.011% daily, about 4% annually
                 period:   Duration::DAY
             },
-            success_fee_config: SuccessFeeConfig{
+            success_fee: SuccessFeeConfig{
                 fee:       INITIAL_SUCCESS_FEE,
                 benchmark: Scripts::benchmark_delegate
             }
         },
-        tokens: TokenConfig{
+        token: TokenConfig{
             max_supply:    100_000_000_000,
             max_price_age: Duration::DAY
         },
         oracle: Scripts::oracle_delegate,
-        assets: AssetsConfig{
-            max_group_size: 3
-        },
         governance: GovernanceConfig{
             update_delay: Duration::WEEK*2,
             delegate:     Scripts::governance_delegate
         },
-        state: ConfigState::None
+        state: ConfigState::Idle
     }
 }
 
@@ -110,7 +107,7 @@ func validate_initial_price() -> Bool {
     price = Price::find_output();
 
     price == Price{
-        value:     Config::INITIAL_PRICE,
+        value:     INITIAL_PRICE,
         timestamp: Time::new(0)
     }
 }
@@ -122,13 +119,14 @@ func validate_initial_supply() -> Bool {
         tick:       INITIAL_TICK,
         n_tokens:   0,
         n_vouchers: 0,
+        last_voucher_id: 0,
         n_lovelace: 0,
         management_fee_timestamp: Time::new(0),
         success_fee: SuccessFeeState{
             period_id:   0,
             start_time:  Time::new(0),
             period:      Duration::WEEK*2, // not yet 1 year, so we can test the success fee for a few periods
-            start_price: Config::INITIAL_PRICE
+            start_price: INITIAL_PRICE
         }
     }
 }

@@ -8,10 +8,10 @@ import { Voucher } from VoucherModule
 func main(_: Voucher, _) -> Bool {
     (id, voucher) = Voucher::get_current();
 
-    if (tx.minted.get_safe(Tokens::voucher_nft(id)) == -1) {
+    if (tx.minted.get_safe(Tokens::voucher_user_nft(id)) == -1) {
         signed_by_agent()
-        && tx.minted.get_safe(Tokens::voucher_ref(id)) == -1
+        && tx.minted.get_safe(Tokens::voucher_ref_token(id)) == -1
     } else {
-        tx.inputs.any(Tokens::contains_reimbursement(voucher.period_id))
+        tx.inputs.any(Tokens::contains_reimbursement[TxInput](voucher.period_id))
     }
 }

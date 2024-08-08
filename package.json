@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/PBGToken/validators#readme",
   "dependencies": {
-    "@helios-lang/compiler": "npm:@hyperionbt/helios@^0.16.4",
-    "@helios-lang/contract-utils": "^0.2.8"
+    "@helios-lang/compiler": "^0.17.0-30",
+    "@helios-lang/contract-utils": "^0.2.10"
   }
 }

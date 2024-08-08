@@ -1,7 +1,7 @@
 module VoucherModule
 
 import Addresses
-import { tx } from ScriptContext
+import { get_current_input, tx } from ScriptContext
 import TokenNames
 import Tokens
 
@@ -17,11 +17,20 @@ struct Voucher {
     url: String "url"
 
     func get_current() -> (Int, Voucher) {
-        input = tx.get_current_input();
+        input = get_current_input();
 
         id = Tokens::parse_voucher_ref(input);
 
         (id, input.datum.inline.as[Voucher])
+    }
+
+    func find_input(id: Int) -> Voucher {
+        input = tx.inputs.find((input: TxInput) -> {
+            input.address == Addresses::voucher
+            && Tokens::contains_voucher_ref(input, id)
+        });
+
+        input.datum.inline.as[Voucher]
     }
 
     func find_output(id: Int) -> Voucher {
@@ -46,7 +55,7 @@ struct Voucher {
  * Asserts that token_name is either dvp token or voucher
  * Assets that each minted voucher has a unique id
  */
-func validate_minted_vouchers(price: Ratio, period_id: Int, n_vouchers_0: Int) -> Int {
+func validate_minted_vouchers(price: Ratio, period_id: Int, last_voucher_id: Int) -> (Int, Int) {
     tokens_minted = Tokens::get_minted();
 
     n_vouchers_minted = tokens_minted.fold((n_vouchers: Int, token_name: ByteArray, qty: Int) -> {
@@ -58,25 +67,25 @@ func validate_minted_vouchers(price: Ratio, period_id: Int, n_vouchers_0: Int) -
             TokenNames::parse_voucher_ref(token_name).switch{
                 Some{id} => {
                     // assure the user nft is minted
-                    assert(tokens_minted.get(Tokens::voucher_user_nft(id)) == 1, "not exactly one user nft minted");
+                    assert(tokens_minted.get(TokenNames::voucher_nft(id)) == 1, "not exactly one user nft minted");
     
                     voucher = Voucher::find_output(id);
 
                     // return_address and return_datum are checked by the mint_order_validator
                     assert(
                         voucher.tokens > 0 
-                        && voucher.price == price.relative_to_benchmark()
+                        && voucher.price == price
                         && voucher.period_id == period_id, 
                         "invalid Voucher datum"
-                    )
+                    );
 
                     n_vouchers + 1
                 },
                 else => {
-                    id = TokenNames::parse_voucher_user_nft(token_name).unwrap();
+                    id = TokenNames::parse_voucher_nft(token_name).unwrap();
     
                     // make sure the ref token was minted
-                    assert(tokens_minted.get(Tokens::voucher_ref_token(id)) == 1, "not exactly one ref token minted");
+                    assert(tokens_minted.get(TokenNames::voucher_ref(id)) == 1, "not exactly one ref token minted");
                     
                     // the count is incremented via the ref token, not the user nft
                     n_vouchers
@@ -115,18 +124,19 @@ func validate_burned_vouchers(period_id: Int) -> Int {
 
             TokenNames::parse_voucher_ref(token_name).switch{
                 Some{id} => {
-                    assert(tokens_minted.get(Tokens::voucher_user_nft(id)) == -1, "not exactly one user nft burned");
+                    assert(tokens_minted.get(TokenNames::voucher_nft(id)) == -1, "not exactly one nft burned");
 
-                    voucher = Voucher::get_input(id);
+                    voucher = Voucher::find_input(id);
 
+                    // TODO: can this check be removed if ids are not reset in new periods?
                     assert(voucher.period_id == period_id, "Voucher from other period");
 
                     n_vouchers + 1
                 },
                 else => {
-                    id = TokenNames::parse_voucher_user_nft(token_name).unwrap();
+                    id = TokenNames::parse_voucher_nft(token_name).unwrap();
 
-                    assert(tokens_minted.get(Tokens::voucher_ref_token(id)) == -1, "not exactly one ref token burned");
+                    assert(tokens_minted.get(TokenNames::voucher_ref(id)) == -1, "not exactly one ref token burned");
 
                     n_vouchers
                 }

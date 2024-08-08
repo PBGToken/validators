@@ -13,13 +13,13 @@ import { Voucher } from VoucherModule
  * Each voucher is also validated
  * Each spent voucher ref token
  */
-func validate_burned_vouchers(period_id: Int, reim: Reimbursement) -> (Int, Int) {
+func validate_burned_vouchers(reim: Reimbursement) -> (Int, Int) {
     minted_tokens = Tokens::get_minted();
     main_phi_alpha_ratio = reim.calc_phi_alpha_ratio();
 
     tx.inputs.fold2((n_vouchers_burned: Int, n_tokens_reimbursed: Int, input: TxInput) -> (Int, Int) {
         if (input.address == Addresses::voucher) {
-            id = Tokens::parse_voucher(input);
+            id = Tokens::parse_voucher_ref(input);
 
             assert(minted_tokens.get(TokenNames::voucher_ref(id)) == -1, "voucher ref not burned");
 
@@ -28,7 +28,7 @@ func validate_burned_vouchers(period_id: Int, reim: Reimbursement) -> (Int, Int)
             // voucher period id is checked by voucher_validator
 
             return = voucher.find_return();
-            reimbursed_tokens = return.value.get_safe(Tokens::policy);
+            reimbursed_tokens = return.value.get_safe(Tokens::dvp_token);
             voucher_phi_alpha_ratio = reim.calc_phi_alpha_ratio(voucher.price);
             expected_reimbursed_tokens = (voucher.tokens*(main_phi_alpha_ratio - voucher_phi_alpha_ratio)).floor().bound_min(0);
             
@@ -54,7 +54,7 @@ func main(_: Reimbursement, _) -> Bool {
         // the reimbursement token itself must be burned, output isn't validated
         Tokens::get_minted().get(TokenNames::reimbursement(id)) == -1
     } else {
-        (reim1, n1) = Reimbursement::find_output(id);
+        (reim1, n1) = Reimbursement::find_output(id, 0);
 
         n1 == n0 - n_tokens_reimbursed
         && reim1 == reim0.copy(

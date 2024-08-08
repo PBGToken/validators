@@ -1,5 +1,6 @@
 module BurnOrderModule
 
+import { AssetPtr } from AssetPtrModule
 import { sum_lovelace } from PortfolioModule
 import { current_script, get_current_input, tx } from ScriptContext
 import Tokens
@@ -15,11 +16,11 @@ enum BurnOrderReturnValue {
 
 struct BurnOrder {
     return_address:   Address
-    return_datum:     Datum
+    return_datum:     Data
     min_return_value: BurnOrderReturnValue
     max_price_age:    Duration
 
-    func find_return(self) -> TxOuput {
+    func find_return(self) -> TxOutput {
         tx.outputs.find((output: TxOutput) -> {
             output.address == self.return_address
             && output.datum.inline == self.return_datum
@@ -34,11 +35,11 @@ struct BurnOrder {
             
         return = self.find_return();
 
-        input.value - return.value;
+        input.value - return.value
     }
 
     func value(self) -> Value {
-        -self.diff().remove_policy(Tokens::policy)
+        (-1) * self.diff().delete_policy(Tokens::policy)
     }
 
     func value_lovelace(self, ptrs: []AssetPtr) -> Int {

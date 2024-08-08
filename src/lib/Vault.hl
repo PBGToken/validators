@@ -4,8 +4,10 @@ import Addresses
 import { Asset } from AssetModule
 import { AssetPtr } from AssetPtrModule
 import { price_expiry } from ConfigModule
+import { sum_lovelace } from PortfolioModule
 import { tx } from ScriptContext
 import TokenNames
+import Tokens
 
 const VAULT_DATUM: ByteArray = #
 
@@ -39,7 +41,7 @@ func diff() -> Value {
         if (
             output.address == addr 
             && output.datum.inline.as[ByteArray] == VAULT_DATUM 
-            && output.value.remove_lovelace().flatten().length == 1
+            && output.value.delete_lovelace().flatten().length == 1
         ) {
             prev + output.value
         } else {
@@ -71,10 +73,11 @@ func diff_counted(d_lovelace: Int, expected_tick: Int) -> Value {
             assert(qty > 0, "not a positive number of assets tokens");
 
             id = TokenNames::parse_assets(token_name).unwrap();
+            group_asset_class = Tokens::assets(id);
 
             output = tx.outputs.find((output: TxOutput) -> {
                 output.address == Addresses::assets
-                && output.value.get_safe(token_name) == 1
+                && output.value.get_safe(group_asset_class) == 1
             });
             
             assets0 = input.datum.inline.as[[]Asset];
@@ -83,7 +86,7 @@ func diff_counted(d_lovelace: Int, expected_tick: Int) -> Value {
             assets0.zip(assets1).fold((m: Map[AssetClass]Int, a: Asset, b: Asset) -> {
                 assert(
                     b.asset_class == a.asset_class
-                    && b.count_tick == tick
+                    && b.count_tick == expected_tick
                     && b.price == a.price
                     && b.price_timestamp == a.price_timestamp,
                     "invalid asset change"
@@ -99,7 +102,7 @@ func diff_counted(d_lovelace: Int, expected_tick: Int) -> Value {
     m = m.append(AssetClass::ADA, d_lovelace);
 
     // this function sorts the assetclass to make it easier to detect duplicates
-    Value::from_flat_map(m)
+    Value::from_flat(m)
 }
 
 /**

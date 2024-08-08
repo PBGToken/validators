@@ -1,9 +1,12 @@
 spending portfolio_validator
 
+import Addresses
+import { Asset } from AssetModule
 import { AssetGroup, search_for_asset_class, sum_total_asset_value } from AssetGroupModule
 import { Config, signed_by_agent, witnessed_by_oracle } from ConfigModule
 import { Portfolio, PortfolioReductionMode } from PortfolioModule
 import { tx } from ScriptContext
+import { Supply } from SupplyModule
 import TokenNames
 import Tokens
 
@@ -30,12 +33,13 @@ func validate_add_asset_group(portfolio0: Portfolio, portfolio1: Portfolio, adde
     && added_group.is_empty()
 }
 
-func validate_remove_asset_group(portfolio0: Portfolio, portfolio1: Portfolio, removed_id: Int) -> Bool {
-    removed_group = AssetGroup::find_single_input(removed_id);
+func validate_remove_asset_group(portfolio0: Portfolio, portfolio1: Portfolio, burned_id: Int) -> Bool {
+    (removed_id, removed_group) = AssetGroup::find_single_input();
                     
     portfolio0.reduction.is_idle()
     && portfolio1.reduction.is_idle()
-    && portfolio0.n_groups == removed_id
+    && burned_id == removed_id
+    && portfolio0.n_groups == removed_id // only the last one can be removed
     && portfolio1.n_groups == portfolio0.n_groups - 1
     && removed_group.is_empty()
 }
@@ -93,14 +97,14 @@ func validate_continue_reduction(
 
         },
         (Exists{asset_class0, found0}, Exists{asset_class1, found1}) => {
-            found = search_for_asset_class(asset_class, group_ptrs, next_id);
+            found = search_for_asset_class(asset_class0, group_ptrs, next_id);
 
             asset_class0 == asset_class1
             && ig1 == ig0 + n_groups
             && found1 == (found0 || found)
         },
         (DoesNotExist{asset_class0}, DoesNotExist{asset_class1}) => {
-            found = search_for_asset_class(asset_class, group_ptrs, next_id);
+            found = search_for_asset_class(asset_class0, group_ptrs, next_id);
 
             asset_class0 == asset_class1
             && ig1 == ig0 + n_groups
@@ -110,7 +114,8 @@ func validate_continue_reduction(
     }
 }
 
-func validate_add_asset_class(config0: Config, config_is_spent: Bool, portfolio0: Portfolio, portfolio1: Portfolio) -> Bool {
+// TODO: should we use _portfolio1 for some of the validation?
+func validate_add_asset_class(config0: Config, config_is_spent: Bool, portfolio0: Portfolio, _portfolio1: Portfolio) -> Bool {
     (id, group0) = AssetGroup::find_single_input();
     group1 = AssetGroup::find_output(id);
 
@@ -124,7 +129,8 @@ func validate_add_asset_class(config0: Config, config_is_spent: Bool, portfolio0
     && Tokens::nothing_minted()
 }
 
-func validate_remove_asset_class(config0: Config, config_is_spent: Bool, portfolio0: Portfolio, portfolio1: Portfolio) -> Bool {
+// TODO: should we use _portfolio1 for some of the validation?
+func validate_remove_asset_class(config0: Config, config_is_spent: Bool, portfolio0: Portfolio, _portfolio1: Portfolio) -> Bool {
     (id, group0) = AssetGroup::find_single_input();
     group1 = AssetGroup::find_output(id);
 
@@ -192,7 +198,7 @@ func validate_move_assets(portfolio0: Portfolio) -> Bool {
     /**
      * Each asset class in outputs must also be found in inputs
      */
-    n_assets_in_outputs = tx.outputs.fold((n_assets: Int, output: TxInput) -> {
+    n_assets_in_outputs = tx.outputs.fold((n_assets: Int, output: TxOutput) -> {
         if (output.address == Addresses::assets) {
             assert(Tokens::contains_only_any_assets(output), "doesn't contain only 1 assets token");
             
@@ -249,13 +255,13 @@ func main(_: Portfolio, action: Action) -> Bool {
             },
             (Reducing{ig0, kp0, mode0}, Reducing{ig1, kp1, mode1}) => {
                 Reduce{ptrs} = action;
-                validate_continue_reducing(ig0, kp0, mode0, ig1, kp1, mode1, ptrs)
+                validate_continue_reduction(ig0, kp0, mode0, ig1, kp1, mode1, ptrs)
             },
             (_, Idle) => {
                 action.switch{
                     AddAssetClass => validate_add_asset_class(config0, config_is_spent, portfolio0, portfolio1),
                     RemoveAssetClass => validate_remove_asset_class(config0, config_is_spent, portfolio0, portfolio1),
-                    UpdatePrices => validate_update_price(portfolio0),
+                    UpdatePrices => validate_update_prices(portfolio0),
                     MoveAssets => validate_move_assets(portfolio0),
                     Reset => validate_reset_reduction(portfolio0),
                     else => error("invalid action during Idle state")

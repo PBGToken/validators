@@ -1,8 +1,12 @@
 spending burn_order_validator
 
+import Addresses
+import { AssetPtr } from AssetPtrModule
 import { BurnOrder } from BurnOrderModule
-import { Config, signed_by_agent } from ConfigModule
+import { Config, deduct_burn_fee, signed_by_agent } from ConfigModule
+import { Price } from PriceModule
 import { tx } from ScriptContext
+import { Supply } from SupplyModule
 import TokenNames
 import Tokens
 import { Voucher } from VoucherModule
@@ -30,11 +34,11 @@ func calc_provisional_success_fee(
     });
 
     (delta_vouchers, n_voucher_tokens) = vouchers.fold2((delta_vouchers: Int, n_voucher_tokens: Int, token_name: ByteArray, qty: Int) -> {
-        voucher_id = TokenNames::parse_voucher_nft(token_name);
+        voucher_id = TokenNames::parse_voucher_nft(token_name).unwrap();
 
         assert(qty >= 1, "can't be negative");
 
-        voucher_ref_token = Tokens::voucher_reference(voucher_id);
+        voucher_ref_token = Tokens::voucher_ref_token(voucher_id);
         voucher_ref_input = tx.inputs.find((input: TxInput) -> {
             input.address == Addresses::voucher
             && input.value.get_safe(voucher_ref_token) == 1
@@ -43,7 +47,7 @@ func calc_provisional_success_fee(
         voucher = voucher_ref_input.datum.inline.as[Voucher];
 
         alpha_voucher = (benchmark_price/voucher.price).to_real();
-        delta_voucher = (voucher.tokens*(config.fees.success_fee.apply(alpha_voucher)/alpha_voucher)).floor();
+        delta_voucher = (voucher.tokens*(config.fees.success_fee.fee.apply(alpha_voucher)/alpha_voucher)).floor();
 
         (
             delta_vouchers + delta_voucher, 
@@ -53,7 +57,7 @@ func calc_provisional_success_fee(
 
     alpha = (benchmark_price/p0).to_real();
     
-    delta_vouchers + ((n_burn - n_voucher_tokens)*config.fees.success_fee.apply(alpha)/alpha).floor()
+    delta_vouchers + ((n_burn - n_voucher_tokens)*config.fees.success_fee.fee.apply(alpha)/alpha).floor()
 }
 
 func main(order: BurnOrder, redeemer: Redeemer) -> Bool {

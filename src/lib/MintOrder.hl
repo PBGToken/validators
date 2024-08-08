@@ -39,7 +39,7 @@ struct MintOrder {
     }
 
     func value(self) -> Value {
-        self.diff().remove_policy(Tokens::policy)
+        self.diff().delete_policy(Tokens::policy)
     }
 
     func value_lovelace(self, ptrs: []AssetPtr) -> Int {

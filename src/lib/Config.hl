@@ -1,7 +1,7 @@
 module ConfigModule
 
 import Addresses
-import { current_script, tx } from ScriptContext
+import { current_script, get_current_input, tx } from ScriptContext
 import { SuccessFee } from SuccessFeeModule
 import Tokens
 
@@ -154,15 +154,25 @@ struct Config {
 
     func find() -> (Config, Bool) {
         (input, is_spent) = current_script.switch{
-            config_validator => (tx.get_current_input(), true),
-            mint_order_validator => (tx.get_ref_input_at(Addresses::config), false),
-            burn_order_validator => (tx.get_ref_input_at(Addresses::config), false),
+            config_validator => (get_current_input(), true),
+            mint_order_validator => (tx.ref_inputs.find((input: TxInput) -> {
+                input.address == Addresses::config
+            }), false),
+            burn_order_validator => (tx.ref_inputs.find((input: TxInput) -> {
+                input.address == Addresses::config
+            }), false),
             else => {
-                ref_input = tx.get_ref_input_at_safe(Addresses::config).switch{
+                tx.ref_inputs.find_safe((input: TxInput) -> {
+                    input.address == Addresses::config
+                }).switch{
                     Some{ref_input} => (ref_input, false),
-                    else => (tx.get_input_at(Addresses::config), true)
-                };
-                tx.get_any_input_at(Addresses::config)
+                    else => (
+                        tx.inputs.find((input: TxInput) -> {
+                            input.address == Addresses::config
+                        }), 
+                        true
+                    )
+                }
             }
         };
 
@@ -173,7 +183,7 @@ struct Config {
 
     func find_input() -> Config {
         input = current_script.switch{
-            config_validator => tx.get_current_input(),
+            config_validator => get_current_input(),
             else => tx.inputs.find((input: TxInput) -> {
                 input.address == Addresses::config
             })
@@ -194,6 +204,16 @@ struct Config {
         output.datum.inline.as[Config]
     }
 
+    func find_ref() -> Config {
+        input = tx.ref_inputs.find((input: TxInput) -> {
+            input.address == Addresses::config
+        });
+
+        assert(Tokens::contains_config(input), "doesn't contain the config token");
+
+        input.datum.inline.as[Config]
+    }
+
     func find_thread() -> (Config, Config) {
         (
             Config::find_input(),
@@ -206,24 +226,24 @@ struct Config {
         lovelace_price: Ratio, 
         benchmark: StakingValidatorHash = self.fees.success_fee.benchmark
     ) -> Ratio {
-        self.fees.success_fee.get_benchmark_price(lovelace_price)
+        self.fees.success_fee.get_benchmark_price(lovelace_price, benchmark)
     }
 }
 
 func deduct_burn_fee(n: Int) -> Int {
-    config = Config::find();
+    (config, _) = Config::find();
 
     config.fees.burn_fee.deduct(n)
 }
 
 func deduct_mint_fee(n: Int) -> Int {
-    config = Config::find();
+    (config, _) = Config::find();
 
     config.fees.mint_fee.deduct(n)
 }
 
 func price_expiry() -> Time {
-    config = Config::find();
+    (config, _) = Config::find();
 
     tx.time_range.end - config.token.max_price_age
 }
@@ -237,7 +257,7 @@ func signed_by_agent(
 func witnessed_by_oracle(
     oracle: StakingValidatorHash = Config::find_input().oracle
 ) -> Bool {
-    tx.withdrawals.any((scred: StakingCredential, _) -> {
+    tx.withdrawals.any((scred: StakingCredential, _) -> Bool {
         scred.switch{
             Hash{h} => {
                 h.switch{

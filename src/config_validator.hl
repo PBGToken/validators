@@ -47,14 +47,15 @@ func main(_: Config, _) -> Bool {
                 },
                 RemovingAssetClass{asset_class} => {
                     portfolio = Portfolio::find_ref();
-                    Exists{expected_asset_class} = portfolio.get_reduction_result();
+                    Exists{expected_asset_class, actually_exists} = portfolio.get_reduction_result();
                     
-                    asset_class == expected_asset_class
+                    actually_exists
+                    && asset_class == expected_asset_class
                 },
                 UpdatingSuccessFee{period, benchmark, fee} => {
                     supply = Supply::find_ref();
         
-                    period > Duration::ZERO
+                    period > Duration::new(0)
                     && period < SUCCESS_FEE_PERIOD_UPPER_LIMIT
                     && tx.redeemers.any((key: ScriptPurpose, _) -> {
                         key == ScriptPurpose::new_rewarding(StakingCredential::new_hash(StakingHash::new_validator(benchmark)))
@@ -75,7 +76,7 @@ func main(_: Config, _) -> Bool {
                 },
                 ChangingGovernance{new_governance, tau_gov} => {
                     witnessed_by_governance(new_governance)
-                    && tau_gov > Duration::ZERO
+                    && tau_gov > Duration::new(0)
                     && tau_gov < UPDATE_DELAY_UPPER_LIMIT
                 },
                 ChangingMintFee{relative, d_min} => {
@@ -93,11 +94,11 @@ func main(_: Config, _) -> Bool {
                 ChangingManagementFee{relative, tau_mgmt} => {
                     relative >= 0.0
                     && relative < 0.1 // 10%
-                    && tau_mgmt > Duration::ZERO
+                    && tau_mgmt > Duration::new(0)
                     && tau_mgmt < MANAGEMENT_FEE_PERIOD_UPPER_LIMIT
                 },
                 ChangingMaxPriceAge{tau_p} => {
-                    tau_p > Duration::ZERO
+                    tau_p > Duration::new(0)
                     && tau_p < MAX_PRICE_AGE_UPPER_LIMIT
                 },
                 ChangingMetadata{hash} => {
@@ -125,10 +126,12 @@ func main(_: Config, _) -> Bool {
                     && !group1.has_asset(asset_class)
                     && config1 == config0.copy(state: ConfigState::Idle)
                 },
-                UpdatingSuccessFee{period, benchmark, fee} => {
+                UpdatingSuccessFee{_period, benchmark, fee} => {
                     supply = Supply::find_input();
 
-                    tx.minted.get_safe(Tokens::reimbursement(supply.period_id)) == 1
+                    // TODO: should UpdatingSuccessFee.period be used to check something?
+
+                    tx.minted.get_safe(Tokens::reimbursement(supply.period_id())) == 1
                     && config1 == config0.copy(
                         fees: config0.fees.copy(
                             success_fee: SuccessFeeConfig{

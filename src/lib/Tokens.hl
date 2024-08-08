@@ -1,13 +1,13 @@
 module Tokens
 
-import { current_script, tx } from ScriptContext
+import { current_script, get_current_input, tx } from ScriptContext
 import TokenNames
 
 const direct_policy = MintingPolicyHash::from_script_hash(Scripts::fund_policy)
 
 // as a function because it can fail
 func indirect_policy() -> MintingPolicyHash {
-    input = tx.get_current_input();
+    input = get_current_input();
     
     // ignores ADA
     input.value.get_singleton_asset_class().mph // this is why it is important that these UTxOs only contain a single policy
@@ -22,8 +22,8 @@ const policy: MintingPolicyHash = current_script.switch{
     portfolio_validator  => indirect_policy(),
     price_validator      => indirect_policy(),
     reimbursement_validator => {
-        input = tx.get_current_input();
-        input.value.to_map().delete(MintingPolicyHash::new(#)).get_singleton().first
+        input = get_current_input();
+        input.value.get_singleton_asset_class().mph
     },
     voucher_validator    => indirect_policy(),
     config_validator     => indirect_policy(),
@@ -40,16 +40,20 @@ const portfolio: AssetClass = AssetClass::new(policy, TokenNames::portfolio)
 const price:     AssetClass = AssetClass::new(policy, TokenNames::price)
 const supply:    AssetClass = AssetClass::new(policy, TokenNames::supply)
 
+func assets(id: Int) -> AssetClass {
+    AssetClass::new(policy, TokenNames::assets(id))
+}
+
 func reimbursement(id: Int) -> AssetClass {
     AssetClass::new(policy, TokenNames::reimbursement(id))
 }
 
 func voucher_ref_token(id: Int) -> AssetClass {
-    AssetClass::new(policy, TokenNames::voucher_reference(id))
+    AssetClass::new(policy, TokenNames::voucher_ref(id))
 }
 
 func voucher_user_nft(id: Int) -> AssetClass {
-    AssetClass::new(policy, TokenNames::voucher_user_nft(id))
+    AssetClass::new(policy, TokenNames::voucher_nft(id))
 }
 
 func get_minted() -> Map[ByteArray]Int {
@@ -64,6 +68,10 @@ func contains_assets[V: Valuable](v: V, id: Int) -> Bool {
     contains(v, assets(id))
 }
 
+func contains_config[V: Valuable](v: V) -> Bool {
+    contains(v, config)
+}
+
 func contains_metadata[V: Valuable](v: V) -> Bool {
     contains(v, metadata)
 }
@@ -76,8 +84,8 @@ func contains_price[V: Valuable](v: V) -> Bool {
     contains(v, price)
 }
 
-func contains_reimbursement(id: Int) -> [V: Valuable](v: V) -> Bool {
-    [V: Valuable](v: V) -> {
+func contains_reimbursement[V: Valuable](id: Int) -> (V) -> Bool {
+    (v: V) -> {
         contains(v, reimbursement(id))
     }
 }
@@ -92,11 +100,15 @@ func contains_voucher_ref[V: Valuable](v: V, id: Int) -> Bool {
 
 // being able to retrieve a specific DVP policy depends on state UTxOs only contain a single policy type
 func contains_only[V: Valuable](v: V, asset_class: AssetClass) -> Bool {
-    v.value.remove_lovelace() == Value::new(asset_class, 1)
+    v.value.get_singleton_asset_class() == asset_class
 }
 
 func contains_only_assets[V: Valuable](v: V, id: Int) -> Bool {
     contains_only(v, assets(id))
+}
+
+func contains_only_config[V: Valuable](v: V) -> Bool {
+    contains_only(v, config)
 }
 
 func contains_only_metadata[V: Valuable](v: V) -> Bool {
@@ -155,6 +167,18 @@ func parse_assets[V: Valuable](v: V) -> Int {
     assert(qty == 1, "expected only 1 assets token");
 
     TokenNames::parse_assets(token_name).unwrap()
+}
+
+func parse_reimbursement[V: Valuable](v: V) -> Int {
+    tokens = v.value.get_policy(policy);
+
+    assert(tokens.length == 1, "can only contain one reimbursement token");
+
+    (token_name, qty) = tokens.head;
+
+    assert(qty == 1, "expected only 1 reimbursement token");
+
+    TokenNames::parse_reimbursement(token_name).unwrap()
 }
 
 func parse_voucher_ref[V: Valuable](v: V) -> Int {

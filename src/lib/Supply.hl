@@ -23,7 +23,7 @@ struct Supply {
 
     func find_input() -> Supply {
         input = current_script.switch{
-            config_validator => tx.inputs.find(Tokens::contains_supply),
+            config_validator => tx.inputs.find(Tokens::contains_supply[TxInput]),
             else => {
                 input = tx.inputs.find((input: TxInput) -> {input.address == Addresses::supply});
 
@@ -51,7 +51,7 @@ struct Supply {
      * Can't use the supply validator address because that would create a circular hash dependency
      */
     func find_ref() -> Supply {
-        input = tx.ref_inputs.find(Tokens::contains_supply);
+        input = tx.ref_inputs.find(Tokens::contains_supply[TxInput]);
 
         input.datum.inline.as[Supply]
     }
@@ -76,7 +76,7 @@ struct Supply {
         config = Config::find_ref();
 
         N = self.n_tokens;
-        alpha = (end_price/self.success.start_price).to_real();
+        alpha = (end_price/self.success_fee.start_price).to_real();
         phi_alpha = config.fees.success_fee.fee.apply(alpha);
 
         // guard against the edge case where phi_alpha is very bad

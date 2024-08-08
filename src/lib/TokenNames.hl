@@ -16,7 +16,7 @@ func assets(group_id: Int) -> ByteArray {
 func parse_series(prefix: ByteArray, token_name: ByteArray) -> Option[Int] {
     if (token_name.starts_with(prefix)) {
         id = token_name.slice(prefix.length, token_name.length);
-        Int::parse(id.decode_utf8())
+        Option[Int]::Some{Int::parse(id.decode_utf8())}
     } else {
         Option[Int]::None
     }
@@ -48,7 +48,7 @@ const supply: ByteArray = "supply".encode_utf8()
 
 const voucher_infix: ByteArray = "voucher ".encode_utf8()
 const voucher_ref_prefix: ByteArray = Cip67::reference_token_label + voucher_infix
-const voucher_nft_prefix: ByteArray = Cip67::user_nft_label + voucher_infix
+const voucher_nft_prefix: ByteArray = Cip67::user_token_label + voucher_infix
 
 func parse_voucher_ref(token_name: ByteArray) -> Option[Int] {
     parse_series(voucher_ref_prefix, token_name)

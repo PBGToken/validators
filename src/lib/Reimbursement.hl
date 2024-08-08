@@ -2,6 +2,7 @@ module ReimbursementModule
 
 import Addresses
 import { current_script, get_current_input, tx } from ScriptContext
+import { SuccessFee } from SuccessFeeModule
 import TokenNames
 import Tokens
 
@@ -16,7 +17,7 @@ struct Reimbursement {
             reimbursement_validator => get_current_input(),
             else => tx.inputs.find((input: TxInput) -> {
                 input.address == Addresses::reimbursement
-            });
+            })
         };
 
         id = Tokens::parse_reimbursement(input);
@@ -34,12 +35,15 @@ struct Reimbursement {
         });
 
         tokens = output.value.get_policy(Tokens::policy);
-        n_dvp_tokens = tokens.get_safe(TokenNames::dvp_token);
+        n_dvp_tokens = tokens.get_safe(TokenNames::dvp_token).switch{
+            Some{n} => n,
+            else => 0
+        };
 
-        assert(tokens.get(TokenNames::reimbursement(id) == 1), "output doesnt contain reimbursement token");
+        assert(tokens.get(TokenNames::reimbursement(id)) == 1, "output doesnt contain reimbursement token");
         assert(n_dvp_tokens >= min_tokens, "output doesnt contain enough dvp tokens");
         assert(tokens.length <= 2, "output contains unexpected tokens");
-        assert(output.value.remove_lovelace().to_map().length == 1, "output contains unexpected token policies");
+        assert(output.value.delete_lovelace().to_map().length == 1, "output contains unexpected token policies");
 
         (output.datum.inline.as[Reimbursement], n_dvp_tokens)
     }
@@ -52,7 +56,7 @@ struct Reimbursement {
     }
 
     func calc_alpha(self, end_price: Ratio = self.end_price) -> Real {
-        (end_price/self.start_price).to_real();
+        (end_price/self.start_price).to_real()
     }
 
     func calc_phi_alpha_ratio(self, end_price: Ratio = self.end_price) -> Real {

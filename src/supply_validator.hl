@@ -3,6 +3,7 @@ spending supply_validator
 import { AssetPtr } from AssetPtrModule
 import { Config, signed_by_agent } from ConfigModule
 import { Price } from PriceModule
+import { Reimbursement } from ReimbursementModule
 import { tx } from ScriptContext
 import { Supply } from SupplyModule
 import TokenNames
@@ -15,7 +16,7 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> Bool {
 
     end_price = price.relative_to_benchmark();
     Dalpha = supply0.calc_success_fee_dilution(end_price);
-    reimbursement = Reimbursement::find_output(supply0.period_id(), Dalpha);
+    (reimbursement, _) = Reimbursement::find_output(supply0.period_id(), Dalpha);
     (config0, is_updated) = Config::find();
     tokens_minted = Tokens::get_minted();
 
@@ -23,7 +24,7 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> Bool {
     && D >= 0
     && price.is_not_expired()
     && supply1.success_fee.start_time == supply0.success_fee.start_time + supply0.success_fee.period
-    && supply1.success_fee.period_id == supply0.period_id + 1
+    && supply1.success_fee.period_id == supply0.success_fee.period_id + 1
     && supply1.last_voucher_id == 0
     && supply1.n_vouchers == 0
     && supply1.n_lovelace == supply0.n_lovelace
@@ -32,7 +33,7 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> Bool {
     && reimbursement.start_price == supply0.success_fee.start_price
     && reimbursement.end_price == end_price
     && if (is_updated) {
-        UpdatingSuccessFee{period, _, _} = config0.state;
+        UpdatingSuccessFee{period, _, _} = config0.state.get_proposal();
 
         config1 = Config::find_output();
         new_price = config1.fees.success_fee.get_benchmark_price(price.value);
@@ -41,12 +42,14 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> Bool {
         && supply1.success_fee.period == period
     } else {
         config0.state.switch{
-            UpdatingSuccessFee => error("config must be spent"),
-            else => {
-                supply1.success_fee.start_price == end_price
-                && supply1.success_fee.period == supply0.success_fee.period
-            }
+            Changing{_, proposal} => proposal.switch{
+                UpdatingSuccessFee => false, // config must be spent
+                else => true
+            },
+            else => true
         }
+        && supply1.success_fee.start_price == end_price
+        && supply1.success_fee.period == supply0.success_fee.period
     }
     && tokens_minted.all((token_name: ByteArray, qty: Int) -> {
         token_name == TokenNames::dvp_token
@@ -56,6 +59,7 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> Bool {
 }
 
 func validate_reward_management(supply0: Supply, supply1: Supply, D: Int) -> Bool {
+    config = Config::find_ref();
     Dmgmt = supply0.calc_management_fee_dilution();
 
     D <= Dmgmt
@@ -85,7 +89,7 @@ func validate_mint_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: [
 
     price.is_not_expired()
     && dV >= (price.value * D).floor()
-    && supply1.n_tokens <= config.token.max_supply;
+    && supply1.n_tokens <= config.token.max_supply
     && supply1.n_vouchers == supply0.n_vouchers + n_vouchers_minted
     && supply1.last_voucher_id == last_voucher_id
     && supply1.management_fee_timestamp == supply0.management_fee_timestamp
@@ -136,7 +140,10 @@ func main(_: Supply, ptrs: []AssetPtr) -> Bool {
     (supply0, supply1) = Supply::find_thread();
     tokens_minted = Tokens::get_minted();
 
-    D = tokens_minted.get_safe(TokenNames::dvp_token);
+    D = tokens_minted.get_safe(TokenNames::dvp_token).switch{
+        Some{n} => n,
+        else => 0
+    };
 
     signed_by_agent()
     && supply1.tick == supply0.tick + 1

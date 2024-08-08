@@ -62,7 +62,7 @@ struct Portfolio {
     func find_ref() -> Portfolio {
         input = current_script.switch{
             config_validator => {
-                tx.ref_inputs.find(Tokens::contains_portfolio)
+                tx.ref_inputs.find(Tokens::contains_portfolio[TxInput])
             },
             else => {
                 input = tx.ref_inputs.find((input: TxInput) -> {
@@ -106,11 +106,11 @@ func sum_lovelace(v: Value, inputs: []TxInput, ptrs: []AssetPtr, price_expiry: T
         if (asset_class == AssetClass::ADA) {
             sum + qty
         } else {
-            asset = ptr.resolve(inputs);
+            asset = ptr.resolve_input(inputs, asset_class);
 
             assert(asset.price_timestamp >= price_expiry, "price expired");
 
-            sum + qty * asset.price
+            sum + (qty * asset.price).floor()
         }
     }, 0, ptrs)
 }
@@ -118,7 +118,7 @@ func sum_lovelace(v: Value, inputs: []TxInput, ptrs: []AssetPtr, price_expiry: T
 func witnessed_by_portfolio() -> Bool {    
     current_script.switch{
         assets_validator => {
-            tx.inputs.any(Tokens::contains_portfolio)
+            tx.inputs.any(Tokens::contains_portfolio[TxInput])
         },
         else => {
             tx.inputs.any((input: TxInput) -> {

@@ -2,7 +2,7 @@ module AssetGroupModule
 
 import Addresses
 import { Asset } from AssetModule
-import { current_script, tx } from ScriptContext
+import { current_script, get_current_input, tx } from ScriptContext
 import TokenNames
 import Tokens
 
@@ -12,7 +12,7 @@ struct AssetGroup {
     const MAX_SIZE: Int = 3
 
     func find_current() -> (Int, AssetGroup) {
-        input = tx.get_current_input();
+        input = get_current_input();
 
         id = Tokens::parse_assets(input);
 
@@ -116,7 +116,7 @@ struct AssetGroup {
 
     func nothing_spent() -> Bool {
         tx.inputs.all((input: TxInput) -> Bool {
-            input.address != Addresses::asset
+            input.address != Addresses::assets
         })
     }
 }

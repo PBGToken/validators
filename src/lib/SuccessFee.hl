@@ -5,7 +5,7 @@ struct SuccessFeeStep {
     c:     Real
 }
 
-func apply_internal(self, alpha: Real, sigma: Real, c: Real, next: []SuccessFeeStep) -> Real {
+func apply_internal(alpha: Real, sigma: Real, c: Real, next: []SuccessFeeStep) -> Real {
     if (alpha < sigma) {
         0.0
     } else if (next.is_empty()) {
@@ -13,7 +13,7 @@ func apply_internal(self, alpha: Real, sigma: Real, c: Real, next: []SuccessFeeS
     } else {
         SuccessFeeStep{sigma_next, c_next} = next.head;
         
-        (Int::min(alpha, sigma_next) - sigma)*c 
+        (Real::min(alpha, sigma_next) - sigma)*c 
         + apply_internal(alpha, sigma_next, c_next, next.tail)
     }
 }
@@ -47,7 +47,7 @@ struct SuccessFee {
     const MAX_SUCCESS_FEE_STEPS: Int = 10
 
     func apply(self, alpha: Real) -> Real {
-        self.apply_internal(alpha, 1.0, self.c0, self.steps)
+        apply_internal(alpha, 1.0, self.c0, self.steps)
     }   
 
     func is_valid(self) -> Bool {

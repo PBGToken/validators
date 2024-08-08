@@ -2,7 +2,7 @@ module PriceModule
 
 import Addresses
 import { Config, price_expiry } from ConfigModule
-import { current_script, tx } from ScriptContext
+import { current_script, get_current_input, tx } from ScriptContext
 import Tokens
 
 struct Price {
@@ -11,8 +11,10 @@ struct Price {
 
     func find() -> Price {
         input = current_script.switch{
-            price_validator => tx.get_current_input(),
-            else => tx.get_ref_input_at(Addresses::price) // TODO: use the token where the DAG doesn't allow fetching by address
+            price_validator => get_current_input(),
+            else => tx.ref_inputs.find((input: TxInput) -> {
+                input.address == Addresses::price
+            }) // TODO: use the token where the DAG doesn't allow fetching by address
         };
 
         assert(Tokens::contains_only_price(input), "doesn't contain only the price token");
@@ -22,7 +24,7 @@ struct Price {
 
     func find_input() -> Price {
         input = current_script.switch{
-            price_validator => tx.get_current_input(),
+            price_validator => get_current_input(),
             else => tx.inputs.find((input: TxInput) -> {
                 input.address == Addresses::price
             })
@@ -68,7 +70,7 @@ struct Price {
     }
 
     func relative_to_benchmark(self) -> Ratio {
-        config = Config::find();
+        (config, _) = Config::find();
 
         config.fees.success_fee.get_benchmark_price(self.value)
     }

@@ -7,7 +7,7 @@ func main(_) -> Bool {
 
     n_signers = ORACLE_KEYS.fold((n_signers: Int, key: PubKeyHash) -> {
         n_signers + tx.is_signed_by(key).to_int()
-    });
+    }, 0);
 
     n_signers > (ORACLE_KEYS.length/2)
 }
