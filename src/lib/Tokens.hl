@@ -100,7 +100,7 @@ func contains_voucher_ref[V: Valuable](v: V, id: Int) -> Bool {
 
 // being able to retrieve a specific DVP policy depends on state UTxOs only contain a single policy type
 func contains_only[V: Valuable](v: V, asset_class: AssetClass) -> Bool {
-    v.value.get_singleton_asset_class() == asset_class
+    v.value.get_singleton_asset_class() == asset_class // TODO: this is much more restrictive than in the previous version of the code, check that this doesn't throw unintended errors
 }
 
 func contains_only_assets[V: Valuable](v: V, id: Int) -> Bool {

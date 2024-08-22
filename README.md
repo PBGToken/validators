@@ -9,6 +9,8 @@ This is a mono-repo which contains 3 packages:
 
 ## Building
 
+Run `npm install` first.
+
 Running `npm run build` in the root package creates a Javascript bundle with Typescript definitions in `./dist/`. 
 
 The generated JS/TS bundle contains all the validators, and user-defined types and data-functions used by those validators. This makes it easy to interact with the smart contract from within JS/TS.
