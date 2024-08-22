@@ -1,0 +1,9 @@
+{
+    "name": "pbg-token-validators-test",
+    "type": "module",
+    "scripts": {
+        "build:context": "npm run build --prefix ./context",
+        "test": "npm run build:context && npm run test:suite",
+        "test:suite": "node --test *.test.js"
+    }
+}

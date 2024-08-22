@@ -1,0 +1,30 @@
+{
+    "compilerOptions": {
+        "rootDir": "./src",
+        "target": "ESNext",
+        "lib": ["DOM", "DOM.Iterable", "ESNext"],
+        "module": "ESNext",
+        "skipLibCheck": true,
+        "disableSizeLimit": true,
+        "declaration": true,
+        "outDir": "dist",
+        "allowSyntheticDefaultImports": true,
+
+        /* Bundler mode */
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "isolatedModules": true,
+        "noEmit": true,
+
+        /* Linting */
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true
+    },
+    "include": [
+        "src",
+        "node_modules/pbg-token-validators"
+    ],
+    "exclude": ["node_modules", "dist"]
+}

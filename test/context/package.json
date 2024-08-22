@@ -1,0 +1,19 @@
+{
+    "name": "pbg-token-validators-test-context",
+    "type": "module",
+    "main": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "npm run build:esbuild && npm run build:types",
+        "build:esbuild": "node build.js",
+        "build:types": "npx tsc --noEmit false --emitDeclarationOnly --outDir ./dist"
+    },
+    "devDependencies": {
+        "@helios-lang/compiler": "^0.17.0-57",
+        "@helios-lang/contract-utils": "^0.2.31",
+        "@helios-lang/esbuild-plugin": "^0.1.10",
+        "esbuild": "^0.23.1",
+        "pbg-token-validators": "file:../../",
+        "typescript": "^5.5.4"
+    }
+}
