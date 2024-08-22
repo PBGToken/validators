@@ -11,7 +11,7 @@ This is a mono-repo which contains 3 packages:
 
 Running `npm run build` in the root package creates a Javascript bundle with Typescript definitions in `./dist/`. 
 
-The generated bundle contains all the validators, and user-defined types and data-functions used by those validators. This makes it easy to interact with the smart contract from with JS/TS.
+The generated JS/TS bundle contains all the validators, and user-defined types and data-functions used by those validators. This makes it easy to interact with the smart contract from within JS/TS.
 
 ## Audit recommendations
 
@@ -19,11 +19,11 @@ The generated bundle contains all the validators, and user-defined types and dat
 - install the Helios IDE plugin through the VSCode Extensions tab 
    - search for "Helios"
    - the description of the plugin should read "Helios language support for VS Code"
-- run `npm run install` inside the repo so the IDE plugin can pick up the correct version of the compiler
+- run `npm install` inside the repo so the IDE plugin can pick up the correct version of the compiler
 
 ## Unit tests
 
-The unit tests are placed in the `./test` directory, and can be executed with the command `npm test`.
+The unit tests are placed in the `./test` directory, and can be run with `npm test`.
 
 ### Context
 
