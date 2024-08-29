@@ -1,6 +1,6 @@
-import { IntData, ListData } from "@helios-lang/uplc";
 import { strictEqual, throws } from "node:assert";
 import { describe, it } from "node:test";
+import { IntData, ListData } from "@helios-lang/uplc";
 import context from "pbg-token-validators-test-context";
 
 describe("MintFeeConfig.apply()", () => {

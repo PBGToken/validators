@@ -57,7 +57,7 @@ func voucher_user_nft(id: Int) -> AssetClass {
 }
 
 func get_minted() -> Map[ByteArray]Int {
-    tx.minted.get_policy(policy)
+    tx.minted.get_policy_safe(policy)
 }
 
 func contains[V: Valuable](v: V, asset_class: AssetClass) -> Bool {

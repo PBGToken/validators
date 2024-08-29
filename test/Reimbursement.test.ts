@@ -2,10 +2,12 @@ import { strictEqual } from "node:assert"
 import { describe, it } from "node:test"
 import { IntData, ListData } from "@helios-lang/uplc"
 import context from "pbg-token-validators-test-context"
-    
+
+const calc_alpha = context.ReimbursementModule["Reimbursement::calc_alpha"]
+
 describe("Reimbursement::calc_alpha", () => {
     it("correct ratio division with non-default end_price (typesafe eval)", () => {
-        const alpha = context.ReimbursementModule["Reimbursement::calc_alpha"].eval({
+        const alpha = calc_alpha.eval({
             self: {
                 n_remaining_vouchers: 0,
                 start_price: [100, 1],
@@ -34,7 +36,7 @@ describe("Reimbursement::calc_alpha", () => {
 
         const endPrice = new ListData([new IntData(300_000_000), new IntData(1_000_000)])
 
-        const alpha = context.ReimbursementModule["Reimbursement::calc_alpha"].evalUnsafe({
+        const alpha = calc_alpha.evalUnsafe({
             self: self,
             end_price: endPrice
         })
@@ -43,7 +45,7 @@ describe("Reimbursement::calc_alpha", () => {
     })
 
     it("correct ratio division with default end_price (typesafe eval)", () => {
-        const alpha = context.ReimbursementModule["Reimbursement::calc_alpha"].eval({
+        const alpha = calc_alpha.eval({
             self: {
                 n_remaining_vouchers: 0,
                 start_price: [100, 1],
@@ -69,7 +71,7 @@ describe("Reimbursement::calc_alpha", () => {
             }
         })
 
-        const alpha = context.ReimbursementModule["Reimbursement::calc_alpha"].evalUnsafe({
+        const alpha = calc_alpha.evalUnsafe({
             self: self
         })
 
