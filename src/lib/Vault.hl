@@ -37,11 +37,12 @@ func diff() -> Value {
 
     // vault inputs are transaction outputs that must match the address and datum exactly, and can only contain a single asset class in addition to ADA
     //  (be as restrictive as possible when sending UTxOs to the vault)
+    //  this will throw an error if and output datum at the vault address isn't a ByteArray
     in = tx.outputs.fold((prev: Value, output: TxOutput) -> {
         if (
             output.address == addr 
             && output.datum.inline.as[ByteArray] == VAULT_DATUM 
-            && output.value.delete_lovelace().flatten().length == 1
+            && output.value.delete_lovelace().flatten().length <= 1
         ) {
             prev + output.value
         } else {

@@ -1,8 +1,8 @@
 import { ContractContextBuilder } from "@helios-lang/contract-utils"
-import { 
-    assets_validator, 
+import {
+    assets_validator,
     benchmark_delegate,
-    burn_order_validator, 
+    burn_order_validator,
     config_validator,
     fund_policy,
     governance_delegate,

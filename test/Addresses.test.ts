@@ -1,78 +1,91 @@
-import { describe, it } from "node:test";
-import { DUMMY_SUPPLY, allScripts, makeSupplyValidatorSpendingContext } from "./utils";
-import { strictEqual } from "node:assert";
-import { Address, ValidatorHash } from "@helios-lang/ledger";
-import context from "pbg-token-validators-test-context";
+import { strictEqual } from "node:assert"
+import { describe, it } from "node:test"
+import contract from "pbg-token-validators-test-context"
+import { Addresses, scripts } from "./constants"
+import { spendSupply } from "./tx"
+import { makeSupply } from "./data"
+const {
+    assets,
+    config,
+    metadata,
+    portfolio,
+    price,
+    reimbursement,
+    supply,
+    vault,
+    voucher
+} = contract.Addresses
 
 describe("Addresses", () => {
     it("metadata", () => {
-        const res = context.Addresses.metadata.eval({})
-        const expected = Address.fromHash(false, context.metadata_validator.$hash)
-
-        strictEqual(res.toBech32(), expected.toBech32())
+        strictEqual(
+            metadata.eval({}).toBech32(),
+            Addresses.metadataValidator.toBech32()
+        )
     })
 
     it("assets", () => {
-        const res = context.Addresses.assets.eval({})
-        const expected = Address.fromHash(false, context.assets_validator.$hash)
-
-        strictEqual(res.toBech32(), expected.toBech32())
+        strictEqual(
+            assets.eval({}).toBech32(),
+            Addresses.assetsValidator.toBech32()
+        )
     })
 
     it("config", () => {
-        const res = context.Addresses.config.eval({})
-        const expected = Address.fromHash(false, context.config_validator.$hash)
-
-        strictEqual(res.toBech32(), expected.toBech32())
+        strictEqual(
+            config.eval({}).toBech32(),
+            Addresses.configValidator.toBech32()
+        )
     })
 
     it("portfolio", () => {
-        const res = context.Addresses.portfolio.eval({})
-        const expected = Address.fromHash(false, context.portfolio_validator.$hash)
-
-        strictEqual(res.toBech32(), expected.toBech32())
+        strictEqual(
+            portfolio.eval({}).toBech32(),
+            Addresses.portfolioValidator.toBech32()
+        )
     })
 
     it("price", () => {
-        const res = context.Addresses.price.eval({})
-        const expected = Address.fromHash(false, context.price_validator.$hash)
-
-        strictEqual(res.toBech32(), expected.toBech32())
+        strictEqual(
+            price.eval({}).toBech32(),
+            Addresses.priceValidator.toBech32()
+        )
     })
 
     it("reimbursement", () => {
-        const res = context.Addresses.reimbursement.eval({})
-        const expected = Address.fromHash(false, context.reimbursement_validator.$hash)
-
-        strictEqual(res.toBech32(), expected.toBech32())
+        strictEqual(
+            reimbursement.eval({}).toBech32(),
+            Addresses.reimbursementValidator.toBech32()
+        )
     })
 
     it("supply", () => {
-        const res = context.Addresses.supply.eval({})
-        const expected = Address.fromHash(false, context.supply_validator.$hash)
-
-        strictEqual(res.toBech32(), expected.toBech32())
+        strictEqual(
+            supply.eval({}).toBech32(),
+            Addresses.supplyValidator.toBech32()
+        )
     })
 
-    const ctx = makeSupplyValidatorSpendingContext({supply: DUMMY_SUPPLY})
+    const ctx = spendSupply({ supply: makeSupply({}) })
 
-    allScripts.forEach(currentScript => {
-        it(`vault in ${currentScript}`, () => {
-            const res = context.Addresses.vault.eval({
-                $currentScript: currentScript,
-                $scriptContext: ctx
-            })
-
-            const expected = Address.fromHash(false, new ValidatorHash(context.fund_policy.$hash.bytes))
-        
-            strictEqual(res.toBech32(), expected.toBech32())
+    it("vault", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                vault
+                    .eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    })
+                    .toBech32(),
+                Addresses.vault.toBech32()
+            )
         })
     })
 
     it("voucher", () => {
-        const res = context.Addresses.voucher.eval({})
-        const expected = Address.fromHash(false, context.voucher_validator.$hash)
-
-        strictEqual(res.toBech32(), expected.toBech32())
+        strictEqual(
+            voucher.eval({}).toBech32(),
+            Addresses.voucherValidator.toBech32()
+        )
     })
 })

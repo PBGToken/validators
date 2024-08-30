@@ -1,9 +1,8 @@
 import { strictEqual } from "node:assert"
 import { describe, it } from "node:test"
 import { IntData, ListData } from "@helios-lang/uplc"
-import context from "pbg-token-validators-test-context"
-
-const calc_alpha = context.ReimbursementModule["Reimbursement::calc_alpha"]
+import contract from "pbg-token-validators-test-context"
+const { "Reimbursement::calc_alpha": calc_alpha } = contract.ReimbursementModule
 
 describe("Reimbursement::calc_alpha", () => {
     it("correct ratio division with non-default end_price (typesafe eval)", () => {
@@ -24,7 +23,7 @@ describe("Reimbursement::calc_alpha", () => {
     })
 
     it("correct ratio division with non-default end_price (evalUnsafe)", () => {
-        const self = context.ReimbursementModule.Reimbursement.toUplcData({
+        const self = contract.ReimbursementModule.Reimbursement.toUplcData({
             n_remaining_vouchers: 0,
             start_price: [100, 1],
             end_price: [200_000_000, 1_000_000],
@@ -34,7 +33,10 @@ describe("Reimbursement::calc_alpha", () => {
             }
         })
 
-        const endPrice = new ListData([new IntData(300_000_000), new IntData(1_000_000)])
+        const endPrice = new ListData([
+            new IntData(300_000_000),
+            new IntData(1_000_000)
+        ])
 
         const alpha = calc_alpha.evalUnsafe({
             self: self,
@@ -61,7 +63,7 @@ describe("Reimbursement::calc_alpha", () => {
     })
 
     it("correct ratio division with default end_price (evalUnsafe)", () => {
-        const self = context.ReimbursementModule.Reimbursement.toUplcData({
+        const self = contract.ReimbursementModule.Reimbursement.toUplcData({
             n_remaining_vouchers: 0,
             start_price: [100, 1],
             end_price: [200_000_000, 1_000_000],

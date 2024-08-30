@@ -1,266 +1,366 @@
-import { strictEqual, throws } from "node:assert"
+import { strictEqual } from "node:assert"
 import { describe, it } from "node:test"
-import context from "pbg-token-validators-test-context"
-import { allScripts, DUMMY_CONFIG, DUMMY_SUPPLY, makeSupplyValidatorSpendingContext, policy } from "./utils"
-import { AssetClass, Assets, MintingPolicyHash } from "@helios-lang/ledger"
-import { encodeUtf8, hexToBytes } from "@helios-lang/codec-utils"
+import { Assets, MintingPolicyHash } from "@helios-lang/ledger"
+import contract from "pbg-token-validators-test-context"
+import { policy, scripts } from "./constants"
+import { spendSupply } from "./tx"
+import { AssetClasses, makeAssetsToken, makeDvpTokens } from "./tokens"
+import { makeConfig, makeSupply } from "./data"
+const {
+    assets,
+    config,
+    direct_policy,
+    dvp_token,
+    get_minted,
+    indirect_policy,
+    metadata,
+    minted_only_dvp_tokens,
+    nothing_minted,
+    policy: policy_internal,
+    portfolio,
+    price,
+    reimbursement,
+    supply,
+    voucher_ref_token,
+    voucher_user_nft
+} = contract.Tokens
 
-const scriptContext = makeSupplyValidatorSpendingContext({supply: DUMMY_SUPPLY, config: DUMMY_CONFIG})
+const scriptContext = spendSupply({
+    supply: makeSupply({}),
+    config: makeConfig({})
+})
 
 describe("Tokens policy", () => {
     it("direct_policy", () => {
-        const res = context.Tokens.direct_policy.eval({})
-
-        strictEqual(res.toHex(), policy.toHex())
+        strictEqual(direct_policy.eval({}).toHex(), policy.toHex())
     })
 
     it("indirect_policy", () => {
-        const res = context.Tokens.indirect_policy.eval({
-            $scriptContext: scriptContext
-        })
-
-        strictEqual(res.toHex(), policy.toHex())
+        strictEqual(
+            indirect_policy
+                .eval({
+                    $scriptContext: scriptContext
+                })
+                .toHex(),
+            policy.toHex()
+        )
     })
 
-    allScripts.forEach(currentScript => {
+    scripts.forEach((currentScript) => {
         it(`policy in ${currentScript}`, () => {
-            const res = context.Tokens.policy.eval({
-                $currentScript: currentScript,
-                $scriptContext: scriptContext
-            })
-
-            strictEqual(res.toHex(), policy.toHex())
+            strictEqual(
+                policy_internal
+                    .eval({
+                        $currentScript: currentScript,
+                        $scriptContext: scriptContext
+                    })
+                    .toHex(),
+                policy.toHex()
+            )
         })
     })
 })
 
-allScripts.forEach(currentScript => {
-    describe(`Tokens asset classes in ${currentScript}`, () => {
-        it("dvp_token", () => {
-            const res = context.Tokens.dvp_token.eval({
-                $scriptContext: scriptContext,
-                $currentScript: currentScript
-            })
-
-            const expected = new AssetClass(policy, hexToBytes("0014df10"))
-            strictEqual(res.toFingerprint(), expected.toFingerprint())
+describe("Tokens asset classes", () => {
+    it("dvp_token", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                dvp_token
+                    .eval({
+                        $scriptContext: scriptContext,
+                        $currentScript: currentScript
+                    })
+                    .toFingerprint(),
+                AssetClasses.dvpToken.toFingerprint()
+            )
         })
-    
-        it("metadata", () => {
-            const res = context.Tokens.metadata.eval({
-                $scriptContext: scriptContext,
-                $currentScript: currentScript
-            })
+    })
 
-            const expected = new AssetClass(policy, hexToBytes("000643b0"))
-            strictEqual(res.toFingerprint(), expected.toFingerprint())
+    it("metadata", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                metadata
+                    .eval({
+                        $scriptContext: scriptContext,
+                        $currentScript: currentScript
+                    })
+                    .toFingerprint(),
+                AssetClasses.metadata.toFingerprint()
+            )
         })
+    })
 
-        it("config", () => {
-            const res = context.Tokens.config.eval({
-                $scriptContext: scriptContext,
-                $currentScript: currentScript
-            })
-
-            const expected = new AssetClass(policy, encodeUtf8("config"))
-            strictEqual(res.toFingerprint(), expected.toFingerprint())
+    it("config", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                config
+                    .eval({
+                        $scriptContext: scriptContext,
+                        $currentScript: currentScript
+                    })
+                    .toFingerprint(),
+                AssetClasses.config.toFingerprint()
+            )
         })
+    })
 
-        it("portfolio", () => {
-            const res = context.Tokens.portfolio.eval({
-                $scriptContext: scriptContext,
-                $currentScript: currentScript
-            })
-
-            const expected = new AssetClass(policy, encodeUtf8("portfolio"))
-            strictEqual(res.toFingerprint(), expected.toFingerprint())
+    it("portfolio", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                portfolio
+                    .eval({
+                        $scriptContext: scriptContext,
+                        $currentScript: currentScript
+                    })
+                    .toFingerprint(),
+                AssetClasses.portfolio.toFingerprint()
+            )
         })
+    })
 
-        it("price", () => {
-            const res = context.Tokens.price.eval({
-                $scriptContext: scriptContext,
-                $currentScript: currentScript
-            })
-
-            const expected = new AssetClass(policy, encodeUtf8("price"))
-            strictEqual(res.toFingerprint(), expected.toFingerprint())
+    it("price", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                price
+                    .eval({
+                        $scriptContext: scriptContext,
+                        $currentScript: currentScript
+                    })
+                    .toFingerprint(),
+                AssetClasses.price.toFingerprint()
+            )
         })
+    })
 
-    
-        it("supply", () => {
-            const res = context.Tokens.supply.eval({
-                $scriptContext: scriptContext,
-                $currentScript: currentScript
-            })
-
-            const expected = new AssetClass(policy, encodeUtf8("supply"))
-            strictEqual(res.toFingerprint(), expected.toFingerprint())
+    it("supply", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                supply
+                    .eval({
+                        $scriptContext: scriptContext,
+                        $currentScript: currentScript
+                    })
+                    .toFingerprint(),
+                AssetClasses.supply.toFingerprint()
+            )
         })
+    })
 
-        it("assets 10", () => {
-            const res = context.Tokens.assets.eval({
-                id: 10,
-                $scriptContext: scriptContext,
-                $currentScript: currentScript
-            })
-
-            const expected = new AssetClass(policy, encodeUtf8("assets 10"))
-            strictEqual(res.toFingerprint(), expected.toFingerprint())
+    it("assets 10", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                assets
+                    .eval({
+                        id: 10,
+                        $scriptContext: scriptContext,
+                        $currentScript: currentScript
+                    })
+                    .toFingerprint(),
+                AssetClasses.assets(10).toFingerprint()
+            )
         })
+    })
 
-        it("reimbursement 10", () => {
-            const res = context.Tokens.reimbursement.eval({
-                id: 10,
-                $scriptContext: scriptContext,
-                $currentScript: currentScript
-            })
-
-            const expected = new AssetClass(policy, encodeUtf8("reimbursement 10"))
-            strictEqual(res.toString(), expected.toString())
+    it("reimbursement 10", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                reimbursement
+                    .eval({
+                        id: 10,
+                        $scriptContext: scriptContext,
+                        $currentScript: currentScript
+                    })
+                    .toString(),
+                AssetClasses.reimbursement(10).toString()
+            )
         })
+    })
 
-        it("voucher ref 10", () => {
-            const res = context.Tokens.voucher_ref_token.eval({
-                id: 10,
-                $scriptContext: scriptContext,
-                $currentScript: currentScript
-            })
-
-            const expected = new AssetClass(policy, hexToBytes("000643b0").concat(encodeUtf8("voucher 10")))
-            strictEqual(res.toFingerprint(), expected.toFingerprint())
+    it("voucher ref 10", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                voucher_ref_token
+                    .eval({
+                        id: 10,
+                        $scriptContext: scriptContext,
+                        $currentScript: currentScript
+                    })
+                    .toFingerprint(),
+                AssetClasses.voucher_ref(10).toFingerprint()
+            )
         })
+    })
 
-        it("voucher nft 10", () => {
-            const res = context.Tokens.voucher_user_nft.eval({
-                id: 10,
-                $scriptContext: scriptContext,
-                $currentScript: currentScript
-            })
-
-            const expected = new AssetClass(policy, hexToBytes("000de140").concat(encodeUtf8("voucher 10")))
-            strictEqual(res.toFingerprint(), expected.toFingerprint())
+    it("voucher nft 10", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                voucher_user_nft
+                    .eval({
+                        id: 10,
+                        $scriptContext: scriptContext,
+                        $currentScript: currentScript
+                    })
+                    .toFingerprint(),
+                AssetClasses.voucher_nft(10).toFingerprint()
+            )
         })
     })
 })
 
-const ctxWithWrongMinted = makeSupplyValidatorSpendingContext({
-    supply: DUMMY_SUPPLY,
-    config: DUMMY_CONFIG,
-    minted: new Assets([[new MintingPolicyHash([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27]), []]])
+const ctxWithWrongMinted = spendSupply({
+    supply: makeSupply({}),
+    config: makeConfig({}),
+    minted: new Assets([
+        [
+            new MintingPolicyHash([
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+                18, 19, 20, 21, 22, 23, 24, 25, 26, 27
+            ]),
+            []
+        ]
+    ])
 })
 
-const ctxWithDvpTokensMinted = makeSupplyValidatorSpendingContext({
-    supply: DUMMY_SUPPLY,
-    config: DUMMY_CONFIG,
-   minted: new Assets([[policy, [[hexToBytes("0014df10"), 1_000_000]]]])
+const ctxWithDvpTokensMinted = spendSupply({
+    supply: makeSupply({}),
+    config: makeConfig({}),
+    minted: makeDvpTokens(1_000_000)
 })
 
-const ctxWithAssetTokenMinted = makeSupplyValidatorSpendingContext({
-    supply: DUMMY_SUPPLY,
-    config: DUMMY_CONFIG,
-    minted: new Assets([[policy, [[encodeUtf8("assets 10"), 1]]]])
+const ctxWithAssetTokenMinted = spendSupply({
+    supply: makeSupply({}),
+    config: makeConfig({}),
+    minted: makeAssetsToken(10, 1)
 })
 
-const ctxWithAssetTokenAndDvpTokensMinted = makeSupplyValidatorSpendingContext({
-    supply: DUMMY_SUPPLY,
-    config: DUMMY_CONFIG,
-    minted: new Assets([[policy, [[encodeUtf8("assets 10"), 1], [hexToBytes("0014df10"), 1_000_000]]]])
+const ctxWithAssetTokenAndDvpTokensMinted = spendSupply({
+    supply: makeSupply({}),
+    config: makeConfig({}),
+    minted: makeAssetsToken(10, 1).add(makeDvpTokens(1_000_000))
 })
 
-allScripts.forEach(currentScript => {
-    describe(`Tokens::get_minted in ${currentScript}`, () => {
-        it("returns empty map if nothing is minted", () => {
-            const res = context.Tokens.get_minted.eval({
-                $currentScript: currentScript,
-                $scriptContext: scriptContext
-            })
-            
-            strictEqual(res.size, 0)
-        })
-
-        it("returns empty map if something else is minted", () => {
-            const res = context.Tokens.get_minted.eval({
-                $currentScript: currentScript,
-                $scriptContext: ctxWithWrongMinted
-            })
-            
-            strictEqual(res.size, 0)
-        })
-
-        it("ok for some dvp_tokens minted", () => {
-            const res = context.Tokens.get_minted.eval({
-                $currentScript: currentScript,
-                $scriptContext: ctxWithDvpTokensMinted
-            })
-
-            strictEqual(res.size, 1)
+describe("Tokens::get_minted", () => {
+    it("returns empty map if nothing is minted", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                get_minted.eval({
+                    $currentScript: currentScript,
+                    $scriptContext: scriptContext
+                }).size,
+                0
+            )
         })
     })
 
-    describe(`Tokens::nothing_minted in ${currentScript}`, () => {
-        it("true if nothing minted", () => {
-            const res = context.Tokens.nothing_minted.eval({
-                $currentScript: currentScript,
-                $scriptContext: scriptContext
-            })
-
-            strictEqual(res, true)
-        })
-
-        it("true if something else is minted", () => {
-            const res = context.Tokens.nothing_minted.eval({
-                $currentScript: currentScript,
-                $scriptContext: ctxWithWrongMinted
-            })
-
-            strictEqual(res, true)
-        })
-
-        it("false if dvp tokens are minted", () => {
-            const res = context.Tokens.nothing_minted.eval({
-                $currentScript: currentScript,
-                $scriptContext: ctxWithDvpTokensMinted
-            })
-
-            strictEqual(res, false)
+    it("returns empty map if something else is minted", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                get_minted.eval({
+                    $currentScript: currentScript,
+                    $scriptContext: ctxWithWrongMinted
+                }).size,
+                0
+            )
         })
     })
 
-    describe(`Tokens::minted_only_dvp_tokens in ${currentScript}`, () => {
-        it("true of dvp tokens are minted", () => {
-            const res = context.Tokens.minted_only_dvp_tokens.eval({
-                $currentScript: currentScript,
-                $scriptContext: ctxWithDvpTokensMinted
-            })
-
-            strictEqual(res, true)
+    it("ok for some dvp_tokens minted", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                get_minted.eval({
+                    $currentScript: currentScript,
+                    $scriptContext: ctxWithDvpTokensMinted
+                }).size,
+                1
+            )
         })
+    })
+})
 
-        it("true if nothing minted", () => {
-            const res = context.Tokens.minted_only_dvp_tokens.eval({
-                $currentScript: currentScript,
-                $scriptContext: scriptContext
-            })
-
-            strictEqual(res, true)
+describe("Tokens::nothing_minted", () => {
+    it("true if nothing minted", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                nothing_minted.eval({
+                    $currentScript: currentScript,
+                    $scriptContext: scriptContext
+                }),
+                true
+            )
         })
+    })
 
-        it("false if asset token minted", () => {
-            const res = context.Tokens.minted_only_dvp_tokens.eval({
-                $currentScript: currentScript,
-                $scriptContext: ctxWithAssetTokenMinted
-            })
-
-            strictEqual(res, false)
+    it("true if something else is minted", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                nothing_minted.eval({
+                    $currentScript: currentScript,
+                    $scriptContext: ctxWithWrongMinted
+                }),
+                true
+            )
         })
+    })
 
-        it("false if dvp tokens and asset token minted", () => {
-            const res = context.Tokens.minted_only_dvp_tokens.eval({
-                $currentScript: currentScript,
-                $scriptContext: ctxWithAssetTokenAndDvpTokensMinted
-            })
+    it("false if dvp tokens are minted", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                nothing_minted.eval({
+                    $currentScript: currentScript,
+                    $scriptContext: ctxWithDvpTokensMinted
+                }),
+                false
+            )
+        })
+    })
+})
 
-            strictEqual(res, false)
+describe("Tokens::minted_only_dvp_tokens", () => {
+    it("true of dvp tokens are minted", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                minted_only_dvp_tokens.eval({
+                    $currentScript: currentScript,
+                    $scriptContext: ctxWithDvpTokensMinted
+                }),
+                true
+            )
+        })
+    })
+
+    it("true if nothing minted", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                minted_only_dvp_tokens.eval({
+                    $currentScript: currentScript,
+                    $scriptContext: scriptContext
+                }),
+                true
+            )
+        })
+    })
+
+    it("false if asset token minted", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                minted_only_dvp_tokens.eval({
+                    $currentScript: currentScript,
+                    $scriptContext: ctxWithAssetTokenMinted
+                }),
+                false
+            )
+        })
+    })
+
+    it("false if dvp tokens and asset token minted", () => {
+        scripts.forEach((currentScript) => {
+            strictEqual(
+                minted_only_dvp_tokens.eval({
+                    $currentScript: currentScript,
+                    $scriptContext: ctxWithAssetTokenAndDvpTokensMinted
+                }),
+                false
+            )
         })
     })
 })
