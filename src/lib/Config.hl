@@ -249,13 +249,15 @@ func price_expiry() -> Time {
 }
 
 func signed_by_agent(
-    agent: PubKeyHash = Config::find_input().agent
+    // we must use Config::find() instead of Config::find_input() because eg. the update price transactions call this function without arguments and only reference the config UTxO
+    agent: PubKeyHash = Config::find().first.agent
 ) -> Bool {
     tx.is_signed_by(agent)
 }
 
 func witnessed_by_oracle(
-    oracle: StakingValidatorHash = Config::find_input().oracle
+    // we must use Config::find() instead of Config::find_input() because the update asset price transactions call this function without arguments and only reference the config UTxO
+    oracle: StakingValidatorHash = Config::find().first.oracle
 ) -> Bool {
     tx.withdrawals.any((scred: StakingCredential, _) -> Bool {
         scred.switch{
@@ -271,6 +273,7 @@ func witnessed_by_oracle(
 }
 
 func witnessed_by_governance(
+    // using Config::find_input() is fine because witnessed_by_governance() is only used in the config_validator
     governance: StakingValidatorHash = Config::find_input().governance.delegate
 ) -> Bool {    
     tx.withdrawals.any((scred: StakingCredential, _) -> {

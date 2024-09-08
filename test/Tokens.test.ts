@@ -1,11 +1,11 @@
-import { strictEqual } from "node:assert"
+import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { Assets, MintingPolicyHash } from "@helios-lang/ledger"
 import contract from "pbg-token-validators-test-context"
-import { policy, scripts } from "./constants"
-import { spendSupply } from "./tx"
+import { directPolicyScripts, policy, scripts } from "./constants"
 import { AssetClasses, makeAssetsToken, makeDvpTokens } from "./tokens"
-import { makeConfig, makeSupply } from "./data"
+import { ScriptContextBuilder } from "./tx"
+
 const {
     assets,
     config,
@@ -25,342 +25,432 @@ const {
     voucher_user_nft
 } = contract.Tokens
 
-const scriptContext = spendSupply({
-    supply: makeSupply({}),
-    config: makeConfig({})
-})
-
-describe("Tokens policy", () => {
+describe("Tokens::direct_policy", () => {
     it("direct_policy", () => {
         strictEqual(direct_policy.eval({}).toHex(), policy.toHex())
     })
+})
 
-    it("indirect_policy", () => {
-        strictEqual(
-            indirect_policy
-                .eval({
-                    $scriptContext: scriptContext
-                })
-                .toHex(),
-            policy.toHex()
-        )
+describe("Tokens::indirect_policy", () => {
+    it("ok when policy token is spent in current input", () => {
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                strictEqual(
+                    indirect_policy
+                        .eval({
+                            $scriptContext: ctx
+                        })
+                        .toHex(),
+                    policy.toHex()
+                )
+            })
     })
 
-    scripts.forEach((currentScript) => {
-        it(`policy in ${currentScript}`, () => {
-            strictEqual(
-                policy_internal
-                    .eval({
-                        $currentScript: currentScript,
-                        $scriptContext: scriptContext
-                    })
-                    .toHex(),
-                policy.toHex()
-            )
+    it("fails if no policy token is spent in current input", () => {
+        new ScriptContextBuilder().addPortfolioRef().use((ctx) => {
+            throws(() => {
+                indirect_policy.eval({
+                    $scriptContext: ctx
+                })
+            })
         })
+    })
+})
+
+describe("Tokens::policy", () => {
+    it("ok for unrelated tx in scripts that have direct access to policy", () => {
+        new ScriptContextBuilder().use((ctx) => {
+            directPolicyScripts.forEach((currentScript) => {
+                strictEqual(
+                    policy_internal
+                        .eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        })
+                        .toHex(),
+                    policy.toHex()
+                )
+            })
+        })
+    })
+
+    it("ok when spending utxo containing a policy token", () => {
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        policy_internal
+                            .eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx
+                            })
+                            .toHex(),
+                        policy.toHex()
+                    )
+                })
+            })
     })
 })
 
 describe("Tokens asset classes", () => {
     it("dvp_token", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                dvp_token
-                    .eval({
-                        $scriptContext: scriptContext,
-                        $currentScript: currentScript
-                    })
-                    .toFingerprint(),
-                AssetClasses.dvpToken.toFingerprint()
-            )
-        })
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        dvp_token
+                            .eval({
+                                $scriptContext: ctx,
+                                $currentScript: currentScript
+                            })
+                            .toFingerprint(),
+                        AssetClasses.dvpToken.toFingerprint()
+                    )
+                })
+            })
     })
 
     it("metadata", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                metadata
-                    .eval({
-                        $scriptContext: scriptContext,
-                        $currentScript: currentScript
-                    })
-                    .toFingerprint(),
-                AssetClasses.metadata.toFingerprint()
-            )
-        })
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        metadata
+                            .eval({
+                                $scriptContext: ctx,
+                                $currentScript: currentScript
+                            })
+                            .toFingerprint(),
+                        AssetClasses.metadata.toFingerprint()
+                    )
+                })
+            })
     })
 
     it("config", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                config
-                    .eval({
-                        $scriptContext: scriptContext,
-                        $currentScript: currentScript
-                    })
-                    .toFingerprint(),
-                AssetClasses.config.toFingerprint()
-            )
-        })
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        config
+                            .eval({
+                                $scriptContext: ctx,
+                                $currentScript: currentScript
+                            })
+                            .toFingerprint(),
+                        AssetClasses.config.toFingerprint()
+                    )
+                })
+            })
     })
 
     it("portfolio", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                portfolio
-                    .eval({
-                        $scriptContext: scriptContext,
-                        $currentScript: currentScript
-                    })
-                    .toFingerprint(),
-                AssetClasses.portfolio.toFingerprint()
-            )
-        })
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        portfolio
+                            .eval({
+                                $scriptContext: ctx,
+                                $currentScript: currentScript
+                            })
+                            .toFingerprint(),
+                        AssetClasses.portfolio.toFingerprint()
+                    )
+                })
+            })
     })
 
     it("price", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                price
-                    .eval({
-                        $scriptContext: scriptContext,
-                        $currentScript: currentScript
-                    })
-                    .toFingerprint(),
-                AssetClasses.price.toFingerprint()
-            )
-        })
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        price
+                            .eval({
+                                $scriptContext: ctx,
+                                $currentScript: currentScript
+                            })
+                            .toFingerprint(),
+                        AssetClasses.price.toFingerprint()
+                    )
+                })
+            })
     })
 
     it("supply", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                supply
-                    .eval({
-                        $scriptContext: scriptContext,
-                        $currentScript: currentScript
-                    })
-                    .toFingerprint(),
-                AssetClasses.supply.toFingerprint()
-            )
-        })
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        supply
+                            .eval({
+                                $scriptContext: ctx,
+                                $currentScript: currentScript
+                            })
+                            .toFingerprint(),
+                        AssetClasses.supply.toFingerprint()
+                    )
+                })
+            })
     })
 
     it("assets 10", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                assets
-                    .eval({
-                        id: 10,
-                        $scriptContext: scriptContext,
-                        $currentScript: currentScript
-                    })
-                    .toFingerprint(),
-                AssetClasses.assets(10).toFingerprint()
-            )
-        })
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        assets
+                            .eval({
+                                id: 10,
+                                $scriptContext: ctx,
+                                $currentScript: currentScript
+                            })
+                            .toFingerprint(),
+                        AssetClasses.assets(10).toFingerprint()
+                    )
+                })
+            })
     })
 
     it("reimbursement 10", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                reimbursement
-                    .eval({
-                        id: 10,
-                        $scriptContext: scriptContext,
-                        $currentScript: currentScript
-                    })
-                    .toString(),
-                AssetClasses.reimbursement(10).toString()
-            )
-        })
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        reimbursement
+                            .eval({
+                                id: 10,
+                                $scriptContext: ctx,
+                                $currentScript: currentScript
+                            })
+                            .toString(),
+                        AssetClasses.reimbursement(10).toString()
+                    )
+                })
+            })
     })
 
     it("voucher ref 10", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                voucher_ref_token
-                    .eval({
-                        id: 10,
-                        $scriptContext: scriptContext,
-                        $currentScript: currentScript
-                    })
-                    .toFingerprint(),
-                AssetClasses.voucher_ref(10).toFingerprint()
-            )
-        })
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        voucher_ref_token
+                            .eval({
+                                id: 10,
+                                $scriptContext: ctx,
+                                $currentScript: currentScript
+                            })
+                            .toFingerprint(),
+                        AssetClasses.voucher_ref(10).toFingerprint()
+                    )
+                })
+            })
     })
 
     it("voucher nft 10", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                voucher_user_nft
-                    .eval({
-                        id: 10,
-                        $scriptContext: scriptContext,
-                        $currentScript: currentScript
-                    })
-                    .toFingerprint(),
-                AssetClasses.voucher_nft(10).toFingerprint()
-            )
-        })
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        voucher_user_nft
+                            .eval({
+                                id: 10,
+                                $scriptContext: ctx,
+                                $currentScript: currentScript
+                            })
+                            .toFingerprint(),
+                        AssetClasses.voucher_nft(10).toFingerprint()
+                    )
+                })
+            })
     })
-})
-
-const ctxWithWrongMinted = spendSupply({
-    supply: makeSupply({}),
-    config: makeConfig({}),
-    minted: new Assets([
-        [
-            new MintingPolicyHash([
-                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
-                18, 19, 20, 21, 22, 23, 24, 25, 26, 27
-            ]),
-            []
-        ]
-    ])
-})
-
-const ctxWithDvpTokensMinted = spendSupply({
-    supply: makeSupply({}),
-    config: makeConfig({}),
-    minted: makeDvpTokens(1_000_000)
-})
-
-const ctxWithAssetTokenMinted = spendSupply({
-    supply: makeSupply({}),
-    config: makeConfig({}),
-    minted: makeAssetsToken(10, 1)
-})
-
-const ctxWithAssetTokenAndDvpTokensMinted = spendSupply({
-    supply: makeSupply({}),
-    config: makeConfig({}),
-    minted: makeAssetsToken(10, 1).add(makeDvpTokens(1_000_000))
 })
 
 describe("Tokens::get_minted", () => {
     it("returns empty map if nothing is minted", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                get_minted.eval({
-                    $currentScript: currentScript,
-                    $scriptContext: scriptContext
-                }).size,
-                0
-            )
-        })
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        get_minted.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }).size,
+                        0
+                    )
+                })
+            })
     })
 
     it("returns empty map if something else is minted", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                get_minted.eval({
-                    $currentScript: currentScript,
-                    $scriptContext: ctxWithWrongMinted
-                }).size,
-                0
-            )
-        })
+        new ScriptContextBuilder()
+            .mint({ assets: new Assets([[MintingPolicyHash.dummy(1), []]]) })
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        get_minted.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }).size,
+                        0
+                    )
+                })
+            })
     })
 
     it("ok for some dvp_tokens minted", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                get_minted.eval({
-                    $currentScript: currentScript,
-                    $scriptContext: ctxWithDvpTokensMinted
-                }).size,
-                1
-            )
-        })
+        new ScriptContextBuilder()
+            .mint({ assets: makeDvpTokens(1_000_000) })
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        get_minted.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }).size,
+                        1
+                    )
+                })
+            })
     })
 })
 
 describe("Tokens::nothing_minted", () => {
     it("true if nothing minted", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                nothing_minted.eval({
-                    $currentScript: currentScript,
-                    $scriptContext: scriptContext
-                }),
-                true
-            )
-        })
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        nothing_minted.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }),
+                        true
+                    )
+                })
+            })
     })
 
     it("true if something else is minted", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                nothing_minted.eval({
-                    $currentScript: currentScript,
-                    $scriptContext: ctxWithWrongMinted
-                }),
-                true
-            )
-        })
+        new ScriptContextBuilder()
+            .mint({ assets: new Assets([[MintingPolicyHash.dummy(1), []]]) })
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        nothing_minted.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }),
+                        true
+                    )
+                })
+            })
     })
 
     it("false if dvp tokens are minted", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                nothing_minted.eval({
-                    $currentScript: currentScript,
-                    $scriptContext: ctxWithDvpTokensMinted
-                }),
-                false
-            )
-        })
+        new ScriptContextBuilder()
+            .mint({ assets: makeDvpTokens(1_000_000) })
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        nothing_minted.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }),
+                        false
+                    )
+                })
+            })
     })
 })
 
 describe("Tokens::minted_only_dvp_tokens", () => {
     it("true of dvp tokens are minted", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                minted_only_dvp_tokens.eval({
-                    $currentScript: currentScript,
-                    $scriptContext: ctxWithDvpTokensMinted
-                }),
-                true
-            )
-        })
+        new ScriptContextBuilder()
+            .mint({ assets: makeDvpTokens(1_000_000) })
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        minted_only_dvp_tokens.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }),
+                        true
+                    )
+                })
+            })
     })
 
     it("true if nothing minted", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                minted_only_dvp_tokens.eval({
-                    $currentScript: currentScript,
-                    $scriptContext: scriptContext
-                }),
-                true
-            )
-        })
+        new ScriptContextBuilder()
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        minted_only_dvp_tokens.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }),
+                        true
+                    )
+                })
+            })
     })
 
     it("false if asset token minted", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                minted_only_dvp_tokens.eval({
-                    $currentScript: currentScript,
-                    $scriptContext: ctxWithAssetTokenMinted
-                }),
-                false
+        new ScriptContextBuilder()
+            .mint({ assets: makeAssetsToken(10, 1) })
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) =>
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        minted_only_dvp_tokens.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }),
+                        false
+                    )
+                })
             )
-        })
     })
 
     it("false if dvp tokens and asset token minted", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                minted_only_dvp_tokens.eval({
-                    $currentScript: currentScript,
-                    $scriptContext: ctxWithAssetTokenAndDvpTokensMinted
-                }),
-                false
-            )
-        })
+        new ScriptContextBuilder()
+            .mint({
+                assets: makeAssetsToken(10, 1).add(makeDvpTokens(1_000_000))
+            })
+            .redeemDummyTokenWithDvpPolicy()
+            .use((ctx) => {
+                scripts.forEach((currentScript) => {
+                    strictEqual(
+                        minted_only_dvp_tokens.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }),
+                        false
+                    )
+                })
+            })
     })
 })

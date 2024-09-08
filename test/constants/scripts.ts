@@ -14,3 +14,28 @@ export const scripts = [
     "benchmark_delegate",
     "governance_delegate"
 ]
+
+export const directPolicyScripts = [
+    "fund_policy",
+    "mint_order_validator",
+    "burn_order_validator",
+    "oracle_delegate",
+    "benchmark_delegate",
+    "governance_delegate"
+]
+
+export const indirectPolicyScripts = [
+    "supply_validator",
+    "assets_validator",
+    "portfolio_validator",
+    "price_validator",
+    "reimbursement_validator",
+    "voucher_validator",
+    "config_validator",
+    "metadata_validator"
+]
+
+export const orderValidatorScripts = [
+    "mint_order_validator",
+    "burn_order_validator"
+]

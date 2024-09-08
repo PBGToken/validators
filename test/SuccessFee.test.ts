@@ -1,7 +1,8 @@
 import { strictEqual } from "node:assert"
 import { describe, it } from "node:test"
-import { PermissiveType } from "@helios-lang/contract-utils"
 import contract from "pbg-token-validators-test-context"
+import { makeSuccessFee } from "./data"
+
 const {
     apply_internal,
     is_valid_internal,
@@ -201,20 +202,16 @@ describe("SuccessFeeModule::is_valid_internal", () => {
     })
 })
 
-const castSuccessFee = contract.SuccessFeeModule.SuccessFee
-type SuccessFeeType = PermissiveType<typeof castSuccessFee>
-
-describe("SuccessFeeModule::SuccessFee whitepaper example", () => {
-    const self: SuccessFeeType = {
-        c0: 0.0,
-        steps: [{ sigma: 1.05, c: 0.3 }]
-    }
-
-    it("SuccessFee::MAX_SUCCESS_FEE_STEPS", () => {
+describe("SuccessFeeModule::SuccessFee::MAX_SUCCESS_FEE_STEPS", () => {
+    it("equal to 10", () => {
         strictEqual(MAX_SUCCESS_FEE_STEPS.eval({}), 10n)
     })
+})
 
-    it("SuccessFee::apply whitepaper example", () => {
+describe("SuccessFeeModule::SuccessFee::apply", () => {
+    const self = makeSuccessFee()
+
+    it("matches whitepaper calculation example", () => {
         strictEqual(
             apply.eval({
                 self,
@@ -223,8 +220,12 @@ describe("SuccessFeeModule::SuccessFee whitepaper example", () => {
             0.135
         )
     })
+})
 
-    it("SuccessFee::is_valid whitepaper example", () => {
+describe("SuccessFeeModule::SuccessFee::is_valid", () => {
+    const self = makeSuccessFee()
+
+    it("returns true for coefficients used in whitepaper calculation example", () => {
         strictEqual(
             is_valid.eval({
                 self

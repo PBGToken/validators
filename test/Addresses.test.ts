@@ -1,9 +1,14 @@
-import { strictEqual } from "node:assert"
+import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import contract from "pbg-token-validators-test-context"
-import { Addresses, scripts } from "./constants"
-import { spendSupply } from "./tx"
-import { makeSupply } from "./data"
+import {
+    Addresses,
+    directPolicyScripts,
+    indirectPolicyScripts,
+    scripts
+} from "./constants"
+import { ScriptContextBuilder } from "./tx"
+
 const {
     assets,
     config,
@@ -66,26 +71,63 @@ describe("Addresses", () => {
         )
     })
 
-    const ctx = spendSupply({ supply: makeSupply({}) })
-
-    it("vault", () => {
-        scripts.forEach((currentScript) => {
-            strictEqual(
-                vault
-                    .eval({
-                        $currentScript: currentScript,
-                        $scriptContext: ctx
-                    })
-                    .toBech32(),
-                Addresses.vault.toBech32()
-            )
-        })
-    })
-
     it("voucher", () => {
         strictEqual(
             voucher.eval({}).toBech32(),
             Addresses.voucherValidator.toBech32()
         )
+    })
+})
+
+describe("Addresses::vault", () => {
+    describe("in validators that have direct access to policy", () => {
+        it("matches the expected off-chain value", () => {
+            new ScriptContextBuilder().use((ctx) => {
+                directPolicyScripts.forEach((currentScript) => {
+                    strictEqual(
+                        vault
+                            .eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx
+                            })
+                            .toBech32(),
+                        Addresses.vault.toBech32()
+                    )
+                })
+            })
+        })
+    })
+
+    describe("in validators that don't have direct access to policy", () => {
+        it("matches the expected off-chain value if a UTxO is spent which contains a single token of the associated minting policy", () => {
+            new ScriptContextBuilder()
+                .redeemDummyTokenWithDvpPolicy()
+                .use((ctx) => {
+                    indirectPolicyScripts.forEach((currentScript) => {
+                        strictEqual(
+                            vault
+                                .eval({
+                                    $currentScript: currentScript,
+                                    $scriptContext: ctx
+                                })
+                                .toBech32(),
+                            Addresses.vault.toBech32()
+                        )
+                    })
+                })
+        })
+
+        it("throws an error if no UTxO is spent containing a single token of the associated minting policy", () => {
+            new ScriptContextBuilder().use((ctx) => {
+                indirectPolicyScripts.forEach((currentScript) => {
+                    throws(() => {
+                        vault.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        })
+                    })
+                })
+            })
+        })
     })
 })

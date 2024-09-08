@@ -14,3 +14,13 @@ export const castAssetPtrs = new Cast<AssetPtrStrictType[], AssetPtrType[]>(
         isMainnet: false
     }
 )
+
+export function makeAssetPtr(props?: {
+    groupIndex?: number
+    assetClassIndex?: number
+}): AssetPtrStrictType {
+    return {
+        group_index: BigInt(props?.groupIndex ?? 0),
+        asset_class_index: BigInt(props?.assetClassIndex ?? 0)
+    }
+}

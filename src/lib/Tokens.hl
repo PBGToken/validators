@@ -21,10 +21,7 @@ const policy: MintingPolicyHash = current_script.switch{
     assets_validator     => indirect_policy(),
     portfolio_validator  => indirect_policy(),
     price_validator      => indirect_policy(),
-    reimbursement_validator => {
-        input = get_current_input();
-        input.value.get_singleton_asset_class().mph
-    },
+    reimbursement_validator => indirect_policy(),
     voucher_validator    => indirect_policy(),
     config_validator     => indirect_policy(),
     metadata_validator   => indirect_policy(),

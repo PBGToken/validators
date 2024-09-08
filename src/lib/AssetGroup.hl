@@ -31,38 +31,48 @@ struct AssetGroup {
     }
 
     func find_output_asset(asset_class: AssetClass) -> Asset {
-        result: Option[Asset] = tx.outputs.fold_lazy((output: TxOutput, next: () -> Option[Asset]) -> {
+        maybe_asset: Option[Asset] = tx.outputs.fold_lazy((output: TxOutput, next: () -> Option[Asset]) -> {
             if (output.address == Addresses::assets) {
                 assert(Tokens::contains_only_any_assets(output), "doesn't only contain assets token");
 
                 group = output.datum.inline.as[AssetGroup];
 
-                group.find_asset(asset_class)
+                
+                maybe_asset = group.find_asset(asset_class);
+
+                // TODO: a higher performance way of doing this would be to pass next() as the terminating expression to an inner find_or() function
+                maybe_asset.switch{
+                    Some => maybe_asset,
+                    None => next()
+                }
             } else {
                 next()
             }
         }, Option[Asset]::None);
 
-        result.switch{
-            Some{asset} => asset,
-            None => error("asset not found")
-        }
+        maybe_asset.unwrap()
     }
 
     func find_input_asset(asset_class: AssetClass) -> Asset {
-        result: Option[Asset] = tx.inputs.fold_lazy((input: TxInput, next: () -> Option[Asset]) -> {
+        maybe_asset: Option[Asset] = tx.inputs.fold_lazy((input: TxInput, next: () -> Option[Asset]) -> {
             if (input.address == Addresses::assets) {
                 assert(Tokens::contains_only_any_assets(input), "doesn't only contain assets token");
 
                 group = input.datum.inline.as[AssetGroup];
 
-                group.find_asset(asset_class)
+                maybe_asset = group.find_asset(asset_class);
+
+                // TODO: a higher performance way of doing this would be to pass next() as the terminating expression to an inner find_or() function
+                maybe_asset.switch{
+                    Some => maybe_asset,
+                    None => next()
+                }
             } else {
                 next()
             }
         }, Option[Asset]::None);
 
-        result.unwrap()
+        maybe_asset.unwrap()
     }
 
     /**
@@ -88,14 +98,6 @@ struct AssetGroup {
         id = Tokens::parse_assets(input);
 
         (id, input.datum.inline.as[AssetGroup])
-    }
-
-    func is_burned(id: Int) -> Bool {
-        tokens_burned = tx.minted.get_policy(Tokens::policy);
-
-        // only one can be burned at a time, nothing else can be minted
-        tokens_burned.get(TokenNames::assets(id)) == -1 // can fail
-        && tokens_burned.length == 1
     }
 
     func find_asset(self, asset_class: AssetClass) -> Option[Asset] {
@@ -142,13 +144,8 @@ func search_for_asset_class(asset_class: AssetClass, group_ptrs: []Int, first_id
             } else {
                 group = input.datum.inline.as[AssetGroup];
 
-                group.assets.fold_lazy((asset: Asset, next: () -> Bool) -> {
-                    if (asset_class == asset.asset_class) {
-                        true
-                    } else {
-                        next()
-                    }
-                }, false)
+                // reuse group.has_asset
+                group.has_asset(asset_class)
             }
         )
     }, first_id, false);

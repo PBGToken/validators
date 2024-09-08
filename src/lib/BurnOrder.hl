@@ -21,16 +21,20 @@ struct BurnOrder {
     max_price_age:    Duration
 
     func find_return(self) -> TxOutput {
+        // TODO: take invariants out of loop for performance
         tx.outputs.find((output: TxOutput) -> {
             output.address == self.return_address
-            && output.datum.inline == self.return_datum
+            && output.datum.switch{ // using output.datum.inline fails if an unrelated output is sent to same address without an inline datum, so we must use a switch to be safe
+                Inline{d} => d == self.return_datum,
+                else => false
+            }
         })
     }
 
     func diff(self) -> Value {
         input = current_script.switch{
             burn_order_validator => get_current_input(),
-            else => error("unexpected")
+            else => error("unexpected current script (BurnOrder.diff() can only be called within burn_order_validator)")
         };
             
         return = self.find_return();

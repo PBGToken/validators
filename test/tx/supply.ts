@@ -24,7 +24,8 @@ export function spendSupply(args: SpendSupplyArgs): UplcData {
         .addSupplyThread({
             outputAddress: args?.returnAddr,
             redeemer: [],
-            supply: args?.supply,
+            inputSupply: args?.supply,
+            outputSupply: args?.supply,
             token: args?.supplyToken
         })
         .addConfigRef({

@@ -93,6 +93,7 @@ func diff_counted(d_lovelace: Int, expected_tick: Int) -> Value {
                     "invalid asset change"
                 );
 
+                // TODO: prepend is cheaper
                 m.append(a.asset_class, b.count - a.count)
             }, m)
         } else {
@@ -100,9 +101,10 @@ func diff_counted(d_lovelace: Int, expected_tick: Int) -> Value {
         }
     }, Map[AssetClass]Int{});
 
+    // TODO: prepend is cheaper, and only do this if d_lovelace is non-zero?
     m = m.append(AssetClass::ADA, d_lovelace);
 
-    // this function sorts the assetclass to make it easier to detect duplicates
+    // this function sorts by assetclass to make it easier to detect duplicates
     Value::from_flat(m)
 }
 

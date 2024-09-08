@@ -5,6 +5,8 @@ import { AssetType } from "./Asset"
 export const castAssetGroup = contract.AssetGroupModule.AssetGroup
 export type AssetGroupType = PermissiveType<typeof castAssetGroup>
 type AssetGroupStrictType = StrictType<typeof castAssetGroup>
+export const castAssetGroupAction = contract.assets_validator.Action
+export type AssetGroupAction = PermissiveType<typeof castAssetGroupAction>
 
 type MakeAssetGroupProps = {
     assets: AssetType[]

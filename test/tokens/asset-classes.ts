@@ -5,7 +5,7 @@ import {
     cip68_333_prefix
 } from "../constants/cip68"
 import { policy } from "../constants/policy"
-import { encodeUtf8 } from "@helios-lang/codec-utils"
+import { IntLike, encodeUtf8 } from "@helios-lang/codec-utils"
 
 export const config = new AssetClass(policy, encodeUtf8("config"))
 export const dvpToken = new AssetClass(policy, cip68_333_prefix)
@@ -29,9 +29,9 @@ export function voucher_ref(id: number) {
     )
 }
 
-export function voucher_nft(id: number) {
+export function voucher_nft(id: IntLike) {
     return new AssetClass(
         policy,
-        cip68_222_prefix.concat(encodeUtf8(`voucher ${id}`))
+        cip68_222_prefix.concat(encodeUtf8(`voucher ${Number(id)}`))
     )
 }

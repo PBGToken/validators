@@ -6,6 +6,11 @@ export const assetsValidator = Address.fromHash(
     contract.assets_validator.$hash
 )
 
+export const burnOrderValidator = Address.fromHash(
+    false,
+    contract.burn_order_validator.$hash
+)
+
 export const configValidator = Address.fromHash(
     false,
     contract.config_validator.$hash
@@ -14,6 +19,11 @@ export const configValidator = Address.fromHash(
 export const metadataValidator = Address.fromHash(
     false,
     contract.metadata_validator.$hash
+)
+
+export const mintOrderValidator = Address.fromHash(
+    false,
+    contract.mint_order_validator.$hash
 )
 
 export const portfolioValidator = Address.fromHash(
