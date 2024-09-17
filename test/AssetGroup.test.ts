@@ -1,11 +1,16 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { Address, AssetClass, StakingValidatorHash } from "@helios-lang/ledger"
+import {
+    Address,
+    AssetClass,
+    Assets,
+    StakingValidatorHash
+} from "@helios-lang/ledger"
 import contract from "pbg-token-validators-test-context"
 import { indirectPolicyScripts, scripts } from "./constants"
 import { AssetGroupAction, AssetType, makeAsset } from "./data"
 import { makeAssetsToken, makeConfigToken } from "./tokens"
-import { ScriptContextBuilder } from "./tx"
+import { ScriptContextBuilder, withScripts } from "./tx"
 
 const {
     "AssetGroup::MAX_SIZE": MAX_SIZE,
@@ -40,65 +45,62 @@ describe("AssetGroupModule::AssetGroup::find_current", () => {
         const redeemer: AssetGroupAction = { Count: { supply_ptr: 1 } }
         const groupId = 123n
 
-        describe("for all validators", () => {
+        const configureParentContext = (props?: {
+            address?: Address
+            token?: Assets
+        }) => {
+            return new ScriptContextBuilder().addAssetGroupInput({
+                assets,
+                redeemer,
+                id: groupId,
+                address: props?.address,
+                token: props?.token
+            })
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns the asset group id and data if the current input contains an asset group token", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({
-                        assets,
-                        redeemer,
-                        id: groupId
-                    })
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                find_current.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript
-                                }),
-                                [groupId, { assets }]
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx) => {
+                    deepEqual(
+                        find_current.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }),
+                        [groupId, { assets }]
+                    )
+                })
             })
 
             it("returns the asset group id and data even if the asset group UTxO, containing an asset group token, is at the wrong address", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({
-                        assets,
-                        redeemer,
-                        id: groupId,
-                        address: Address.dummy(false)
-                    })
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                find_current.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript
-                                }),
-                                [groupId, { assets }]
-                            )
-                        })
-                    })
+                configureContext({ address: Address.dummy(false) }).use(
+                    (currentScript, ctx) => {
+                        deepEqual(
+                            find_current.eval({
+                                $scriptContext: ctx,
+                                $currentScript: currentScript
+                            }),
+                            [groupId, { assets }]
+                        )
+                    }
+                )
             })
 
             it("throws an error if the asset group UTxO doesn't contain an asset group token", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({
-                        assets,
-                        redeemer,
-                        token: makeConfigToken()
-                    })
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                find_current.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx
-                                })
+                configureContext({ token: makeConfigToken() }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            find_current.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx
                             })
                         })
-                    })
+                    }
+                )
             })
         })
     })
@@ -109,88 +111,91 @@ describe("AssetGroupModule::AssetGroup::find_output", () => {
         const assets = [makeAsset()]
         const groupId = 123n
 
-        describe("for all validators", () => {
+        const configureParentContext = (props?: {
+            address?: Address
+            token?: Assets
+            withoutDummyRedeemer?: boolean
+        }) => {
+            const scb = new ScriptContextBuilder().addAssetGroupOutput({
+                id: groupId,
+                assets,
+                address: props?.address,
+                token: props?.token
+            })
+
+            if (props?.withoutDummyRedeemer) {
+                return scb
+            } else {
+                return scb.redeemDummyTokenWithDvpPolicy()
+            }
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns the group data if the asset group output containing the asset group token is sent to the assets_validator address", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({
-                        id: groupId,
-                        assets
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                find_output.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    id: groupId
-                                }),
-                                { assets }
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx) => {
+                    deepEqual(
+                        find_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            id: groupId
+                        }),
+                        { assets }
+                    )
+                })
             })
 
             it("throws an error if the asset group output isn't sent to the assets_validator address", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({
-                        id: groupId,
-                        address: Address.dummy(false),
-                        assets
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                find_output.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    id: groupId
-                                })
+                configureContext({ address: Address.dummy(false) }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            find_output.eval({
+                                $scriptContext: ctx,
+                                $currentScript: currentScript,
+                                id: groupId
                             })
                         })
-                    })
+                    }
+                )
             })
 
             it("throws an error if the asset group output doesn't contain the asset group token", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({
-                        token: makeConfigToken(),
-                        assets
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                find_output.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    id: groupId
-                                })
+                configureContext({ token: makeConfigToken() }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            find_output.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                id: groupId
                             })
                         })
-                    })
+                    }
+                )
             })
         })
 
-        describe("in validators that don't have direct access to the policy", () => {
+        describe("@ validators that don't have direct access to the policy", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                indirectPolicyScripts
+            )
+
             it("throws an error if no UTxO containing a policy token is spent", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({
-                        id: groupId,
-                        assets
-                    })
-                    .use((ctx) => {
-                        indirectPolicyScripts.forEach((currentScript) => {
-                            throws(() => {
-                                find_output.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    id: groupId
-                                })
+                configureContext({ withoutDummyRedeemer: true }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            find_output.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                id: groupId
                             })
                         })
-                    })
+                    }
+                )
             })
         })
     })
@@ -201,26 +206,32 @@ describe("AssetGroupModule::AssetGroup::find_output_asset", () => {
         const asset = makeAsset()
         const assets = [asset]
 
-        describe("for all validators", () => {
+        const configureParentContext = () => {
+            return new ScriptContextBuilder()
+                .addAssetGroupOutput({
+                    id: 0,
+                    assets
+                })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns the asset data if found", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({
-                        id: 0,
-                        assets
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                find_output_asset.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: asset.asset_class
-                                }),
-                                asset
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx) => {
+                    deepEqual(
+                        find_output_asset.eval({
+                            $scriptContext: ctx,
+                            $currentScript: currentScript,
+                            asset_class: asset.asset_class
+                        }),
+                        asset
+                    )
+                })
             })
         })
     })
@@ -239,104 +250,81 @@ describe("AssetGroupModule::AssetGroup::find_output_asset", () => {
         ]
         const groupId1 = 1
 
-        describe("for all validators", () => {
+        const configureParentContext = (props?: {
+            firstGroupToken?: Assets
+            secondGroupAddress?: Address
+        }) => {
+            return new ScriptContextBuilder()
+                .addAssetGroupOutput({
+                    id: groupId0,
+                    assets: assets0,
+                    token: props?.firstGroupToken
+                })
+                .addAssetGroupOutput({
+                    id: groupId1,
+                    assets: assets1,
+                    address: props?.secondGroupAddress
+                })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns the asset data if found", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({
-                        id: groupId0,
-                        assets: assets0
-                    })
-                    .addAssetGroupOutput({
-                        id: groupId1,
-                        assets: assets1
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                find_output_asset.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: assets1[2].asset_class
-                                }),
-                                assets1[2]
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx) => {
+                    deepEqual(
+                        find_output_asset.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            asset_class: assets1[2].asset_class
+                        }),
+                        assets1[2]
+                    )
+                })
             })
 
             it("throws an error if the asset class isn't found", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({
-                        id: groupId0,
-                        assets: assets0
-                    })
-                    .addAssetGroupOutput({
-                        id: groupId1,
-                        assets: assets1
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                find_output_asset.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    asset_class: AssetClass.dummy(4)
-                                })
-                            })
+                configureContext().use((currentScript, ctx) => {
+                    throws(() => {
+                        find_output_asset.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            asset_class: AssetClass.dummy(4)
                         })
                     })
+                })
             })
 
             it("throws an error if one of asset group outputs doesn't contain exactly one asset group token", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({
-                        id: groupId0,
-                        assets: assets0,
-                        token: makeAssetsToken(0).add(makeConfigToken())
-                    })
-                    .addAssetGroupOutput({
-                        id: groupId1,
-                        assets: assets1
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                find_output_asset.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    asset_class: assets1[2].asset_class
-                                })
-                            })
+                configureContext({
+                    firstGroupToken: makeAssetsToken(0).add(makeConfigToken())
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        find_output_asset.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            asset_class: assets1[2].asset_class
                         })
                     })
+                })
             })
 
             it("throws an error if an asset group output isn't at the correct address", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({
-                        id: groupId0,
-                        assets: assets0
-                    })
-                    .addAssetGroupOutput({
-                        id: groupId1,
-                        assets: assets1,
-                        address: Address.dummy(false)
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                find_output_asset.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    asset_class: assets1[2].asset_class
-                                })
-                            })
+                configureContext({
+                    secondGroupAddress: Address.dummy(false)
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        find_output_asset.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            asset_class: assets1[2].asset_class
                         })
                     })
+                })
             })
         })
     })
@@ -347,26 +335,31 @@ describe("AssetGroupModule::AssetGroup::find_input_asset", () => {
         const asset = makeAsset()
         const assets = [asset]
 
-        describe("for all validators", () => {
+        const configureParentContext = () => {
+            return new ScriptContextBuilder().addAssetGroupInput({
+                id: 0,
+                redeemer: { Count: { supply_ptr: 1 } },
+                assets: assets
+            })
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns the asset data if found", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({
-                        id: 0,
-                        redeemer: { Count: { supply_ptr: 1 } },
-                        assets: assets
-                    })
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                find_input_asset.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: asset.asset_class
-                                }),
-                                asset
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx) => {
+                    deepEqual(
+                        find_input_asset.eval({
+                            $scriptContext: ctx,
+                            $currentScript: currentScript,
+                            asset_class: asset.asset_class
+                        }),
+                        asset
+                    )
+                })
             })
         })
     })
@@ -385,104 +378,81 @@ describe("AssetGroupModule::AssetGroup::find_input_asset", () => {
         ]
         const groupId1 = 1
 
-        describe("for all validators", () => {
+        const configureParentContext = (props?: {
+            firstGroupToken?: Assets
+            secondGroupAddress?: Address
+        }) => {
+            return new ScriptContextBuilder()
+                .addAssetGroupInput({
+                    id: groupId0,
+                    assets: assets0,
+                    token: props?.firstGroupToken
+                })
+                .addAssetGroupInput({
+                    id: groupId1,
+                    assets: assets1,
+                    address: props?.secondGroupAddress
+                })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns the asset data if found", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({
-                        id: groupId0,
-                        assets: assets0
-                    })
-                    .addAssetGroupInput({
-                        id: groupId1,
-                        assets: assets1
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                find_input_asset.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: assets1[2].asset_class
-                                }),
-                                assets1[2]
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx) => {
+                    deepEqual(
+                        find_input_asset.eval({
+                            $scriptContext: ctx,
+                            $currentScript: currentScript,
+                            asset_class: assets1[2].asset_class
+                        }),
+                        assets1[2]
+                    )
+                })
             })
 
             it("throws an error if not found", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({
-                        id: groupId0,
-                        assets: assets0
-                    })
-                    .addAssetGroupInput({
-                        id: groupId1,
-                        assets: assets1
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                find_input_asset.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    asset_class: AssetClass.dummy(4)
-                                })
-                            })
+                configureContext().use((currentScript, ctx) => {
+                    throws(() => {
+                        find_input_asset.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            asset_class: AssetClass.dummy(4)
                         })
                     })
+                })
             })
 
             it("throws an error if one of the asset group inputs doesn't contain exactly one asset group token", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({
-                        id: groupId0,
-                        assets: assets0,
-                        token: makeAssetsToken(0).add(makeConfigToken())
-                    })
-                    .addAssetGroupInput({
-                        id: groupId1,
-                        assets: assets1
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                find_input_asset.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    asset_class: assets1[2].asset_class
-                                })
-                            })
+                configureContext({
+                    firstGroupToken: makeAssetsToken(0).add(makeConfigToken())
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        find_input_asset.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            asset_class: assets1[2].asset_class
                         })
                     })
+                })
             })
 
             it("throws an error if the asset group containing the searched asset isn't at the correct address", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({
-                        id: groupId0,
-                        assets: assets0
-                    })
-                    .addAssetGroupInput({
-                        id: groupId1,
-                        assets: assets1,
-                        address: Address.dummy(false)
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                find_input_asset.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    asset_class: assets1[2].asset_class
-                                })
-                            })
+                configureContext({
+                    secondGroupAddress: Address.dummy(false)
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        find_input_asset.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            asset_class: assets1[2].asset_class
                         })
                     })
+                })
             })
         })
     })
@@ -493,44 +463,44 @@ describe("AssetGroupModule::AssetGroup::find_single_input", () => {
         const assets = [makeAsset()]
         const groupId = 0n
 
-        describe("for all validators", () => {
+        const configureParentContext = (props?: { token?: Assets }) => {
+            return new ScriptContextBuilder().addAssetGroupInput({
+                id: groupId,
+                assets: assets,
+                redeemer: { Count: { supply_ptr: 1 } },
+                token: props?.token
+            })
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns the asset group id and data if only a single asset group UTxO is being spent", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({
-                        id: groupId,
-                        assets: assets,
-                        redeemer: { Count: { supply_ptr: 1 } }
-                    })
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                find_single_input.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx
-                                }),
-                                [groupId, { assets: assets }]
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx) => {
+                    deepEqual(
+                        find_single_input.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }),
+                        [groupId, { assets: assets }]
+                    )
+                })
             })
 
             it("throws an error if the asset group input doesn't contain an asset group token", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({
-                        token: makeConfigToken(),
-                        assets,
-                        redeemer: { Count: { supply_ptr: 1 } }
-                    })
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                find_single_input.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx
-                                })
+                configureContext({ token: makeConfigToken() }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            find_single_input.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx
                             })
                         })
-                    })
+                    }
+                )
             })
         })
     })
@@ -549,81 +519,77 @@ describe("AssetGroupModule::AssetGroup::find_single_input", () => {
         ]
         const groupId1 = 1n
 
-        describe("for the config_validator", () => {
+        const configureParentContext = (props?: {
+            secondGroupToken?: Assets
+        }) => {
+            return new ScriptContextBuilder()
+                .addAssetGroupInput({
+                    id: groupId0,
+                    assets: assets0,
+                    redeemer: { Count: { supply_ptr: 1 } }
+                })
+                .addAssetGroupInput({
+                    id: groupId1,
+                    assets: assets1,
+                    token: props?.secondGroupToken
+                })
+        }
+
+        describe("@ config_validator", () => {
+            const configureContext = withScripts(configureParentContext, [
+                "config_validator"
+            ])
+
             it("returns the first asset group id and data if the second asset group doesn't contain an asset group token", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({
-                        id: groupId0,
-                        assets: assets0,
-                        redeemer: { Count: { supply_ptr: 1 } }
-                    })
-                    .addAssetGroupInput({
-                        id: groupId1,
-                        token: makeConfigToken()
-                    })
-                    .use((ctx) => {
+                configureContext({ secondGroupToken: makeConfigToken() }).use(
+                    (currentScript, ctx) => {
                         deepEqual(
                             find_single_input.eval({
-                                $currentScript: "config_validator",
+                                $currentScript: currentScript,
                                 $scriptContext: ctx
                             }),
                             [0n, { assets: assets0 }]
                         )
-                    })
+                    }
+                )
             })
         })
 
-        describe("for all validators except the config_validator", () => {
-            const nonConfigValidatorScripts = scripts.filter(
-                (s) => s != "config_validator"
+        describe("@ all validators except the config_validator", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts.filter((s) => s != "config_validator")
             )
+
             it("throws an error even if the second asset group doesn't contain an asset group token (only address matters for the singleton check)", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({
-                        id: groupId0,
-                        assets: assets0,
-                        redeemer: { Count: { supply_ptr: 1 } }
-                    })
-                    .addAssetGroupInput({
-                        id: groupId1,
-                        token: makeConfigToken(),
-                        assets: assets1
-                    })
-                    .use((ctx) => {
-                        nonConfigValidatorScripts.forEach((currentScript) => {
-                            throws(() => {
-                                find_single_input.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx
-                                })
+                configureContext({ secondGroupToken: makeConfigToken() }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            find_single_input.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx
                             })
                         })
-                    })
+                    }
+                )
             })
         })
 
-        describe("for all validators", () => {
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("throws an error if both asset groups are at the asset_validator address and contain an asset group token", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({
-                        id: groupId0,
-                        assets: assets0,
-                        redeemer: { Count: { supply_ptr: 1 } }
-                    })
-                    .addAssetGroupInput({
-                        id: groupId1,
-                        assets: assets1
-                    })
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                find_single_input.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx
-                                })
-                            })
+                configureContext().use((currentScript, ctx) => {
+                    throws(() => {
+                        find_single_input.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
                         })
                     })
+                })
             })
         })
     })
@@ -631,9 +597,9 @@ describe("AssetGroupModule::AssetGroup::find_single_input", () => {
 
 describe("AssetGroupModule::AssetGroup::find_asset", () => {
     describe("empty asset group", () => {
-        it("returns None", () => {
-            const assets: AssetType[] = []
+        const assets: AssetType[] = []
 
+        it("returns None", () => {
             strictEqual(
                 find_asset.eval({
                     self: { assets },
@@ -695,9 +661,9 @@ describe("AssetGroupModule::AssetGroup::find_asset", () => {
 
 describe("AssetGroupModule::AssetGroup::has_asset", () => {
     describe("empty asset group", () => {
-        it("returns false", () => {
-            const assets: AssetType[] = []
+        const assets: AssetType[] = []
 
+        it("returns false", () => {
             strictEqual(
                 has_asset.eval({
                     self: { assets },
@@ -869,25 +835,32 @@ describe("AssetGroupModule::AssetGroup::nothing_spent", () => {
 describe("AssetGroupModule::search_for_asset_class", () => {
     describe("the tx references a single empty asset group", () => {
         const assets: AssetType[] = []
-        describe("for all validators", () => {
+
+        const configureParentContext = () => {
+            return new ScriptContextBuilder()
+                .addAssetGroupRef({ assets, id: 0 })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns false", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets, id: 0 })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            strictEqual(
-                                search_for_asset_class.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: AssetClass.dummy(),
-                                    group_ptrs: [0],
-                                    first_id: 0
-                                }),
-                                false
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx) => {
+                    strictEqual(
+                        search_for_asset_class.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            asset_class: AssetClass.dummy(),
+                            group_ptrs: [0],
+                            first_id: 0
+                        }),
+                        false
+                    )
+                })
             })
         })
     })
@@ -896,86 +869,79 @@ describe("AssetGroupModule::search_for_asset_class", () => {
         const assets = [makeAsset()]
         const groupId = 0n
 
-        describe("for all validators", () => {
+        const configureParentContext = (props?: { address?: Address }) => {
+            return new ScriptContextBuilder()
+                .addAssetGroupRef({
+                    address: props?.address,
+                    assets,
+                    id: groupId
+                })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns true if found", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets, id: groupId })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            strictEqual(
-                                search_for_asset_class.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: assets[0].asset_class,
-                                    group_ptrs: [0],
-                                    first_id: 0
-                                }),
-                                true
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx) => {
+                    strictEqual(
+                        search_for_asset_class.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            asset_class: assets[0].asset_class,
+                            group_ptrs: [0],
+                            first_id: 0
+                        }),
+                        true
+                    )
+                })
             })
 
             it("throws an error if the pointer is out-of-range", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets, id: groupId })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                search_for_asset_class.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: assets[0].asset_class,
-                                    group_ptrs: [1],
-                                    first_id: 0
-                                })
-                            })
+                configureContext().use((currentScript, ctx) => {
+                    throws(() => {
+                        search_for_asset_class.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            asset_class: assets[0].asset_class,
+                            group_ptrs: [1],
+                            first_id: 0
                         })
                     })
+                })
             })
 
             it("throws an error if the expected asset group id doesn't match", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets, id: groupId })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                search_for_asset_class.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: assets[0].asset_class,
-                                    group_ptrs: [0],
-                                    first_id: 1
-                                })
-                            })
+                configureContext().use((currentScript, ctx) => {
+                    throws(() => {
+                        search_for_asset_class.eval({
+                            $scriptContext: ctx,
+                            $currentScript: currentScript,
+                            asset_class: assets[0].asset_class,
+                            group_ptrs: [0],
+                            first_id: 1
                         })
                     })
+                })
             })
 
             it("throws an error if the asset group is at the wrong address", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({
-                        assets,
-                        address: Address.dummy(false),
-                        id: groupId
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                search_for_asset_class.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: assets[0].asset_class,
-                                    group_ptrs: [0],
-                                    first_id: 0
-                                })
+                configureContext({ address: Address.dummy(false) }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            search_for_asset_class.eval({
+                                $scriptContext: ctx,
+                                $currentScript: currentScript,
+                                asset_class: assets[0].asset_class,
+                                group_ptrs: [0],
+                                first_id: 0
                             })
                         })
-                    })
+                    }
+                )
             })
         })
     })
@@ -988,25 +954,30 @@ describe("AssetGroupModule::search_for_asset_class", () => {
         ]
         const groupId = 0n
 
-        describe("for all validators", () => {
+        const configureParentContext = () => {
+            return new ScriptContextBuilder()
+                .addAssetGroupRef({ assets, id: groupId })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns false if not found", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets, id: groupId })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            strictEqual(
-                                search_for_asset_class.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: AssetClass.dummy(0),
-                                    group_ptrs: [0],
-                                    first_id: 0
-                                }),
-                                false
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx) => {
+                    strictEqual(
+                        search_for_asset_class.eval({
+                            $scriptContext: ctx,
+                            $currentScript: currentScript,
+                            asset_class: AssetClass.dummy(0),
+                            group_ptrs: [0],
+                            first_id: 0
+                        }),
+                        false
+                    )
+                })
             })
         })
     })
@@ -1024,118 +995,104 @@ describe("AssetGroupModule::search_for_asset_class", () => {
         ]
         const groupId1 = 1n
 
-        describe("for all validators", () => {
+        const configureParentContext = (props?: {
+            secondGroupId?: number
+            secondGroupAddress?: Address
+            secondGroupToken?: Assets
+        }) => {
+            return new ScriptContextBuilder()
+                .addAssetGroupRef({ assets: assets0, id: groupId0 })
+                .addDummyRefs(5)
+                .addAssetGroupRef({
+                    assets: assets1,
+                    id: props?.secondGroupId ?? groupId1,
+                    address: props?.secondGroupAddress,
+                    token: props?.secondGroupToken
+                })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns true if found in the second asset group", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets: assets0, id: groupId0 })
-                    .addDummyRefs(5)
-                    .addAssetGroupRef({ assets: assets1, id: groupId1 })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            strictEqual(
-                                search_for_asset_class.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: AssetClass.dummy(0),
-                                    group_ptrs: [0, 6],
-                                    first_id: 0
-                                }),
-                                true
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx) => {
+                    strictEqual(
+                        search_for_asset_class.eval({
+                            $scriptContext: ctx,
+                            $currentScript: currentScript,
+                            asset_class: AssetClass.dummy(0),
+                            group_ptrs: [0, 6],
+                            first_id: 0
+                        }),
+                        true
+                    )
+                })
             })
 
             it("throws an error if found in the first asset group (which is error-free), but the second asset group doesn't have the expected id", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets: assets0, id: groupId0 })
-                    .addDummyRefs(5)
-                    .addAssetGroupRef({ assets: assets1, id: 5 })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                search_for_asset_class.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: AssetClass.dummy(1),
-                                    group_ptrs: [0, 6],
-                                    first_id: 0
-                                })
+                configureContext({ secondGroupId: 5 }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            search_for_asset_class.eval({
+                                $scriptContext: ctx,
+                                $currentScript: currentScript,
+                                asset_class: AssetClass.dummy(1),
+                                group_ptrs: [0, 6],
+                                first_id: 0
                             })
                         })
-                    })
+                    }
+                )
             })
 
             it("throws an error if found in the first asset group (which is error-free), but the second asset group isn't at the assets_validator address", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets: assets0, id: groupId0 })
-                    .addDummyRefs(5)
-                    .addAssetGroupRef({
-                        assets: assets1,
-                        address: Address.dummy(false),
-                        id: groupId1
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                search_for_asset_class.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: AssetClass.dummy(1),
-                                    group_ptrs: [0, 6],
-                                    first_id: 0
-                                })
-                            })
+                configureContext({
+                    secondGroupAddress: Address.dummy(false)
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        search_for_asset_class.eval({
+                            $scriptContext: ctx,
+                            $currentScript: currentScript,
+                            asset_class: AssetClass.dummy(1),
+                            group_ptrs: [0, 6],
+                            first_id: 0
                         })
                     })
+                })
             })
 
             it("throws an error if found in the first asset group (which is error-free), but the second asset group doesn't contain the asset group token", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets: assets0, id: groupId0 })
-                    .addDummyRefs(5)
-                    .addAssetGroupRef({
-                        assets: assets1,
-                        token: makeConfigToken()
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                search_for_asset_class.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: AssetClass.dummy(1),
-                                    group_ptrs: [0, 6],
-                                    first_id: 0
-                                })
+                configureContext({ secondGroupToken: makeConfigToken() }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            search_for_asset_class.eval({
+                                $scriptContext: ctx,
+                                $currentScript: currentScript,
+                                asset_class: AssetClass.dummy(1),
+                                group_ptrs: [0, 6],
+                                first_id: 0
                             })
                         })
-                    })
+                    }
+                )
             })
 
             it("throws an error if found in the first asset group (which is error-free), but the second asset group pointer is out-of-range", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets: assets0, id: groupId0 })
-                    .addDummyRefs(5)
-                    .addAssetGroupRef({ assets: assets1, id: groupId1 })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                search_for_asset_class.eval({
-                                    $scriptContext: ctx,
-                                    $currentScript: currentScript,
-                                    asset_class: AssetClass.dummy(1),
-                                    group_ptrs: [0, 7],
-                                    first_id: 0
-                                })
-                            })
+                configureContext().use((currentScript, ctx) => {
+                    throws(() => {
+                        search_for_asset_class.eval({
+                            $scriptContext: ctx,
+                            $currentScript: currentScript,
+                            asset_class: AssetClass.dummy(1),
+                            group_ptrs: [0, 7],
+                            first_id: 0
                         })
                     })
+                })
             })
         })
     })
@@ -1146,24 +1103,30 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
         const assets: AssetType[] = []
         const groupId = 0
 
-        describe("for all validators", () => {
+        const configureParentContext = () => {
+            return new ScriptContextBuilder()
+                .addAssetGroupRef({ assets, id: groupId })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("throws an error because an oldest price timestamp can't be determined", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets, id: groupId })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                sum_total_asset_value.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    group_ptrs: [0],
-                                    first_id: 0,
-                                    max_tick: 1
-                                })
-                            })
+                configureContext().use((currentScript, ctx) => {
+                    throws(() => {
+                        sum_total_asset_value.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            group_ptrs: [0],
+                            first_id: 0,
+                            max_tick: 1
                         })
                     })
+                })
             })
         })
     })
@@ -1174,25 +1137,31 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
             makeAsset({ count: 10000, price: [100, 1], priceTimestamp })
         ]
 
-        describe("for all validators", () => {
+        const configureParentContext = () => {
+            return new ScriptContextBuilder()
+                .addAssetGroupRef({ assets, id: 0 })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns the price timestamp and lovelace value of the single asset", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets, id: 0 })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                sum_total_asset_value.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    group_ptrs: [0],
-                                    first_id: 0,
-                                    max_tick: 1
-                                }),
-                                [priceTimestamp, 1_000_000n]
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx) => {
+                    deepEqual(
+                        sum_total_asset_value.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            group_ptrs: [0],
+                            first_id: 0,
+                            max_tick: 1
+                        }),
+                        [priceTimestamp, 1_000_000n]
+                    )
+                })
             })
         })
     })
@@ -1215,67 +1184,79 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
         ]
         const groupId1 = 1n
 
-        describe("for all validators", () => {
+        const configureParentContext = () => {
+            return new ScriptContextBuilder()
+                .addAssetGroupRef({ assets: assets0, id: groupId0 })
+                .addDummyRefs(5)
+                .addAssetGroupRef({ assets: assets1, id: groupId1 })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns oldest timestamp and correct lovelace value for multiple assets", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets: assets0, id: groupId0 })
-                    .addDummyRefs(5)
-                    .addAssetGroupRef({ assets: assets1, id: groupId1 })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                sum_total_asset_value.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    group_ptrs: [0, 6],
-                                    first_id: 0,
-                                    max_tick: 1
-                                }),
-                                [oldestPriceTimestamp, 2_230_000n]
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx) => {
+                    deepEqual(
+                        sum_total_asset_value.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            group_ptrs: [0, 6],
+                            first_id: 0,
+                            max_tick: 1
+                        }),
+                        [oldestPriceTimestamp, 2_230_000n]
+                    )
+                })
             })
         })
     })
 
     describe("the tx references three asset groups, the first and second are empty, and the third with one asset", () => {
-        describe("for all validators", () => {
-            const assets0: AssetType[] = []
-            const groupId0 = 0
-            const assets1: AssetType[] = []
-            const groupId1 = 1
-            const oldestPriceTimestamp = 123
-            const assets2 = [
-                makeAsset({
-                    count: 10000,
-                    price: [100, 1],
-                    priceTimestamp: oldestPriceTimestamp
-                })
-            ]
-            const groupId2 = 2
+        const assets0: AssetType[] = []
+        const groupId0 = 0
+        const assets1: AssetType[] = []
+        const groupId1 = 1
+        const oldestPriceTimestamp = 123
+        const assets2 = [
+            makeAsset({
+                count: 10000,
+                price: [100, 1],
+                priceTimestamp: oldestPriceTimestamp
+            })
+        ]
+        const groupId2 = 2
+
+        const configureParentContext = () => {
+            return new ScriptContextBuilder()
+                .addAssetGroupRef({ assets: assets0, id: groupId0 })
+                .addAssetGroupRef({ assets: assets1, id: groupId1 })
+                .addAssetGroupRef({ assets: assets2, id: groupId2 })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
 
             it("returns the price timestamp and lovelace value of the single asset", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets: assets0, id: groupId0 })
-                    .addAssetGroupRef({ assets: assets1, id: groupId1 })
-                    .addAssetGroupRef({ assets: assets2, id: groupId2 })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                sum_total_asset_value.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    group_ptrs: [0, 1, 2],
-                                    first_id: 0,
-                                    max_tick: 1
-                                }),
-                                [oldestPriceTimestamp, 1_000_000n]
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx) => {
+                    deepEqual(
+                        sum_total_asset_value.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            group_ptrs: [0, 1, 2],
+                            first_id: 0,
+                            max_tick: 1
+                        }),
+                        [oldestPriceTimestamp, 1_000_000n]
+                    )
+                })
             })
         })
     })
@@ -1295,116 +1276,115 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
         const groupId2 = 2
         const assets2: AssetType[] = []
 
-        describe("for all validators", () => {
+        const configureParentContext = (props?: {
+            injectDummyRef?: boolean
+            injectConfigRef?: boolean
+            secondGroupId?: number
+            thirdGroupAddress?: Address
+        }) => {
+            const scb = new ScriptContextBuilder()
+                .addAssetGroupRef({ assets: assets0, id: groupId0 })
+                .addAssetGroupRef({
+                    assets: assets1,
+                    id: props?.secondGroupId ?? groupId1
+                })
+
+            if (props?.injectDummyRef) {
+                scb.addDummyRefs(1)
+            } else if (props?.injectConfigRef) {
+                scb.addConfigRef()
+            }
+
+            return scb
+                .addAssetGroupRef({
+                    address: props?.thirdGroupAddress,
+                    assets: assets2,
+                    id: groupId2
+                })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("throws an error if one of the referenced asset groups is not at the assets_validator address", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets: assets0, id: groupId0 })
-                    .addAssetGroupRef({ assets: assets1, id: groupId1 })
-                    .addAssetGroupRef({
-                        address: Address.dummy(false),
-                        assets: assets2,
-                        id: groupId2
-                    })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                sum_total_asset_value.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    group_ptrs: [0, 1, 2],
-                                    first_id: 0,
-                                    max_tick: 1
-                                })
-                            })
+                configureContext({
+                    thirdGroupAddress: Address.dummy(false)
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        sum_total_asset_value.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            group_ptrs: [0, 1, 2],
+                            first_id: 0,
+                            max_tick: 1
                         })
                     })
+                })
             })
 
             it("throws an error if one of the referenced asset groups doesn't have expected id", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets: assets0, id: groupId0 })
-                    .addAssetGroupRef({ assets: assets1, id: 3 })
-                    .addAssetGroupRef({ assets: assets2, id: groupId2 })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                sum_total_asset_value.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    group_ptrs: [0, 1, 2],
-                                    first_id: 0,
-                                    max_tick: 1
-                                })
+                configureContext({ secondGroupId: 3 }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            sum_total_asset_value.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                group_ptrs: [0, 1, 2],
+                                first_id: 0,
+                                max_tick: 1
                             })
                         })
-                    })
+                    }
+                )
             })
 
             it("throws an error if an additional pointer is included which is out-of-range", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets: assets0, id: groupId0 })
-                    .addAssetGroupRef({ assets: assets1, id: groupId1 })
-                    .addAssetGroupRef({ assets: assets2, id: groupId2 })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                sum_total_asset_value.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    group_ptrs: [0, 1, 2, 3],
-                                    first_id: 0,
-                                    max_tick: 1
-                                })
-                            })
+                configureContext().use((currentScript, ctx) => {
+                    throws(() => {
+                        sum_total_asset_value.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            group_ptrs: [0, 1, 2, 3],
+                            first_id: 0,
+                            max_tick: 1
                         })
                     })
+                })
             })
 
             it("throws an error if one of the pointers doesn't point to a related UTxO", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets: assets0, id: groupId0 })
-                    .addAssetGroupRef({ assets: assets1, id: groupId1 })
-                    .addDummyRefs(1)
-                    .addAssetGroupRef({ assets: assets2, id: groupId2 })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                sum_total_asset_value.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    group_ptrs: [0, 1, 2],
-                                    first_id: 0,
-                                    max_tick: 1
-                                })
+                configureContext({ injectDummyRef: true }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            sum_total_asset_value.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                group_ptrs: [0, 1, 2],
+                                first_id: 0,
+                                max_tick: 1
                             })
                         })
-                    })
+                    }
+                )
             })
 
             it("throws an error if one of the pointers doesn't point to an asset group", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupRef({ assets: assets0, id: groupId0 })
-                    .addAssetGroupRef({ assets: assets1, id: groupId1 })
-                    .addConfigRef()
-                    .addAssetGroupRef({ assets: assets2, id: groupId2 })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                sum_total_asset_value.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    group_ptrs: [0, 1, 2],
-                                    first_id: 0,
-                                    max_tick: 1
-                                })
+                configureContext({ injectConfigRef: true }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            sum_total_asset_value.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                group_ptrs: [0, 1, 2],
+                                first_id: 0,
+                                max_tick: 1
                             })
                         })
-                    })
+                    }
+                )
             })
         })
     })

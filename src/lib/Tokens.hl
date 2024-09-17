@@ -21,7 +21,10 @@ const policy: MintingPolicyHash = current_script.switch{
     assets_validator     => indirect_policy(),
     portfolio_validator  => indirect_policy(),
     price_validator      => indirect_policy(),
-    reimbursement_validator => indirect_policy(),
+    reimbursement_validator => {
+        input = get_current_input();
+        input.value.get_singleton_policy()
+    },
     voucher_validator    => indirect_policy(),
     config_validator     => indirect_policy(),
     metadata_validator   => indirect_policy(),
@@ -169,9 +172,23 @@ func parse_assets[V: Valuable](v: V) -> Int {
 func parse_reimbursement[V: Valuable](v: V) -> Int {
     tokens = v.value.get_policy(policy);
 
-    assert(tokens.length == 1, "can only contain one reimbursement token");
+    n = tokens.length;
 
-    (token_name, qty) = tokens.head;
+    (token_name, qty) = if (n == 1) {
+        tokens.head
+    } else if (n == 2) {
+        (tn0, qty0) = tokens.head;
+
+        if (tn0 == TokenNames::dvp_token) {
+            tokens.tail.head
+        } else {
+            assert(tokens.tail.head.first == TokenNames::dvp_token, "can only contain one reimbursement and optionally DVP tokens");
+
+            (tn0, qty0)
+        }
+    } else {
+        error("can only contain one reimbursement and optionally DVP tokens")
+    };
 
     assert(qty == 1, "expected only 1 reimbursement token");
 

@@ -1,12 +1,12 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { Address, Value } from "@helios-lang/ledger"
-import { IntData } from "@helios-lang/uplc"
+import { Address, Assets, Value } from "@helios-lang/ledger"
+import { IntData, ListData, UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { indirectPolicyScripts, scripts } from "./constants"
-import { makeConfig, makeSupply } from "./data"
+import { castSupply, makeConfig, makeSupply } from "./data"
 import { makeConfigToken, makeSupplyToken } from "./tokens"
-import { ScriptContextBuilder } from "./tx"
+import { ScriptContextBuilder, withScripts } from "./tx"
 
 const {
     "Supply::find_input": find_input,
@@ -181,87 +181,128 @@ describe("Supply::find_input", () => {
 describe("Supply::find_output", () => {
     const supply = makeSupply({})
 
-    it("ok if supply token returned", () => {
-        new ScriptContextBuilder()
-            .addSupplyThread({
-                redeemer: [],
-                inputSupply: supply,
-                outputSupply: supply
-            })
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    deepEqual(
-                        find_output.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx
-                        }),
-                        supply
-                    )
-                })
-            })
-    })
+    const configureParentContext = (props?: {
+        inputToken?: Assets
+        outputAddress?: Address
+        outputDatum?: UplcData
+        outputToken?: Assets
+    }) => {
+        return new ScriptContextBuilder().addSupplyThread({
+            redeemer: [],
+            inputSupply: supply,
+            inputToken: props?.inputToken,
+            outputSupply: props?.outputDatum ?? supply,
+            outputAddress: props?.outputAddress,
+            outputToken: props?.outputToken
+        })
+    }
 
-    it("nok if supply token not returned", () => {
-        new ScriptContextBuilder()
-            .addSupplyThread({
-                redeemer: [],
-                inputSupply: supply,
-                outputSupply: supply,
-                outputAddress: Address.dummy(false)
+    describe("@ all validators", () => {
+        const configureContext = withScripts(configureParentContext, scripts)
+
+        it("returns the supply data if the supply token is returned the supply_validator address with the supply token", () => {
+            configureContext().use((currentScript, ctx) => {
+                deepEqual(
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    }),
+                    supply
+                )
             })
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
+        })
+
+        it("throws an error if the supply token isn't returned to the supply_validator address", () => {
+            configureContext({ outputAddress: Address.dummy(false) }).use(
+                (currentScript, ctx) => {
                     throws(() => {
                         find_output.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx
                         })
                     })
-                })
-            })
-    })
+                }
+            )
+        })
 
-    it("nok if not exactly 1 returned", () => {
-        new ScriptContextBuilder()
-            .addSupplyThread({
-                redeemer: [],
-                inputSupply: supply,
-                outputSupply: supply,
+        it("throws an error if not exactly 1 token returned", () => {
+            configureContext({
                 inputToken: makeSupplyToken(1),
-                outputToken: makeSupplyToken(2),
-                outputAddress: Address.dummy(false)
-            })
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        find_output.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx
-                        })
+                outputToken: makeSupplyToken(2)
+            }).use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
                     })
                 })
             })
-    })
+        })
 
-    it("nok if wrong token returned", () => {
-        new ScriptContextBuilder()
-            .addSupplyThread({
-                redeemer: [],
-                inputSupply: supply,
-                outputSupply: supply,
+        it("throws an error if the wrong token is returned", () => {
+            configureContext({
                 inputToken: makeSupplyToken(1),
                 outputToken: makeConfigToken()
-            })
-            .use((ctx) => [
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        find_output.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx
-                        })
+            }).use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
                     })
                 })
-            ])
+            })
+        })
+
+        it("throws an error if the first field in the listData isn't iData", () => {
+            const datum = ListData.expect(castSupply.toUplcData(supply))
+            datum.items[0] = new ListData([])
+
+            configureContext({
+                outputDatum: datum
+            }).use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    })
+                })
+            })
+        })
+
+        it("throws an error if the start_price denominator in the SuccessFeeState data is zero", () => {
+            const datum = ListData.expect(castSupply.toUplcData(supply))
+            ListData.expect(ListData.expect(datum.items[6]).items[3]).items[1] =
+                new IntData(0)
+
+            configureContext({
+                outputDatum: datum
+            }).use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    })
+                })
+            })
+        })
+
+        it("throws an error if the SuccessFeeState listData contains an extra field", () => {
+            const datum = ListData.expect(castSupply.toUplcData(supply))
+            ListData.expect(ListData.expect(datum.items[6])).items.push(
+                new IntData(0)
+            )
+
+            configureContext({
+                outputDatum: datum
+            }).use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    })
+                })
+            })
+        })
     })
 })
 

@@ -29,6 +29,7 @@ struct Metadata {
 
         assert(Tokens::contains_only_metadata(output), "doesn't contain only the metadata token");
 
+        // TODO: check length of serialized data
         output.datum.inline.as[Metadata]
     }
 

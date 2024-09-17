@@ -1,1 +1,1 @@
-export { ScriptContextBuilder } from "./ScriptContextBuilder"
+export { ScriptContextBuilder, withScripts } from "./ScriptContextBuilder"

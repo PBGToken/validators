@@ -61,7 +61,7 @@ struct MintOrder {
             TokenNames::has_voucher_nft_prefix(token_name)
         });
 
-        assert(qty >= 1, "expected at least one token");
+        assert(qty <= -1, "expected at least one token returned");
 
         TokenNames::parse_voucher_nft(voucher_nft_name).unwrap()
     }

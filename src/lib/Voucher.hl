@@ -39,7 +39,8 @@ struct Voucher {
             && Tokens::contains_only_voucher_ref(output, id)
         });
 
-        output.datum.inline.as[Voucher]
+        // TODO: also check the length of the serialized data, because Cip68 allows adding additional fields
+        output.datum.inline.as_strictly[Voucher]
     }
 
     func find_return(self) -> TxOutput {

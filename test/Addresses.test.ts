@@ -80,7 +80,7 @@ describe("Addresses", () => {
 })
 
 describe("Addresses::vault", () => {
-    describe("in validators that have direct access to policy", () => {
+    describe("@ validators that have direct access to policy", () => {
         it("matches the expected off-chain value", () => {
             new ScriptContextBuilder().use((ctx) => {
                 directPolicyScripts.forEach((currentScript) => {
@@ -98,7 +98,7 @@ describe("Addresses::vault", () => {
         })
     })
 
-    describe("in validators that don't have direct access to policy", () => {
+    describe("@ validators that don't have direct access to policy", () => {
         it("matches the expected off-chain value if a UTxO is spent which contains a single token of the associated minting policy", () => {
             new ScriptContextBuilder()
                 .redeemDummyTokenWithDvpPolicy()

@@ -201,7 +201,7 @@ struct Config {
 
         assert(Tokens::contains_only_config(output), "doesn't contain only the config token");
 
-        output.datum.inline.as[Config]
+        output.datum.inline.as_strictly[Config]
     }
 
     func find_ref() -> Config {

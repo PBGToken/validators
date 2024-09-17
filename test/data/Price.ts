@@ -14,9 +14,12 @@ export function makePrice(props?: {
     timestamp?: TimeLike
     top?: IntLike
     bottom?: IntLike
+    ratio?: RatioType
 }): PriceStrictType {
     return {
-        value: [BigInt(props?.top ?? 100), BigInt(props?.bottom ?? 1n)],
+        value: props?.ratio
+            ? [BigInt(props.ratio[0]), BigInt(props.ratio[1])]
+            : [BigInt(props?.top ?? 100), BigInt(props?.bottom ?? 1n)],
         timestamp: toTime(props?.timestamp ?? 0)
     }
 }

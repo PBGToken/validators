@@ -1,11 +1,23 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { Address, TxOutput, TxOutputDatum, Value } from "@helios-lang/ledger"
-import { IntData } from "@helios-lang/uplc"
+import {
+    Address,
+    Assets,
+    TxOutput,
+    TxOutputDatum,
+    Value
+} from "@helios-lang/ledger"
+import {
+    ByteArrayData,
+    ConstrData,
+    IntData,
+    MapData,
+    UplcData
+} from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { scripts } from "./constants"
-import { makePrice, makeVoucher } from "./data"
-import { ScriptContextBuilder } from "./tx"
+import { RatioType, castVoucher, makePrice, makeVoucher } from "./data"
+import { ScriptContextBuilder, withScripts } from "./tx"
 import {
     makeConfigToken,
     makeDvpTokens,
@@ -13,7 +25,7 @@ import {
     makeVoucherRefToken,
     makeVoucherUserToken
 } from "./tokens"
-
+import { IntLike, encodeUtf8 } from "@helios-lang/codec-utils"
 
 const {
     "Voucher::get_current": get_current,
@@ -24,249 +36,325 @@ const {
     validate_burned_vouchers
 } = contract.VoucherModule
 
-describe("Voucher::get_current", () => {
+describe("VoucherModule::Voucher::get_current", () => {
     const voucher = makeVoucher()
+    const voucherId = 123n
 
-    it("ok if current input is a voucher", () => {
-        new ScriptContextBuilder()
-            .addVoucherInput({ id: 123, redeemer: new IntData(0) })
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    deepEqual(
-                        get_current.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx
-                        }),
-                        [123n, voucher]
-                    )
-                })
-            })
-    })
+    const configureContext = (props?: { token?: Assets }) => {
+        return new ScriptContextBuilder().addVoucherInput({
+            id: voucherId,
+            redeemer: new IntData(0),
+            token: props?.token
+        })
+    }
+    const configureParentContext = configureContext
 
-    it("fails if current input doesn't contain a voucher token", () => {
-        new ScriptContextBuilder()
-            .addVoucherInput({
-                token: makeConfigToken(),
-                redeemer: new IntData(0)
+    describe("@ all validators", () => {
+        const configureContext = withScripts(configureParentContext, scripts)
+
+        it("returns the voucher id and voucher data if the current input is a voucher UTxO", () => {
+            configureContext().use((currentScript, ctx) => {
+                deepEqual(
+                    get_current.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    }),
+                    [voucherId, voucher]
+                )
             })
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
+        })
+
+        it("throws an error if the current input doesn't contain a voucher token", () => {
+            configureContext({ token: makeConfigToken() }).use(
+                (currentScript, ctx) => {
                     throws(() => {
                         get_current.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx
                         })
                     })
-                })
-            })
+                }
+            )
+        })
     })
 })
 
-describe("Voucher::find_input", () => {
+describe("VoucherModule::Voucher::find_input", () => {
     const voucher = makeVoucher()
+    const voucherId = 123n
 
-    it("ok for correctly spent voucher UTxO", () => {
-        new ScriptContextBuilder()
-            .addVoucherInput({ id: 123, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    deepEqual(
-                        find_input.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx,
-                            id: 123
-                        }),
-                        voucher
-                    )
-                })
-            })
-    })
-
-    it("fails if id not found", () => {
-        new ScriptContextBuilder()
-            .addVoucherInput({ id: 123, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        find_input.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx,
-                            id: 124
-                        })
-                    })
-                })
-            })
-    })
-
-    it("fails if voucher UTxO is at wrong address", () => {
-        new ScriptContextBuilder()
+    const configureParentContext = (props?: { address?: Address }) => {
+        return new ScriptContextBuilder()
             .addVoucherInput({
-                id: 123,
+                id: voucherId,
                 voucher,
-                address: Address.dummy(false)
+                address: props?.address
             })
             .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
+    }
+
+    describe("@ all validators", () => {
+        const configureContext = withScripts(configureParentContext, scripts)
+
+        it("returns the voucher data if the voucher UTxO with the given id is spent", () => {
+            configureContext().use((currentScript, ctx) => {
+                deepEqual(
+                    find_input.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx,
+                        id: voucherId
+                    }),
+                    voucher
+                )
+            })
+        })
+
+        it("throws an error if no voucher input is found with the given id", () => {
+            configureContext().use((currentScript, ctx) => {
+                throws(() => {
+                    find_input.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx,
+                        id: 124
+                    })
+                })
+            })
+        })
+
+        it("throws an error if the voucher UTxO with the given id isn't at the voucher_validator address", () => {
+            configureContext({ address: Address.dummy(false) }).use(
+                (currentScript, ctx) => {
                     throws(() => {
                         find_input.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
-                            id: 123
+                            id: voucherId
                         })
                     })
-                })
-            })
+                }
+            )
+        })
     })
 })
 
-describe("Voucher::find_output", () => {
+describe("VoucherModule::Voucher::find_output", () => {
     const voucher = makeVoucher()
-
-    it("ok for correctly spent voucher UTxO", () => {
-        new ScriptContextBuilder()
-            .addVoucherOutput({ id: 123, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    deepEqual(
-                        find_output.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx,
-                            id: 123
-                        }),
-                        voucher
-                    )
-                })
-            })
-    })
-
-    it("fails if id not found", () => {
-        new ScriptContextBuilder()
-            .addVoucherOutput({ id: 123, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        find_output.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx,
-                            id: 124
-                        })
-                    })
-                })
-            })
-    })
-
-    it("fails if voucher UTxO is at wrong address", () => {
-        new ScriptContextBuilder()
+    const voucherId = 123n
+    const configureParentContext = (props?: {
+        address?: Address
+        datum?: UplcData
+    }) => {
+        return new ScriptContextBuilder()
             .addVoucherOutput({
-                id: 123,
+                id: voucherId,
                 voucher,
-                address: Address.dummy(false)
+                address: props?.address,
+                datum: props?.datum
             })
             .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
+    }
+
+    describe("@ all validators", () => {
+        const configureContext = withScripts(configureParentContext, scripts)
+
+        it("returns the voucher data if a voucher output is found with the given id", () => {
+            configureContext().use((currentScript, ctx) => {
+                deepEqual(
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx,
+                        id: voucherId
+                    }),
+                    voucher
+                )
+            })
+        })
+
+        it("throws an error if no voucher output is found with the given id", () => {
+            configureContext().use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx,
+                        id: 124
+                    })
+                })
+            })
+        })
+
+        it("throws an error if the voucher output with the given id isn't at the voucher_validator address", () => {
+            configureContext({ address: Address.dummy(false) }).use(
+                (currentScript, ctx) => {
                     throws(() => {
                         find_output.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
-                            id: 123
+                            id: voucherId
                         })
+                    })
+                }
+            )
+        })
+
+        it("throws an error if the return_address data isn't Address", () => {
+            const datum = ConstrData.expect(castVoucher.toUplcData(voucher))
+            const cip68Fields = MapData.expect(datum.fields[0])
+            cip68Fields.items[0][1] = new IntData(0)
+
+            configureContext({ datum }).use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx,
+                        id: voucherId
                     })
                 })
             })
+        })
+
+        it('throws an error if the return_address key isn\'t "owner"', () => {
+            const datum = ConstrData.expect(castVoucher.toUplcData(voucher))
+            const cip68Fields = MapData.expect(datum.fields[0])
+            cip68Fields.items[0][0] = new ByteArrayData(encodeUtf8("@owner"))
+
+            configureContext({ datum }).use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx,
+                        id: voucherId
+                    })
+                })
+            })
+        })
+
+        // TODO: make Cast.fromUplcData less strict, so that additional fields are ignored
+        //it("succeeds and returns the voucher data if an additional field is included", () => {
+        //    const datum = ConstrData.expect(castVoucher.toUplcData(voucher))
+        //    const cip68Fields = MapData.expect(datum.fields[0])
+        //    cip68Fields.items.push([
+        //        new ByteArrayData(encodeUtf8("@owner")),
+        //        new IntData(0)
+        //    ])
+        //
+        //    configureContext({datum})
+        //        .use((currentScript, ctx) => {
+        //            deepEqual(
+        //                find_output.eval({
+        //                    $currentScript: currentScript,
+        //                    $scriptContext: ctx,
+        //                    id: voucherId
+        //                })
+        //            , voucher)
+        //        })
+        //})
     })
 })
 
-describe("Voucher::find_return", () => {
+describe("VoucherModule::Voucher::find_return", () => {
     const address = Address.dummy(false, 5)
     const datum = new IntData(0)
+    const returnLovelace = 2_345_678n
+    const returnValue = new Value(returnLovelace)
     const voucher = makeVoucher({
         address,
         datum
     })
 
-    it("is able to find matching return output", () => {
-        new ScriptContextBuilder()
+    const configureContext = (props?: {
+        address?: Address
+        datum?: null | UplcData
+    }) => {
+        return new ScriptContextBuilder()
             .addDummyOutputs(10)
             .addOutput(
                 new TxOutput(
-                    address,
-                    new Value(2_345_678),
-                    TxOutputDatum.Inline(datum)
+                    props?.address ?? address,
+                    returnValue,
+                    props?.datum === null
+                        ? undefined
+                        : TxOutputDatum.Inline(props?.datum ?? datum)
                 )
             )
-            .use((ctx) => {
-                const actual = find_return.eval({
+    }
+
+    it("returns the output matching the address and datum", () => {
+        configureContext().use((ctx) => {
+            const actual = find_return.eval({
+                self: voucher,
+                $scriptContext: ctx
+            })
+
+            strictEqual(actual.value.lovelace, returnLovelace)
+        })
+    })
+
+    it("throws an error if the voucher return output doesn't have a datum", () => {
+        configureContext({ datum: null }).use((ctx) => {
+            throws(() => {
+                find_return.eval({
                     self: voucher,
                     $scriptContext: ctx
                 })
-
-                strictEqual(actual.value.lovelace, 2_345_678n)
             })
+        })
     })
 
-    it("fails if no datum", () => {
-        new ScriptContextBuilder()
-            .addDummyOutputs(10)
-            .addOutput(new TxOutput(address, new Value(2_345_678)))
-            .use((ctx) => {
-                throws(() => {
-                    find_return.eval({
-                        self: voucher,
-                        $scriptContext: ctx
-                    })
+    it("throws an error if the voucher return output isn't at the requested address", () => {
+        configureContext({ address: Address.dummy(false, 6) }).use((ctx) => {
+            throws(() => {
+                find_return.eval({
+                    self: voucher,
+                    $scriptContext: ctx
                 })
             })
-    })
-
-    it("fails if at wrong address", () => {
-        new ScriptContextBuilder()
-            .addDummyOutputs(10)
-            .addOutput(
-                new TxOutput(Address.dummy(false, 6), new Value(2_345_678))
-            )
-            .use((ctx) => {
-                throws(() => {
-                    find_return.eval({
-                        self: voucher,
-                        $scriptContext: ctx
-                    })
-                })
-            })
+        })
     })
 })
 
-describe("validate_minted_vouchers", () => {
-    const priceRatio = { top: 200, bottom: 1 }
-    const currentPrice = makePrice(priceRatio)
+describe("VoucherModule::validate_minted_vouchers", () => {
+    const priceRatio: RatioType = [200, 1]
+    const currentPrice = makePrice({ ratio: priceRatio })
     const periodId = 0
     const lastVoucherId = -1
 
-    it("ok for a single voucher minted", () => {
+    describe("one voucher minted", () => {
         const voucherId = 0
-        const voucher = makeVoucher({
-            price: priceRatio,
-            periodId,
-            tokens: 1000
-        })
+        const configureParentContext = (props?: {
+            address?: Address
+            minted?: Assets
+            datumTokens?: IntLike
+        }) => {
+            return new ScriptContextBuilder()
+                .mint({
+                    assets: (props?.minted ?? makeVoucherPair(voucherId)).add(
+                        makeDvpTokens(1000)
+                    )
+                })
+                .addVoucherOutput({
+                    address: props?.address,
+                    id: voucherId,
+                    voucher: makeVoucher({
+                        price: priceRatio,
+                        periodId,
+                        tokens: props?.datumTokens ?? 1000
+                    })
+                })
+                .redeemDummyTokenWithDvpPolicy()
+        }
 
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeVoucherPair(voucherId).add(makeDvpTokens(1000))
-            })
-            .addVoucherOutput({ id: voucherId, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
+            it("returns the fact that one voucher is minted and that its id is 0", () => {
+                configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         validate_minted_vouchers.eval({
-                            $scriptContext: ctx,
                             $currentScript: currentScript,
+                            $scriptContext: ctx,
                             price: currentPrice.value,
                             period_id: periodId,
                             last_voucher_id: lastVoucherId
@@ -275,9 +363,110 @@ describe("validate_minted_vouchers", () => {
                     )
                 })
             })
+
+            it("throws an error if the corresponding voucher user token isn't minted", () => {
+                configureContext({
+                    minted: makeVoucherRefToken(voucherId)
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        validate_minted_vouchers.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            price: currentPrice.value,
+                            period_id: periodId,
+                            last_voucher_id: lastVoucherId
+                        })
+                    })
+                })
+            })
+
+            it("throws an error if the corresponding voucher user token is minted more than once", () => {
+                configureContext({
+                    minted: makeVoucherRefToken(voucherId).add(
+                        makeVoucherUserToken(voucherId, 2)
+                    )
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        validate_minted_vouchers.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            price: currentPrice.value,
+                            period_id: periodId,
+                            last_voucher_id: lastVoucherId
+                        })
+                    })
+                })
+            })
+
+            it("throws an error if the number of tokens in the voucher datum is <= 0", () => {
+                configureContext({ datumTokens: 0 }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            validate_minted_vouchers.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                price: currentPrice.value,
+                                period_id: periodId,
+                                last_voucher_id: lastVoucherId
+                            })
+                        })
+                    }
+                )
+            })
+
+            it("throws an error if the voucher output isn't sent to the voucher_validator address", () => {
+                configureContext({ address: Address.dummy(false) }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            validate_minted_vouchers.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                price: currentPrice.value,
+                                period_id: periodId,
+                                last_voucher_id: lastVoucherId
+                            })
+                        })
+                    }
+                )
+            })
+
+            it("throws an error if the voucher ref token isn't minted", () => {
+                configureContext({
+                    minted: makeVoucherUserToken(voucherId)
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        validate_minted_vouchers.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            price: currentPrice.value,
+                            period_id: periodId,
+                            last_voucher_id: lastVoucherId
+                        })
+                    })
+                })
+            })
+
+            it("throws an error if the voucher ref token is minted more than once", () => {
+                configureContext({
+                    minted: makeVoucherUserToken(voucherId).add(
+                        makeVoucherRefToken(voucherId, 2)
+                    )
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        validate_minted_vouchers.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            price: currentPrice.value,
+                            period_id: periodId,
+                            last_voucher_id: lastVoucherId
+                        })
+                    })
+                })
+            })
+        })
     })
 
-    it("ok for 3 vouchers minted", () => {
+    describe("three vouchers minted", () => {
         const voucherId0 = 0
         const voucher0 = makeVoucher({
             price: priceRatio,
@@ -299,19 +488,38 @@ describe("validate_minted_vouchers", () => {
             tokens: 400
         })
 
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeVoucherPair(voucherId0)
-                    .add(makeVoucherPair(voucherId1))
-                    .add(makeVoucherPair(voucherId2))
-                    .add(makeDvpTokens(1000))
-            })
-            .addVoucherOutput({ id: voucherId0, voucher: voucher0 })
-            .addVoucherOutput({ id: voucherId1, voucher: voucher1 })
-            .addVoucherOutput({ id: voucherId2, voucher: voucher2 })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
+        const configureParentContext = (props?: {
+            extraMinted?: Assets
+            voucherId2?: number
+        }) => {
+            const vId2 = props?.voucherId2 ?? voucherId2
+            let minted = makeVoucherPair(voucherId0)
+                .add(makeVoucherPair(voucherId1))
+                .add(makeVoucherPair(vId2))
+                .add(makeDvpTokens(1000))
+
+            if (props?.extraMinted) {
+                minted = minted.add(props.extraMinted)
+            }
+
+            return new ScriptContextBuilder()
+                .mint({
+                    assets: minted
+                })
+                .addVoucherOutput({ id: voucherId0, voucher: voucher0 })
+                .addVoucherOutput({ id: voucherId1, voucher: voucher1 })
+                .addVoucherOutput({ id: vId2, voucher: voucher2 })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
+            it("returns the fact that three vouchers is minted and that the id of the last voucher is 2", () => {
+                configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         validate_minted_vouchers.eval({
                             $scriptContext: ctx,
@@ -324,43 +532,11 @@ describe("validate_minted_vouchers", () => {
                     )
                 })
             })
-    })
 
-    it("fails if one of the minted voucher has quantity not equaly to 1", () => {
-        const voucherId0 = 0
-        const voucher0 = makeVoucher({
-            price: priceRatio,
-            periodId,
-            tokens: 300
-        })
-
-        const voucherId1 = 1
-        const voucher1 = makeVoucher({
-            price: priceRatio,
-            periodId,
-            tokens: 300
-        })
-
-        const voucherId2 = 2
-        const voucher2 = makeVoucher({
-            price: priceRatio,
-            periodId,
-            tokens: 400
-        })
-
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeVoucherPair(voucherId0)
-                    .add(makeVoucherPair(voucherId1))
-                    .add(makeVoucherPair(voucherId2, 2))
-                    .add(makeDvpTokens(1000))
-            })
-            .addVoucherOutput({ id: voucherId0, voucher: voucher0 })
-            .addVoucherOutput({ id: voucherId1, voucher: voucher1 })
-            .addVoucherOutput({ id: voucherId2, voucher: voucher2 })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
+            it("throws an error if one of the minted voucher has a non-unit quantity", () => {
+                configureContext({
+                    extraMinted: makeVoucherPair(voucherId2, 1)
+                }).use((currentScript, ctx) => {
                     throws(() => {
                         validate_minted_vouchers.eval({
                             $scriptContext: ctx,
@@ -372,260 +548,61 @@ describe("validate_minted_vouchers", () => {
                     })
                 })
             })
-    })
 
-    it("fails if corresponding user token not minted", () => {
-        const voucherId = 0
-        const voucher = makeVoucher({
-            price: priceRatio,
-            periodId,
-            tokens: 1000
-        })
-
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeVoucherRefToken(voucherId).add(makeDvpTokens(1000))
-            })
-            .addVoucherOutput({ id: voucherId, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        validate_minted_vouchers.eval({
-                            $scriptContext: ctx,
-                            $currentScript: currentScript,
-                            price: currentPrice.value,
-                            period_id: periodId,
-                            last_voucher_id: lastVoucherId
+            it("throws an error if the new voucher ids aren't consecutive", () => {
+                configureContext({ voucherId2: 3 }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            validate_minted_vouchers.eval({
+                                $scriptContext: ctx,
+                                $currentScript: currentScript,
+                                price: currentPrice.value,
+                                period_id: periodId,
+                                last_voucher_id: lastVoucherId
+                            })
                         })
-                    })
-                })
+                    }
+                )
             })
-    })
-
-    it("fails if corresponding user token minted more than once", () => {
-        const voucherId = 0
-        const voucher = makeVoucher({
-            price: priceRatio,
-            periodId,
-            tokens: 1000
         })
-
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeVoucherRefToken(voucherId)
-                    .add(makeVoucherUserToken(voucherId, 2))
-                    .add(makeDvpTokens(1000))
-            })
-            .addVoucherOutput({ id: voucherId, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        validate_minted_vouchers.eval({
-                            $scriptContext: ctx,
-                            $currentScript: currentScript,
-                            price: currentPrice.value,
-                            period_id: periodId,
-                            last_voucher_id: lastVoucherId
-                        })
-                    })
-                })
-            })
-    })
-
-    it("fails if the number of tokens in the voucher datum is <= 0", () => {
-        const voucherId = 0
-        const voucher = makeVoucher({
-            price: priceRatio,
-            periodId,
-            tokens: 0
-        })
-
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeVoucherRefToken(voucherId)
-                    .add(makeVoucherUserToken(voucherId))
-                    .add(makeDvpTokens(1000))
-            })
-            .addVoucherOutput({ id: voucherId, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        validate_minted_vouchers.eval({
-                            $scriptContext: ctx,
-                            $currentScript: currentScript,
-                            price: currentPrice.value,
-                            period_id: periodId,
-                            last_voucher_id: lastVoucherId
-                        })
-                    })
-                })
-            })
-    })
-
-    it("fails if output isn't sent to voucher_validator address", () => {
-        const voucherId = 0
-        const voucher = makeVoucher({
-            price: priceRatio,
-            periodId,
-            tokens: 1000
-        })
-
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeVoucherRefToken(voucherId)
-                    .add(makeVoucherUserToken(voucherId))
-                    .add(makeDvpTokens(1000))
-            })
-            .addVoucherOutput({
-                address: Address.dummy(false),
-                id: voucherId,
-                voucher
-            })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        validate_minted_vouchers.eval({
-                            $scriptContext: ctx,
-                            $currentScript: currentScript,
-                            price: currentPrice.value,
-                            period_id: periodId,
-                            last_voucher_id: lastVoucherId
-                        })
-                    })
-                })
-            })
-    })
-
-    it("fails if voucher ref token isn't minted", () => {
-        const voucherId = 0
-        const voucher = makeVoucher({
-            price: priceRatio,
-            periodId,
-            tokens: 1000
-        })
-
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeVoucherUserToken(voucherId).add(makeDvpTokens(1000))
-            })
-            .addVoucherOutput({ id: voucherId, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        validate_minted_vouchers.eval({
-                            $scriptContext: ctx,
-                            $currentScript: currentScript,
-                            price: currentPrice.value,
-                            period_id: periodId,
-                            last_voucher_id: lastVoucherId
-                        })
-                    })
-                })
-            })
-    })
-
-    it("fails if voucher ref token is minted more than once", () => {
-        const voucherId = 0
-        const voucher = makeVoucher({
-            price: priceRatio,
-            periodId,
-            tokens: 1000
-        })
-
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeVoucherUserToken(voucherId)
-                    .add(makeVoucherRefToken(voucherId, 2))
-                    .add(makeDvpTokens(1000))
-            })
-            .addVoucherOutput({ id: voucherId, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        validate_minted_vouchers.eval({
-                            $scriptContext: ctx,
-                            $currentScript: currentScript,
-                            price: currentPrice.value,
-                            period_id: periodId,
-                            last_voucher_id: lastVoucherId
-                        })
-                    })
-                })
-            })
-    })
-
-    it("fails new ids aren't consecutive", () => {
-        const voucherId0 = 0
-        const voucher0 = makeVoucher({
-            price: priceRatio,
-            periodId,
-            tokens: 300
-        })
-
-        const voucherId1 = 1
-        const voucher1 = makeVoucher({
-            price: priceRatio,
-            periodId,
-            tokens: 300
-        })
-
-        const voucherId2 = 3
-        const voucher2 = makeVoucher({
-            price: priceRatio,
-            periodId,
-            tokens: 400
-        })
-
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeVoucherPair(voucherId0)
-                    .add(makeVoucherPair(voucherId1))
-                    .add(makeVoucherPair(voucherId2))
-                    .add(makeDvpTokens(1000))
-            })
-            .addVoucherOutput({ id: voucherId0, voucher: voucher0 })
-            .addVoucherOutput({ id: voucherId1, voucher: voucher1 })
-            .addVoucherOutput({ id: voucherId2, voucher: voucher2 })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        validate_minted_vouchers.eval({
-                            $scriptContext: ctx,
-                            $currentScript: currentScript,
-                            price: currentPrice.value,
-                            period_id: periodId,
-                            last_voucher_id: lastVoucherId
-                        })
-                    })
-                })
-            })
     })
 })
 
-describe("validate_burned_vouchers", () => {
+describe("VoucherModule::validate_burned_vouchers", () => {
     const periodId = 0
 
-    it("ok for single voucher burned", () => {
+    describe("one voucher burned", () => {
         const voucherId = 0
         const voucher = makeVoucher({
             periodId
         })
 
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeVoucherPair(voucherId, -1).add(makeDvpTokens(-1000))
-            })
-            .addVoucherInput({ id: voucherId, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
+        const configureParentContext = (props?: { extraMinted?: Assets }) => {
+            let minted = makeVoucherPair(voucherId, -1).add(
+                makeDvpTokens(-1000)
+            )
+
+            if (props?.extraMinted) {
+                // resulting zeroes are automatically removed
+                minted = minted.add(props.extraMinted)
+            }
+
+            return new ScriptContextBuilder()
+                .mint({
+                    assets: minted
+                })
+                .addVoucherInput({ id: voucherId, voucher })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
+            it("returns 1 if both the voucher ref and user token are burned", () => {
+                configureContext().use((currentScript, ctx) => {
                     strictEqual(
                         validate_burned_vouchers.eval({
                             $currentScript: currentScript,
@@ -636,29 +613,123 @@ describe("validate_burned_vouchers", () => {
                     )
                 })
             })
+
+            it("throws an error if not exactly 1 voucher pair is burned", () => {
+                configureContext({
+                    extraMinted: makeVoucherPair(voucherId, -1)
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        validate_burned_vouchers.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            period_id: periodId
+                        })
+                    })
+                })
+            })
+
+            it("throws an error if not exactly 1 voucher ref token is burned", () => {
+                configureContext({
+                    extraMinted: makeVoucherRefToken(voucherId, -1)
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        validate_burned_vouchers.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            period_id: periodId
+                        })
+                    })
+                })
+            })
+
+            it("throws an error if the voucher ref token isn't burned", () => {
+                configureContext({
+                    extraMinted: makeVoucherRefToken(voucherId, 1)
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        validate_burned_vouchers.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            period_id: periodId
+                        })
+                    })
+                })
+            })
+
+            it("throws an error if not exactly 1 voucher user token burned", () => {
+                configureContext({
+                    extraMinted: makeVoucherUserToken(voucherId, -1)
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        validate_burned_vouchers.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            period_id: periodId
+                        })
+                    })
+                })
+            })
+
+            it("throws an error if the voucher user token isn't burned", () => {
+                configureContext({
+                    extraMinted: makeVoucherUserToken(voucherId, 1)
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        validate_burned_vouchers.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            period_id: periodId
+                        })
+                    })
+                })
+            })
+        })
     })
 
-    it("ok for 3 voucher burned", () => {
+    describe("three vouchers burned", () => {
         const voucherId0 = 0
         const voucherId1 = 1
         const voucherId2 = 2
-        const voucher = makeVoucher({
-            periodId
-        })
 
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeVoucherPair(voucherId0, -1)
-                    .add(makeVoucherPair(voucherId1, -1))
-                    .add(makeVoucherPair(voucherId2, -1))
-                    .add(makeDvpTokens(-1000))
-            })
-            .addVoucherInput({ id: voucherId0, voucher })
-            .addVoucherInput({ id: voucherId1, voucher })
-            .addVoucherInput({ id: voucherId2, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
+        const configureParentContext = (props?: {
+            lastVoucherPeriodId?: number
+        }) => {
+            return new ScriptContextBuilder()
+                .mint({
+                    assets: makeVoucherPair(voucherId0, -1)
+                        .add(makeVoucherPair(voucherId1, -1))
+                        .add(makeVoucherPair(voucherId2, -1))
+                        .add(makeDvpTokens(-1000))
+                })
+                .addVoucherInput({
+                    id: voucherId0,
+                    voucher: makeVoucher({
+                        periodId
+                    })
+                })
+                .addVoucherInput({
+                    id: voucherId1,
+                    voucher: makeVoucher({
+                        periodId
+                    })
+                })
+                .addVoucherInput({
+                    id: voucherId2,
+                    voucher: makeVoucher({
+                        periodId: props?.lastVoucherPeriodId ?? periodId
+                    })
+                })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
+            it("returns 3 if three voucher token pairs are burned", () => {
+                configureContext().use((currentScript, ctx) => {
                     strictEqual(
                         validate_burned_vouchers.eval({
                             $currentScript: currentScript,
@@ -669,171 +740,20 @@ describe("validate_burned_vouchers", () => {
                     )
                 })
             })
-    })
 
-    it("fails if not exactly -1 minted", () => {
-        const voucherId = 0
-        const voucher = makeVoucher({
-            periodId
-        })
-
-        new ScriptContextBuilder()
-            .mint({ assets: makeVoucherPair(voucherId, -2) })
-            .addVoucherInput({ id: voucherId, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        validate_burned_vouchers.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx,
-                            period_id: periodId
+            it("throws an error if the period id of voucher three doesn't match the current period id", () => {
+                configureContext({ lastVoucherPeriodId: periodId + 1 }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            validate_burned_vouchers.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                period_id: periodId
+                            })
                         })
-                    })
-                })
-            })
-    })
-
-    it("fails if period_id of 1 of 3 vouchers is wrong", () => {
-        const voucherId0 = 0
-        const voucherId1 = 1
-        const voucherId2 = 2
-        const voucher = makeVoucher({
-            periodId
-        })
-        const voucherWrong = makeVoucher({
-            periodId: periodId + 1
-        })
-
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeVoucherPair(voucherId0, -1)
-                    .add(makeVoucherPair(voucherId1, -1))
-                    .add(makeVoucherPair(voucherId2, -1))
-                    .add(makeDvpTokens(-1000))
-            })
-            .addVoucherInput({ id: voucherId0, voucher })
-            .addVoucherInput({ id: voucherId1, voucher })
-            .addVoucherInput({ id: voucherId2, voucher: voucherWrong })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        validate_burned_vouchers.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx,
-                            period_id: periodId
-                        })
-                    })
-                })
-            })
-    })
-
-    it("fails if not exactly -1 ref token minted", () => {
-        const voucherId = 0
-        const voucher = makeVoucher({
-            periodId
-        })
-
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeDvpTokens(-1000)
-                    .add(makeVoucherUserToken(voucherId, -1))
-                    .add(makeVoucherRefToken(voucherId, -2))
-            })
-            .addVoucherInput({ id: voucherId, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        validate_burned_vouchers.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx,
-                            period_id: periodId
-                        })
-                    })
-                })
-            })
-    })
-
-    it("fails if ref token not minted", () => {
-        const voucherId = 0
-        const voucher = makeVoucher({
-            periodId
-        })
-
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeDvpTokens(-1000).add(
-                    makeVoucherUserToken(voucherId, -1)
+                    }
                 )
             })
-            .addVoucherInput({ id: voucherId, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        validate_burned_vouchers.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx,
-                            period_id: periodId
-                        })
-                    })
-                })
-            })
-    })
-
-    it("fails if not exactly -1 user token minted", () => {
-        const voucherId = 0
-        const voucher = makeVoucher({
-            periodId
         })
-
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeDvpTokens(-1000)
-                    .add(makeVoucherRefToken(voucherId, -1))
-                    .add(makeVoucherUserToken(voucherId, -2))
-            })
-            .addVoucherInput({ id: voucherId, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        validate_burned_vouchers.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx,
-                            period_id: periodId
-                        })
-                    })
-                })
-            })
-    })
-
-    it("fails if user token not minted", () => {
-        const voucherId = 0
-        const voucher = makeVoucher({
-            periodId
-        })
-
-        new ScriptContextBuilder()
-            .mint({
-                assets: makeDvpTokens(-1000).add(
-                    makeVoucherRefToken(voucherId, -1)
-                )
-            })
-            .addVoucherInput({ id: voucherId, voucher })
-            .redeemDummyTokenWithDvpPolicy()
-            .use((ctx) => {
-                scripts.forEach((currentScript) => {
-                    throws(() => {
-                        validate_burned_vouchers.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx,
-                            period_id: periodId
-                        })
-                    })
-                })
-            })
     })
 })

@@ -19,6 +19,6 @@ export function makeMetadata(props?: {
         decimals: BigInt(props?.decimals ?? 6),
         ticker: props?.ticker ?? "tDVP",
         url: props?.url ?? "https://www.example.com",
-        logo: props?.url ?? "https://www.example.com/logo.png"
+        logo: props?.logo ?? "https://www.example.com/logo.png"
     }
 }

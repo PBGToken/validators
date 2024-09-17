@@ -43,7 +43,7 @@ struct Supply {
 
         assert(Tokens::contains_only_supply(output), "doesn't contain only the supply token");
 
-        output.datum.inline.as[Supply]
+        output.datum.inline.as_strictly[Supply]
     }
 
     /**

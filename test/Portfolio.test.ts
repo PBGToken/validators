@@ -13,13 +13,20 @@ import {
     PortfolioReductionModeType,
     PortfolioReductionType,
     RatioType,
+    castPortfolio,
     equalsPortfolioReductionMode,
     makeAsset,
     makeAssetPtr,
     makePortfolio
 } from "./data"
 import { makeConfigToken, makePortfolioToken } from "./tokens"
-import { ScriptContextBuilder } from "./tx"
+import { ScriptContextBuilder, withScripts } from "./tx"
+import {
+    ByteArrayData,
+    ConstrData,
+    ListData,
+    UplcData
+} from "@helios-lang/uplc"
 
 const {
     "PortfolioReduction::is_idle": is_idle,
@@ -197,57 +204,105 @@ describe("PortfolioModule::Portfolio::find_input", () => {
 describe("PortfolioModule::Portfolio::find_output", () => {
     const portfolio = makePortfolio()
 
-    describe("for all validators", () => {
+    const configureParentContext = (props?: {
+        address?: Address
+        datum?: UplcData
+        token?: Assets
+    }) => {
+        return new ScriptContextBuilder()
+            .addPortfolioOutput({
+                address: props?.address,
+                datum: props?.datum,
+                portfolio,
+                token: props?.token
+            })
+            .redeemDummyTokenWithDvpPolicy()
+    }
+
+    describe("@ all validators", () => {
+        const configureContext = withScripts(configureParentContext, scripts)
+
         it("returns the portfolio data if the portfolio UTxO is returned to portfolio_validator address with the portfolio token", () => {
-            new ScriptContextBuilder()
-                .addPortfolioOutput({ portfolio })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    scripts.forEach((currentScript) => {
-                        deepEqual(
-                            find_output.eval({
-                                $scriptContext: ctx,
-                                $currentScript: currentScript
-                            }),
-                            portfolio
-                        )
-                    })
-                })
+            configureContext().use((currentScript, ctx) => {
+                deepEqual(
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    }),
+                    portfolio
+                )
+            })
         })
 
         it("throws an error if the portfolio UTxO isn't returned to the portfolio_validator address", () => {
-            new ScriptContextBuilder()
-                .redeemDummyTokenWithDvpPolicy()
-                .addPortfolioOutput({
-                    address: Address.dummy(false),
-                    portfolio
-                })
-                .use((ctx) => {
-                    scripts.forEach((currentScript) => {
-                        throws(() => {
-                            find_output.eval({
-                                $scriptContext: ctx,
-                                $currentScript: currentScript
-                            })
+            configureContext({ address: Address.dummy(false) }).use(
+                (currentScript, ctx) => {
+                    throws(() => {
+                        find_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
                         })
                     })
-                })
+                }
+            )
         })
 
         it("throws an error if the portfolio UTxO isn't returned with exactly 1 portfolio token", () => {
-            new ScriptContextBuilder()
-                .redeemDummyTokenWithDvpPolicy()
-                .addPortfolioOutput({ portfolio, token: makePortfolioToken(2) })
-                .use((ctx) => {
-                    scripts.forEach((currentScript) => {
-                        throws(() => {
-                            find_output.eval({
-                                $scriptContext: ctx,
-                                $currentScript: currentScript
-                            })
+            configureContext({ token: makePortfolioToken(2) }).use(
+                (currentScript, ctx) => {
+                    throws(() => {
+                        find_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
                         })
                     })
+                }
+            )
+        })
+
+        it("throws an error when the first datum field entry isn't iData", () => {
+            const datum = ListData.expect(castPortfolio.toUplcData(portfolio))
+            datum.items[0] = new ByteArrayData([])
+
+            configureContext({ datum }).use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    })
                 })
+            })
+        })
+
+        it("throws an error if the datum listData contains an additional entry", () => {
+            const datum = ListData.expect(castPortfolio.toUplcData(portfolio))
+            datum.items.push(new ByteArrayData([]))
+
+            configureContext({ datum }).use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    })
+                })
+            })
+        })
+
+        it("throws an error if the datum reduction field has the wrong constr tag", () => {
+            const datum = ListData.expect(castPortfolio.toUplcData(portfolio))
+            datum.items[1] = new ConstrData(
+                2,
+                ConstrData.expect(datum.items[1]).fields
+            )
+
+            configureContext({ datum }).use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    })
+                })
+            })
         })
     })
 })

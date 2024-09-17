@@ -6,13 +6,14 @@ import {
     metadata,
     portfolio,
     price,
+    reimbursement,
     supply,
     voucher_nft,
     voucher_ref
 } from "./asset-classes"
 import { IntLike } from "@helios-lang/codec-utils"
 
-export function makeAssetsToken(id: number, n: IntLike = 1) {
+export function makeAssetsToken(id: IntLike, n: IntLike = 1) {
     return Assets.fromAssetClasses([[assets(id), n]])
 }
 
@@ -36,11 +37,15 @@ export function makePriceToken(n: IntLike = 1) {
     return Assets.fromAssetClasses([[price, n]])
 }
 
+export function makeReimbursementToken(id: IntLike = 0, n: IntLike = 1) {
+    return Assets.fromAssetClasses([[reimbursement(id), n]])
+}
+
 export function makeSupplyToken(n: IntLike = 1) {
     return Assets.fromAssetClasses([[supply, n]])
 }
 
-export function makeVoucherRefToken(id: number = 0, n: IntLike = 1) {
+export function makeVoucherRefToken(id: IntLike = 0, n: IntLike = 1) {
     return Assets.fromAssetClasses([[voucher_ref(id), n]])
 }
 

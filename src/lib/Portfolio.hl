@@ -56,7 +56,7 @@ struct Portfolio {
 
         assert(Tokens::contains_only_portfolio(output), "doesn't contain only the portfolio token");
 
-        output.datum.inline.as[Portfolio]
+        output.datum.inline.as_strictly[Portfolio]
     }
 
     func find_ref() -> Portfolio {

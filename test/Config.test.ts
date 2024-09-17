@@ -1,9 +1,10 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { IntData, ListData } from "@helios-lang/uplc"
+import { ConstrData, IntData, ListData, UplcData } from "@helios-lang/uplc"
 import {
     Address,
     AssetClass,
+    Assets,
     PubKeyHash,
     StakingValidatorHash
 } from "@helios-lang/ledger"
@@ -12,13 +13,14 @@ import { orderValidatorScripts, scripts } from "./constants"
 import {
     ConfigChangeProposal,
     RatioType,
+    castConfig,
     equalsConfig,
     equalsConfigChangeProposal,
     makeConfig,
     makeSuccessFee
 } from "./data"
 import { makeConfigToken, makeDvpTokens } from "./tokens"
-import { ScriptContextBuilder } from "./tx"
+import { ScriptContextBuilder, withScripts } from "./tx"
 
 const {
     INITIAL_PRICE,
@@ -335,72 +337,66 @@ describe("ConfigModule::SuccessFeeConfig::get_benchmark_price", () => {
         benchmark
     }
 
+    const configureContext = (props?: { ratio?: RatioType }) => {
+        return new ScriptContextBuilder()
+            .observeBenchmark({ redeemer: props?.ratio ?? [1, 1] })
+            .redeemDummyTokenWithDvpPolicy()
+    }
+
     describe("implicit benchmark hash taken from config", () => {
         it("returns the same value as the input value if the benchmark is ADA itself (i.e. 1/1)", () => {
-            new ScriptContextBuilder()
-                .observeBenchmark({ redeemer: [1, 1] })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    deepEqual(
-                        get_benchmark_price_internal.eval({
-                            self: successFeeConfig,
-                            $scriptContext: ctx,
-                            lovelace_price: price
-                        }),
-                        price
-                    )
-                })
+            configureContext().use((ctx) => {
+                deepEqual(
+                    get_benchmark_price_internal.eval({
+                        $scriptContext: ctx,
+                        self: successFeeConfig,
+                        lovelace_price: price
+                    }),
+                    price
+                )
+            })
         })
 
         it("returns a ratio with  denominator 0 if the benchmark price denominator is 0", () => {
-            new ScriptContextBuilder()
-                .observeBenchmark({ redeemer: [1, 0] })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    deepEqual(
-                        get_benchmark_price_internal.eval({
-                            self: successFeeConfig,
-                            $scriptContext: ctx,
-                            lovelace_price: price
-                        }),
-                        [100n, 0n]
-                    )
-                })
+            configureContext({ ratio: [1, 0] }).use((ctx) => {
+                deepEqual(
+                    get_benchmark_price_internal.eval({
+                        $scriptContext: ctx,
+                        self: successFeeConfig,
+                        lovelace_price: price
+                    }),
+                    [100n, 0n]
+                )
+            })
         })
     })
 
     describe("explicit benchmark hash, benchmark is ADA", () => {
         it("returns the same value as the input value", () => {
-            new ScriptContextBuilder()
-                .observeBenchmark({ redeemer: [1, 1] })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    deepEqual(
-                        get_benchmark_price_internal.eval({
-                            self: successFeeConfig,
-                            $scriptContext: ctx,
-                            lovelace_price: price,
-                            benchmark
-                        }),
-                        price
-                    )
-                })
+            configureContext().use((ctx) => {
+                deepEqual(
+                    get_benchmark_price_internal.eval({
+                        $scriptContext: ctx,
+                        self: successFeeConfig,
+                        lovelace_price: price,
+                        benchmark
+                    }),
+                    price
+                )
+            })
         })
 
         it("throws an error when specifying another explicit benchmark hash than the benchmark delegate that is observing the tx", () => {
-            new ScriptContextBuilder()
-                .observeBenchmark({ redeemer: [1, 1] })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    throws(() => {
-                        get_benchmark_price_internal.eval({
-                            self: successFeeConfig,
-                            $scriptContext: ctx,
-                            lovelace_price: price,
-                            benchmark: StakingValidatorHash.dummy()
-                        })
+            configureContext().use((ctx) => {
+                throws(() => {
+                    get_benchmark_price_internal.eval({
+                        $scriptContext: ctx,
+                        self: successFeeConfig,
+                        lovelace_price: price,
+                        benchmark: StakingValidatorHash.dummy()
                     })
                 })
+            })
         })
     })
 })
@@ -1127,7 +1123,7 @@ describe("ConfigModule::Config::find", () => {
 describe("ConfigModule::Config::find_input", () => {
     const config = makeConfig()
 
-    describe("for the config_validator", () => {
+    describe("@ config_validator", () => {
         it("returns the config data if the config UTxO is the current input", () => {
             new ScriptContextBuilder()
                 .addConfigInput({ config, redeemer: new IntData(0) })
@@ -1171,7 +1167,7 @@ describe("ConfigModule::Config::find_input", () => {
         })
     })
 
-    describe("for the other validators", () => {
+    describe("@ other validators", () => {
         const otherScripts = scripts.filter((s) => s != "config_validator")
 
         it("returns the config data if the config UTxO is the current input", () => {
@@ -1258,70 +1254,108 @@ describe("ConfigModule::Config::find_input", () => {
 describe("ConfigModule::Config::find_output", () => {
     const config = makeConfig()
 
-    describe("for all validators", () => {
+    const configureParentContext = (props?: {
+        address?: Address
+        datum?: UplcData
+        token?: Assets
+    }) => {
+        return new ScriptContextBuilder()
+            .addConfigOutput({
+                config,
+                address: props?.address,
+                datum: props?.datum,
+                token: props?.token
+            })
+            .redeemDummyTokenWithDvpPolicy()
+    }
+
+    describe("@ all validators", () => {
+        const configureContext = withScripts(configureParentContext, scripts)
+
         it("returns the config data if the config UTxO is returned to the config_validator address and contains the config token", () => {
-            new ScriptContextBuilder()
-                .addConfigOutput({ config })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    scripts.forEach((currentScript) => {
-                        equalsConfig(
-                            find_config_output.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            }),
-                            config
-                        )
+            configureContext().use((currentScript, ctx) => {
+                equalsConfig(
+                    find_config_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    }),
+                    config
+                )
+            })
+        })
+
+        it("throws an error if a garbage datum is given", () => {
+            configureContext({ datum: new IntData(0) }).use(
+                (currentScript, ctx) => {
+                    throws(() => {
+                        find_config_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        })
                     })
-                })
+                }
+            )
+        })
+
+        it("throws an error if a garbage ConfigState::Changing proposal is given", () => {
+            const configData = ListData.expect(castConfig.toUplcData(config))
+            configData.items[5] = new ConstrData(1, [
+                new IntData(0),
+                new ConstrData(0, [
+                    AssetClass.dummy().toUplcData(),
+                    new IntData(0)
+                ])
+            ])
+
+            configureContext({ datum: configData }).use(
+                (currentScript, ctx) => {
+                    throws(() => {
+                        find_config_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        })
+                    })
+                }
+            )
         })
 
         it("throws an error if the config UTxO is returned to the wrong address", () => {
-            new ScriptContextBuilder()
-                .addConfigOutput({ config, address: Address.dummy(false) })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    scripts.forEach((currentScript) => {
-                        throws(() => {
-                            find_config_output.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            })
+            configureContext({ address: Address.dummy(false) }).use(
+                (currentScript, ctx) => {
+                    throws(() => {
+                        find_config_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
                         })
                     })
-                })
+                }
+            )
         })
 
         it("throws an error if the returned config UTxO doesn't contain the config token", () => {
-            new ScriptContextBuilder()
-                .addConfigOutput({ config, token: makeDvpTokens(1) })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    scripts.forEach((currentScript) => {
-                        throws(() => {
-                            find_config_output.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            })
+            configureContext({ token: makeDvpTokens(1) }).use(
+                (currentScript, ctx) => {
+                    throws(() => {
+                        find_config_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
                         })
                     })
-                })
+                }
+            )
         })
 
         it("throws an error if the returned config UTxO contains more than one config token", () => {
-            new ScriptContextBuilder()
-                .addConfigOutput({ config, token: makeConfigToken(2) })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    scripts.forEach((currentScript) => {
-                        throws(() => {
-                            find_config_output.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            })
+            configureContext({ token: makeConfigToken(2) }).use(
+                (currentScript, ctx) => {
+                    throws(() => {
+                        find_config_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
                         })
                     })
-                })
+                }
+            )
         })
     })
 })

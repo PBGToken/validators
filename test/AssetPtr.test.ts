@@ -2,7 +2,7 @@ import { describe, it } from "node:test"
 import contract from "pbg-token-validators-test-context"
 import { scripts } from "./constants"
 import { makeAsset } from "./data"
-import { ScriptContextBuilder } from "./tx"
+import { ScriptContextBuilder, withScripts } from "./tx"
 import { deepEqual, throws } from "node:assert"
 import { AssetClass } from "@helios-lang/ledger"
 
@@ -16,95 +16,95 @@ describe("AssetPtrModule::AssetPtr::resolve_input", () => {
         const asset = makeAsset()
         const assets = [asset]
 
-        describe("for all validators", () => {
+        const configureParentContext = (props?: {
+            addConfigInput?: boolean
+        }) => {
+            const scb = new ScriptContextBuilder()
+                .addAssetGroupInput({ assets })
+                .redeemDummyTokenWithDvpPolicy()
+
+            if (props?.addConfigInput) {
+                scb.addConfigInput()
+            }
+
+            return scb
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns the asset data if the pointer points the single asset in the single asset group", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({ assets })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx, tx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                resolve_input.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    self: {
-                                        group_index: 0,
-                                        asset_class_index: 0
-                                    },
-                                    inputs: tx.inputs,
-                                    asset_class: asset.asset_class
-                                }),
-                                asset
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx, tx) => {
+                    deepEqual(
+                        resolve_input.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            self: {
+                                group_index: 0,
+                                asset_class_index: 0
+                            },
+                            inputs: tx.inputs,
+                            asset_class: asset.asset_class
+                        }),
+                        asset
+                    )
+                })
             })
 
             it("throws an error if the pointer group index is out-of-range", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({ assets })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx, tx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                resolve_input.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    self: {
-                                        group_index: 2,
-                                        asset_class_index: 0
-                                    },
-                                    inputs: tx.inputs,
-                                    asset_class: asset.asset_class
-                                })
-                            })
+                configureContext().use((currentScript, ctx, tx) => {
+                    throws(() => {
+                        resolve_input.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            self: {
+                                group_index: 2,
+                                asset_class_index: 0
+                            },
+                            inputs: tx.inputs,
+                            asset_class: asset.asset_class
                         })
                     })
+                })
             })
 
             it("throws an error if the pointer doesn't point to an asset group input", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({ assets })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .addConfigInput()
-                    .use((ctx, tx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                resolve_input.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    self: {
-                                        group_index: 2,
-                                        asset_class_index: 0
-                                    },
-                                    inputs: tx.inputs,
-                                    asset_class: asset.asset_class
-                                })
+                configureContext({ addConfigInput: true }).use(
+                    (currentScript, ctx, tx) => {
+                        throws(() => {
+                            resolve_input.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                self: {
+                                    group_index: 2,
+                                    asset_class_index: 0
+                                },
+                                inputs: tx.inputs,
+                                asset_class: asset.asset_class
                             })
                         })
-                    })
+                    }
+                )
             })
 
             it("throws an error if the pointer asset class index is out-of-range", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({ assets })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx, tx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                resolve_input.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    self: {
-                                        group_index: 0,
-                                        asset_class_index: 1
-                                    },
-                                    inputs: tx.inputs,
-                                    asset_class: asset.asset_class
-                                })
-                            })
+                configureContext().use((currentScript, ctx, tx) => {
+                    throws(() => {
+                        resolve_input.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            self: {
+                                group_index: 0,
+                                asset_class_index: 1
+                            },
+                            inputs: tx.inputs,
+                            asset_class: asset.asset_class
                         })
                     })
+                })
             })
         })
     })
@@ -128,29 +128,35 @@ describe("AssetPtrModule::AssetPtr::resolve_input", () => {
             })
         ]
 
-        describe("for all validators", () => {
+        const configureParentContext = () => {
+            return new ScriptContextBuilder()
+                .addAssetGroupInput({ assets: assets0 })
+                .addAssetGroupInput({ assets: assets1 })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns the last asset data if the pointer points to the last asset in the second asset group", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({ assets: assets0 })
-                    .addAssetGroupInput({ assets: assets1 })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx, tx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                resolve_input.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    self: {
-                                        group_index: 1,
-                                        asset_class_index: 2
-                                    },
-                                    inputs: tx.inputs,
-                                    asset_class: AssetClass.dummy(3)
-                                }),
-                                assets1[2]
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx, tx) => {
+                    deepEqual(
+                        resolve_input.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            self: {
+                                group_index: 1,
+                                asset_class_index: 2
+                            },
+                            inputs: tx.inputs,
+                            asset_class: AssetClass.dummy(3)
+                        }),
+                        assets1[2]
+                    )
+                })
             })
         })
     })
@@ -163,27 +169,33 @@ describe("AssetPtrModule::AssetPtr::resolve_input", () => {
             makeAsset({ assetClass: AssetClass.dummy(2) })
         ]
 
-        describe("for all validators", () => {
+        const configureParentContext = () => {
+            return new ScriptContextBuilder()
+                .addAssetGroupInput({ assets })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("throws an error if the resolved asset doesn't have expected asset class", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupInput({ assets })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx, tx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                resolve_input.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    self: {
-                                        group_index: 0,
-                                        asset_class_index: 0
-                                    },
-                                    inputs: tx.inputs,
-                                    asset_class: AssetClass.dummy(0)
-                                })
-                            })
+                configureContext().use((currentScript, ctx, tx) => {
+                    throws(() => {
+                        resolve_input.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            self: {
+                                group_index: 0,
+                                asset_class_index: 0
+                            },
+                            inputs: tx.inputs,
+                            asset_class: AssetClass.dummy(0)
                         })
                     })
+                })
             })
         })
     })
@@ -194,97 +206,95 @@ describe("AssetPtrModule::AssetPtr::resolve_output", () => {
         const asset = makeAsset()
         const assets = [asset]
 
-        describe("for all validators", () => {
+        const configureParentContext = (props?: {
+            addConfigInput?: boolean
+        }) => {
+            const scb = new ScriptContextBuilder()
+                .addAssetGroupOutput({ assets })
+                .redeemDummyTokenWithDvpPolicy()
+
+            if (props?.addConfigInput) {
+                scb.addConfigInput()
+            }
+
+            return scb
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns the single asset data if the pointer points to the single asset in the single asset group", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({ assets })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx, tx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                resolve_output.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    self: {
-                                        group_index: 0,
-                                        asset_class_index: 0
-                                    },
-                                    outputs: tx.outputs,
-                                    asset_class: asset.asset_class
-                                }),
-                                asset
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx, tx) => {
+                    deepEqual(
+                        resolve_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            self: {
+                                group_index: 0,
+                                asset_class_index: 0
+                            },
+                            outputs: tx.outputs,
+                            asset_class: asset.asset_class
+                        }),
+                        asset
+                    )
+                })
             })
 
             it("throws an error if the pointer group index is out-of-range", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({ assets })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx, tx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                resolve_output.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    self: {
-                                        group_index: 2,
-                                        asset_class_index: 0
-                                    },
-                                    outputs: tx.outputs,
-                                    asset_class: asset.asset_class
-                                })
-                            })
+                configureContext().use((currentScript, ctx, tx) => {
+                    throws(() => {
+                        resolve_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            self: {
+                                group_index: 2,
+                                asset_class_index: 0
+                            },
+                            outputs: tx.outputs,
+                            asset_class: asset.asset_class
                         })
                     })
+                })
             })
 
             it("throws an error if the pointer doesn't point to asset group output", () => {
-                const assets = [makeAsset()]
-
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({ assets, id: 0 })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .addConfigInput()
-                    .use((ctx, tx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                resolve_output.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    self: {
-                                        group_index: 2,
-                                        asset_class_index: 0
-                                    },
-                                    outputs: tx.outputs,
-                                    asset_class: asset.asset_class
-                                })
+                configureContext({ addConfigInput: true }).use(
+                    (currentScript, ctx, tx) => {
+                        throws(() => {
+                            resolve_output.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                self: {
+                                    group_index: 2,
+                                    asset_class_index: 0
+                                },
+                                outputs: tx.outputs,
+                                asset_class: asset.asset_class
                             })
                         })
-                    })
+                    }
+                )
             })
 
             it("throws an error if the pointer asset class index is out-of-range", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({ assets })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx, tx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                resolve_output.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    self: {
-                                        group_index: 0,
-                                        asset_class_index: 1
-                                    },
-                                    outputs: tx.outputs,
-                                    asset_class: asset.asset_class
-                                })
-                            })
+                configureContext().use((currentScript, ctx, tx) => {
+                    throws(() => {
+                        resolve_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            self: {
+                                group_index: 0,
+                                asset_class_index: 1
+                            },
+                            outputs: tx.outputs,
+                            asset_class: asset.asset_class
                         })
                     })
+                })
             })
         })
     })
@@ -308,29 +318,35 @@ describe("AssetPtrModule::AssetPtr::resolve_output", () => {
             })
         ]
 
-        describe("for all validators", () => {
+        const configureParentContext = () => {
+            return new ScriptContextBuilder()
+                .addAssetGroupOutput({ assets: assets0 })
+                .addAssetGroupOutput({ assets: assets1 })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("returns the last asset data if the pointer points to the third asset in the second asset group", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({ assets: assets0 })
-                    .addAssetGroupOutput({ assets: assets1 })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx, tx) => {
-                        scripts.forEach((currentScript) => {
-                            deepEqual(
-                                resolve_output.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    self: {
-                                        group_index: 1,
-                                        asset_class_index: 2
-                                    },
-                                    outputs: tx.outputs,
-                                    asset_class: AssetClass.dummy(3)
-                                }),
-                                assets1[2]
-                            )
-                        })
-                    })
+                configureContext().use((currentScript, ctx, tx) => {
+                    deepEqual(
+                        resolve_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            self: {
+                                group_index: 1,
+                                asset_class_index: 2
+                            },
+                            outputs: tx.outputs,
+                            asset_class: AssetClass.dummy(3)
+                        }),
+                        assets1[2]
+                    )
+                })
             })
         })
     })
@@ -343,27 +359,33 @@ describe("AssetPtrModule::AssetPtr::resolve_output", () => {
             makeAsset({ assetClass: AssetClass.dummy(2) })
         ]
 
-        describe("for all validators", () => {
+        const configureParentContext = () => {
+            return new ScriptContextBuilder()
+                .addAssetGroupOutput({ assets })
+                .redeemDummyTokenWithDvpPolicy()
+        }
+
+        describe("@ all validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts
+            )
+
             it("throws an error if the resolved asset doesn't have the expected asset class", () => {
-                new ScriptContextBuilder()
-                    .addAssetGroupOutput({ assets })
-                    .redeemDummyTokenWithDvpPolicy()
-                    .use((ctx, tx) => {
-                        scripts.forEach((currentScript) => {
-                            throws(() => {
-                                resolve_output.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    self: {
-                                        group_index: 0,
-                                        asset_class_index: 0
-                                    },
-                                    outputs: tx.outputs,
-                                    asset_class: AssetClass.dummy(0)
-                                })
-                            })
+                configureContext().use((currentScript, ctx, tx) => {
+                    throws(() => {
+                        resolve_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            self: {
+                                group_index: 0,
+                                asset_class_index: 0
+                            },
+                            outputs: tx.outputs,
+                            asset_class: AssetClass.dummy(0)
                         })
                     })
+                })
             })
         })
     })

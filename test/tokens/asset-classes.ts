@@ -14,15 +14,15 @@ export const portfolio = new AssetClass(policy, encodeUtf8("portfolio"))
 export const price = new AssetClass(policy, encodeUtf8("price"))
 export const supply = new AssetClass(policy, encodeUtf8("supply"))
 
-export function assets(id: number) {
+export function assets(id: IntLike) {
     return new AssetClass(policy, encodeUtf8(`assets ${id}`))
 }
 
-export function reimbursement(id: number) {
+export function reimbursement(id: IntLike) {
     return new AssetClass(policy, encodeUtf8(`reimbursement ${id}`))
 }
 
-export function voucher_ref(id: number) {
+export function voucher_ref(id: IntLike) {
     return new AssetClass(
         policy,
         cip68_100_prefix.concat(encodeUtf8(`voucher ${id}`))

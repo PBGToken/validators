@@ -9,7 +9,7 @@ import {
     makeAssetPtr,
     makeMintOrder
 } from "./data"
-import { ScriptContextBuilder } from "./tx"
+import { ScriptContextBuilder, withScripts } from "./tx"
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { scripts } from "./constants"
 import { makeDvpTokens, makeVoucherUserToken } from "./tokens"
@@ -639,94 +639,99 @@ describe("MintOrderModule::MintOrder::voucher_id", () => {
     })
     const redeemer: MintOrderRedeemerType = { Fulfill: { ptrs: [] } }
 
-    describe("the order input contains lovelace and includes a voucher user nft", () => {
+    describe("the order input contains only lovelace", () => {
         const voucherId = 0n
-        const token = makeVoucherUserToken(0)
-        const inputValue = new Value(10_000_000, token)
+        const token = makeVoucherUserToken(voucherId)
 
-        describe("for the mint_order_validator", () => {
-            it("returns the voucher id of the voucher included in the order input if the returned value doesn't contain the voucher", () => {
-                const returnValue = new Value(12_000_000)
+        const configureParentContext = (props?: {
+            inputAssets?: Assets
+            returnAssets?: Assets
+        }) => {
+            const inputValue = new Value(10_000_000, props?.inputAssets)
+            const returnValue = new Value(
+                12_000_000,
+                props?.returnAssets ?? token
+            )
 
-                new ScriptContextBuilder()
-                    .addMintOrderInput({
-                        value: inputValue,
-                        datum: mintOrder,
-                        redeemer
-                    })
-                    .addMintOrderReturn({
-                        address,
-                        datum,
-                        value: returnValue
-                    })
-                    .use((ctx) => {
-                        strictEqual(
-                            voucher_id.eval({
-                                $currentScript: "mint_order_validator",
-                                $scriptContext: ctx,
-                                self: mintOrder
-                            }),
-                            voucherId
-                        )
-                    })
+            return new ScriptContextBuilder()
+                .addMintOrderInput({
+                    value: inputValue,
+                    datum: mintOrder,
+                    redeemer
+                })
+                .addMintOrderReturn({
+                    address,
+                    datum,
+                    value: returnValue
+                })
+        }
+
+        describe("@ mint_order_validator", () => {
+            const configureContext = withScripts(configureParentContext, [
+                "mint_order_validator"
+            ])
+
+            it("returns the voucher id if the voucher included in the order return wasn't part of the input", () => {
+                configureContext().use((currentScript, ctx) => {
+                    strictEqual(
+                        voucher_id.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            self: mintOrder
+                        }),
+                        voucherId
+                    )
+                })
             })
 
-            it("throws an error if the voucher is returned", () => {
-                const returnValue = new Value(12_000_000, token)
-
-                new ScriptContextBuilder()
-                    .addMintOrderInput({
-                        value: inputValue,
-                        datum: mintOrder,
-                        redeemer
-                    })
-                    .addMintOrderReturn({
-                        address,
-                        datum,
-                        value: returnValue
-                    })
-                    .use((ctx) => {
+            it("throws an error if no voucher is returned", () => {
+                configureContext({ returnAssets: new Assets([]) }).use(
+                    (currentScript, ctx) => {
                         throws(() => {
                             voucher_id.eval({
-                                $currentScript: "mint_order_validator",
+                                $currentScript: currentScript,
                                 $scriptContext: ctx,
                                 self: mintOrder
                             })
                         })
+                    }
+                )
+            })
+
+            it("throws an error if the voucher is sent as an input", () => {
+                configureContext({
+                    inputAssets: token,
+                    returnAssets: new Assets([])
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        voucher_id.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            self: mintOrder
+                        })
                     })
+                })
             })
         })
 
-        describe("for the other validators", () => {
-            const otherScripts = scripts.filter(
-                (s) => s != "mint_order_validator"
+        describe("@ other validators", () => {
+            const configureContext = withScripts(
+                configureParentContext,
+                scripts.filter((s) => s != "mint_order_validator")
             )
 
-            it("throws an error", () => {
-                const returnValue = new Value(12_000_000)
-
-                new ScriptContextBuilder()
-                    .addMintOrderInput({
-                        value: inputValue,
-                        datum: mintOrder,
-                        redeemer
-                    })
-                    .addMintOrderReturn({
-                        address,
-                        datum,
-                        value: returnValue
-                    })
-                    .use((ctx) => {
-                        otherScripts.forEach((currentScript) => {
-                            throws(() => {
-                                voucher_id.eval({
-                                    $currentScript: currentScript,
-                                    $scriptContext: ctx,
-                                    self: mintOrder
-                                })
+            it("throws an error if no voucher is returned", () => {
+                configureContext({ returnAssets: new Assets([]) }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            voucher_id.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                self: mintOrder
                             })
                         })
-                    })
+                    }
+                )
             })
         })
     })

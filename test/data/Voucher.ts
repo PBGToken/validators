@@ -4,6 +4,7 @@ import { Address } from "@helios-lang/ledger"
 import { IntData, UplcData } from "@helios-lang/uplc"
 import { describe } from "node:test"
 import contract from "pbg-token-validators-test-context"
+import { RatioType } from "./Price"
 
 export const castVoucher = contract.VoucherModule.Voucher
 export type VoucherType = PermissiveType<typeof castVoucher>
@@ -13,20 +14,16 @@ export function makeVoucher(props?: {
     address?: Address
     datum?: UplcData
     periodId?: IntLike
-    price?: {
-        top?: IntLike
-        bottom?: IntLike
-    }
+    price?: RatioType
     tokens?: IntLike
 }): VoucherStrictType {
     return {
         owner: props?.address ?? Address.dummy(false),
         datum: props?.datum ?? new IntData(0),
         tokens: BigInt(props?.tokens ?? 0),
-        price: [
-            BigInt(props?.price?.top ?? 100),
-            BigInt(props?.price?.bottom ?? 1)
-        ],
+        price: props?.price
+            ? [BigInt(props.price[0]), BigInt(props.price[1])]
+            : [100n, 1n],
         period: BigInt(props?.periodId ?? 0),
         name: "DVP Voucher",
         description:

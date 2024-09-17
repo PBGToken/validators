@@ -46,14 +46,12 @@ func validate_minted_tokens() -> Bool {
 func validate_initial_metadata() -> Bool {
     metadata = Metadata::find_output();
 
-    metadata == Metadata{
-        name:        "PBG Token",
-        description: "The first DVP",
-        ticker:      "PBG",
-        url:         "https://pbg.io",
-        decimals:    6,
-        logo:        "https://token.pbg.io/logo.png"
-    }
+    (metadata.name == "PBG Token").trace_if_false("wrong metadata name")
+    && (metadata.description == "The first DVP").trace_if_false("wrong metadata description")
+    && (metadata.ticker == "PBG").trace_if_false("wrong metadata ticker")
+    && (metadata.url == "https://pbg.io").trace_if_false("wrong metadata url")
+    && (metadata.decimals == 6).trace_if_false("wrong metadata decimals")
+    && (metadata.logo == "https://token.pbg.io/logo.png").trace_if_false("wrong metadata logo uri")
 }
 
 func validate_initial_config() -> Bool {

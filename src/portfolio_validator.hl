@@ -116,8 +116,7 @@ func validate_continue_reduction(
 
 // TODO: should we use _portfolio1 for some of the validation?
 func validate_add_asset_class(config0: Config, config_is_spent: Bool, portfolio0: Portfolio, _portfolio1: Portfolio) -> Bool {
-    (id, group0) = AssetGroup::find_single_input();
-    group1 = AssetGroup::find_output(id);
+    (group0, group1) = AssetGroup::find_single_thread();
 
     DoesNotExist{asset_class} = portfolio0.get_reduction_result();
     AddingAssetClass{expected_asset_class} = config0.state.get_proposal();
@@ -131,8 +130,7 @@ func validate_add_asset_class(config0: Config, config_is_spent: Bool, portfolio0
 
 // TODO: should we use _portfolio1 for some of the validation?
 func validate_remove_asset_class(config0: Config, config_is_spent: Bool, portfolio0: Portfolio, _portfolio1: Portfolio) -> Bool {
-    (id, group0) = AssetGroup::find_single_input();
-    group1 = AssetGroup::find_output(id);
+    (group0, group1) = AssetGroup::find_single_thread();
 
     Exists{asset_class, found} = portfolio0.get_reduction_result();
     RemovingAssetClass{expected_asset_class} = config0.state.get_proposal();
@@ -159,7 +157,9 @@ func validate_update_prices(portfolio0: Portfolio) -> Bool {
             group0 = input.datum.inline.as[AssetGroup];
             group1 = AssetGroup::find_output(id);
 
-            // zip() fails of the first and second list don't have the same length
+            // TODO: assure that both have some length
+
+            // TODO: zip() fails of the first and second list don't have the same length
             group0.assets.zip(group1.assets).all((asset0: Asset, asset1: Asset) -> {
                 asset1.asset_class == asset0.asset_class
                 && asset1.count == asset0.count
@@ -183,6 +183,7 @@ func validate_move_assets(portfolio0: Portfolio) -> Bool {
 
             group.assets.fold((n_assets: Int, asset0: Asset) -> {
                 // look for asset somewhere in output
+                // TODO: use a ptr in the redeemer because this is very expensive
                 asset1 = AssetGroup::find_output_asset(asset0.asset_class);
 
                 // asset can only move, but content can't change

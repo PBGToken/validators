@@ -45,7 +45,7 @@ struct Reimbursement {
         assert(tokens.length <= 2, "output contains unexpected tokens");
         assert(output.value.delete_lovelace().to_map().length == 1, "output contains unexpected token policies");
 
-        (output.datum.inline.as[Reimbursement], n_dvp_tokens)
+        (output.datum.inline.as_strictly[Reimbursement], n_dvp_tokens)
     }
 
     func find_thread() -> (Int, Reimbursement, Int, Reimbursement, Int) {

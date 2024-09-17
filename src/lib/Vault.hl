@@ -2,6 +2,7 @@ module Vault
 
 import Addresses
 import { Asset } from AssetModule
+import { AssetGroup } from AssetGroupModule
 import { AssetPtr } from AssetPtrModule
 import { price_expiry } from ConfigModule
 import { sum_lovelace } from PortfolioModule
@@ -62,7 +63,7 @@ func diff_lovelace(ptrs: []AssetPtr) -> Int {
 }
 
 func diff_counted(d_lovelace: Int, expected_tick: Int) -> Value {
-    m: Map[AssetClass]Int = tx.inputs.fold((m: Map[AssetClass]Int, input: TxInput) -> {
+    m: Map[AssetClass]Int = tx.inputs.fold((mo: Map[AssetClass]Int, input: TxInput) -> {
         if (input.address == Addresses::assets) {
             // extract the token
             tokens = input.value.get_policy(Tokens::policy);
@@ -81,10 +82,13 @@ func diff_counted(d_lovelace: Int, expected_tick: Int) -> Value {
                 && output.value.get_safe(group_asset_class) == 1
             });
             
-            assets0 = input.datum.inline.as[[]Asset];
-            assets1 = output.datum.inline.as[[]Asset];
+            assets0 = input.datum.inline.as[AssetGroup].assets;
+            assets1 = output.datum.inline.as[AssetGroup].assets;
 
-            assets0.zip(assets1).fold((m: Map[AssetClass]Int, a: Asset, b: Asset) -> {
+            // the fold method iterates over the shortest of either, so the length equality must be checked explicitly
+            assert(assets0.length == assets1.length, "assets list not same length");
+
+            assets0.zip(assets1).fold((mi: Map[AssetClass]Int, a: Asset, b: Asset) -> {
                 assert(
                     b.asset_class == a.asset_class
                     && b.count_tick == expected_tick
@@ -93,19 +97,19 @@ func diff_counted(d_lovelace: Int, expected_tick: Int) -> Value {
                     "invalid asset change"
                 );
 
-                // TODO: prepend is cheaper
-                m.append(a.asset_class, b.count - a.count)
-            }, m)
+                // TODO: prepend is cheaper, it might also be better to ignore this if b.count == a.count
+                mi.append(a.asset_class, b.count - a.count)
+            }, mo)
         } else {
-            m
+            mo
         }
     }, Map[AssetClass]Int{});
 
     // TODO: prepend is cheaper, and only do this if d_lovelace is non-zero?
-    m = m.append(AssetClass::ADA, d_lovelace);
+    m_ = m.append(AssetClass::ADA, d_lovelace);
 
     // this function sorts by assetclass to make it easier to detect duplicates
-    Value::from_flat(m)
+    Value::from_flat(m_)
 }
 
 /**
@@ -114,5 +118,5 @@ func diff_counted(d_lovelace: Int, expected_tick: Int) -> Value {
 func counters_are_consistent(d_lovelace: Int, tick: Int) -> Bool {
     d = diff().sort();
     dc = diff_counted(d_lovelace, tick);
-    d == dc
+    d.to_map() == dc.to_map()
 }

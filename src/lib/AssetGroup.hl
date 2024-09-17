@@ -27,7 +27,7 @@ struct AssetGroup {
             && Tokens::contains_only(output, assets_token)
         });
     
-        output.datum.inline.as[AssetGroup]
+        output.datum.inline.as_strictly[AssetGroup]
     }
 
     func find_output_asset(asset_class: AssetClass) -> Asset {
@@ -35,7 +35,7 @@ struct AssetGroup {
             if (output.address == Addresses::assets) {
                 assert(Tokens::contains_only_any_assets(output), "doesn't only contain assets token");
 
-                group = output.datum.inline.as[AssetGroup];
+                group = output.datum.inline.as_strictly[AssetGroup];
 
                 
                 maybe_asset = group.find_asset(asset_class);
@@ -98,6 +98,12 @@ struct AssetGroup {
         id = Tokens::parse_assets(input);
 
         (id, input.datum.inline.as[AssetGroup])
+    }
+
+    func find_single_thread() -> (AssetGroup, AssetGroup) {
+        (id, group0) = AssetGroup::find_single_input();
+        group1 = AssetGroup::find_output(id);
+        (group0, group1)
     }
 
     func find_asset(self, asset_class: AssetClass) -> Option[Asset] {

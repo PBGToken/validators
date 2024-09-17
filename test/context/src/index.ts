@@ -1,4 +1,5 @@
 import { ContractContextBuilder } from "@helios-lang/contract-utils"
+import { PubKeyHash, TxOutputId } from "@helios-lang/ledger"
 import {
     assets_validator,
     benchmark_delegate,
@@ -16,6 +17,9 @@ import {
     voucher_validator
 } from "pbg-token-validators"
 
+export const SEED_ID = TxOutputId.dummy()
+export const INITIAL_AGENT = PubKeyHash.dummy()
+
 const context = ContractContextBuilder.new()
     .with(assets_validator)
     .with(benchmark_delegate)
@@ -32,7 +36,14 @@ const context = ContractContextBuilder.new()
     .with(supply_validator)
     .with(voucher_validator)
     .build({
-        isMainnet: false
+        isMainnet: false,
+        debug: true,
+        parameters: {
+            "fund_policy::SEED_ID": SEED_ID.toUplcData(),
+            "fund_policy::INITIAL_AGENT": INITIAL_AGENT.toUplcData()
+        }
     })
 
 export default context
+
+export {}

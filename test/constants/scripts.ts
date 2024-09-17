@@ -24,12 +24,12 @@ export const directPolicyScripts = [
     "governance_delegate"
 ]
 
+// the reimbursement_validator is a special case and not included in this list
 export const indirectPolicyScripts = [
     "supply_validator",
     "assets_validator",
     "portfolio_validator",
     "price_validator",
-    "reimbursement_validator",
     "voucher_validator",
     "config_validator",
     "metadata_validator"

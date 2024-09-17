@@ -19,7 +19,7 @@ import { tx } from ScriptContext
 import { Supply } from SupplyModule
 import Tokens
 
-const MIN_FEE_UPPER_LIMIT = (100_000_000/INITIAL_PRICE).ceil() // 100 ADA
+const MIN_FEE_UPPER_LIMIT = (100_000_000/INITIAL_PRICE).ceil() // equivalent value of 100 ADA (i.e. 1 token at initial price)
 const MANAGEMENT_FEE_PERIOD_UPPER_LIMIT = 366*Duration::DAY
 const SUCCESS_FEE_PERIOD_UPPER_LIMIT = 3660*Duration::DAY
 const MAX_PRICE_AGE_UPPER_LIMIT = 366*Duration::DAY // if no oracle is available, changing the max price age to something very large is the only way of getting mony out of the vault through burning
@@ -55,14 +55,14 @@ func main(_: Config, _) -> Bool {
                 UpdatingSuccessFee{period, benchmark, fee} => {
                     supply = Supply::find_ref();
         
-                    period > Duration::new(0)
-                    && period < SUCCESS_FEE_PERIOD_UPPER_LIMIT
+                    (period > Duration::new(0)).trace_if_false("new period not larger than 0")
+                    && (period < SUCCESS_FEE_PERIOD_UPPER_LIMIT).trace_if_false("new period not smaller than upper limit")
                     && tx.redeemers.any((key: ScriptPurpose, _) -> {
                         key == ScriptPurpose::new_rewarding(StakingCredential::new_hash(StakingHash::new_validator(benchmark)))
-                    })
-                    && fee.is_valid()
-                    && (supply.period_end() - tx.time_range.end) >= (config0.governance.update_delay + Duration::DAY)
-                    && (supply.period_end() - tx.time_range.start) < config0.governance.update_delay*2
+                    }).trace_if_false("not witnessed by new benchmark")
+                    && fee.is_valid().trace_if_false("new success fee isn't valid")
+                    && ((supply.period_end() - tx.time_range.end) >= (config0.governance.update_delay + Duration::DAY)).trace_if_false("too late (you've missed the window of opportunity to change the success fee config this period)")
+                    && ((supply.period_end() - tx.time_range.start) < config0.governance.update_delay*2).trace_if_false("too soon")
                 },
                 IncreasingMaxTokenSupply{Nmax} => {
                     Nmax > config0.token.max_supply
@@ -111,16 +111,14 @@ func main(_: Config, _) -> Bool {
             && signed_by_agent(config1.agent)
             && changing.proposal.switch{
                 AddingAssetClass{asset_class} => {
-                    (id, group0) = AssetGroup::find_single_input();
-                    group1 = AssetGroup::find_output(id);
+                    (group0, group1) = AssetGroup::find_single_thread();
 
                     !group0.has_asset(asset_class)
                     && group1.has_asset(asset_class)
                     && config1 == config0.copy(state: ConfigState::Idle)
                 },
                 RemovingAssetClass{asset_class} => {
-                    (id, group0) = AssetGroup::find_single_input();
-                    group1 = AssetGroup::find_output(id);
+                    (group0, group1) = AssetGroup::find_single_thread();
 
                     group0.has_asset(asset_class)
                     && !group1.has_asset(asset_class)

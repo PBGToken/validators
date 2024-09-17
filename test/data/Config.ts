@@ -1,14 +1,17 @@
+import { strictEqual } from "node:assert"
+import { IntLike } from "@helios-lang/codec-utils"
 import { PermissiveType, StrictType } from "@helios-lang/contract-utils"
 import { PubKeyHash, StakingValidatorHash } from "@helios-lang/ledger"
 import contract from "pbg-token-validators-test-context"
-import { IntLike, bytesToHex } from "@helios-lang/codec-utils"
-import { deepEqual, strictEqual } from "node:assert"
 
 export const castConfigChangeProposal =
     contract.ConfigModule.ConfigChangeProposal
 export type ConfigChangeProposal = PermissiveType<
     typeof castConfigChangeProposal
 >
+
+export const castConfigState = contract.ConfigModule.ConfigState
+export type ConfigStateType = PermissiveType<typeof castConfigState>
 
 export const castConfig = contract.ConfigModule.Config
 export type ConfigType = PermissiveType<typeof castConfig>
@@ -35,15 +38,21 @@ export function makeConfig(props?: {
         minimum?: IntLike
     }
     relManagementFee?: number
+    managementFeePeriod?: IntLike
     successFee?: {
         c0?: number
         steps?: PermissiveType<
             typeof contract.SuccessFeeModule.SuccessFeeStep
         >[]
     }
+    state?: ConfigStateType
 }): ConfigStrictType {
+    const state = castConfigState.fromUplcData(
+        castConfigState.toUplcData(props?.state ?? { Idle: {} })
+    )
+
     return {
-        agent: PubKeyHash.dummy(),
+        agent: props?.agent ?? PubKeyHash.dummy(99999),
         fees: {
             mint_fee: {
                 relative: props?.mintFee?.relative ?? 0,
@@ -55,7 +64,9 @@ export function makeConfig(props?: {
             },
             management_fee: {
                 relative: props?.relManagementFee ?? 0.0001,
-                period: 24n * 60n * 60n * 1000n
+                period: BigInt(
+                    props?.managementFeePeriod ?? 24n * 60n * 60n * 1000n
+                )
             },
             success_fee: {
                 fee: {
@@ -76,9 +87,7 @@ export function makeConfig(props?: {
                 props?.governance?.delegate ??
                 contract.governance_delegate.$hash
         },
-        state: {
-            Idle: {}
-        }
+        state
     }
 }
 

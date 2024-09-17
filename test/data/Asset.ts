@@ -21,7 +21,7 @@ export function makeAsset(props?: {
         count_tick: BigInt(props?.countTick ?? 0n),
         price: props?.price
             ? [BigInt(props?.price[0]), BigInt(props?.price[1])]
-            : [0n, 0n],
+            : [0n, 1n],
         price_timestamp: toTime(props?.priceTimestamp ?? 0)
     }
 }

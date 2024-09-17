@@ -1,12 +1,12 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { Address } from "@helios-lang/ledger"
-import { IntData } from "@helios-lang/uplc"
+import { Address, Assets } from "@helios-lang/ledger"
+import { ByteArrayData, IntData, ListData, UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { scripts as allScripts } from "./constants"
-import { castRatio, makeConfig, makePrice } from "./data"
+import { castPrice, castRatio, makeConfig, makePrice } from "./data"
 import { makeConfigToken } from "./tokens"
-import { ScriptContextBuilder } from "./tx"
+import { ScriptContextBuilder, withScripts } from "./tx"
 
 const {
     "Price::find": find,
@@ -21,135 +21,135 @@ const {
 describe("PriceModule::Price::find", () => {
     const price = makePrice()
 
-    describe("for the price_validator", () => {
+    const configureParentContext = (props?: {
+        address?: Address
+        redeemer?: UplcData
+        refer?: boolean
+        token?: Assets
+    }) => {
+        const scb = new ScriptContextBuilder()
+
+        if (props?.refer) {
+            scb.addPriceRef({
+                address: props?.address,
+                price,
+                token: props?.token
+            })
+        } else {
+            scb.addPriceInput({
+                address: props?.address,
+                redeemer: props?.redeemer,
+                price,
+                token: props?.token
+            })
+        }
+
+        if (!props?.redeemer) {
+            scb.redeemDummyTokenWithDvpPolicy()
+        }
+
+        return scb
+    }
+
+    describe("@ price_validator", () => {
+        const configureContext = withScripts(configureParentContext, [
+            "price_validator"
+        ])
+
         it("returns the price data if the price UTxO is the current input", () => {
-            new ScriptContextBuilder()
-                .addPriceInput({
-                    redeemer: new IntData(0),
-                    price
-                })
-                .use((ctx) => {
+            configureContext({ redeemer: new IntData(0) }).use(
+                (currentScript, ctx) => {
                     deepEqual(
                         find.eval({
-                            $currentScript: "price_validator",
+                            $currentScript: currentScript,
                             $scriptContext: ctx
                         }),
                         price
                     )
-                })
+                }
+            )
         })
 
         it("throws an error if the price UTxO isn't the current input", () => {
-            new ScriptContextBuilder()
-                .addPriceInput({
-                    price
-                })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    throws(() => {
-                        find.eval({
-                            $currentScript: "price_validator",
-                            $scriptContext: ctx
-                        })
+            configureContext().use((currentScript, ctx) => {
+                throws(() => {
+                    find.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
                     })
                 })
+            })
         })
 
         it("throws an error if the price UTxO is referenced", () => {
-            new ScriptContextBuilder()
-                .addPriceRef({
-                    price
-                })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    throws(() => {
-                        find.eval({
-                            $currentScript: "price_validator",
-                            $scriptContext: ctx
-                        })
+            configureContext({ refer: true }).use((currentScript, ctx) => {
+                throws(() => {
+                    find.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
                     })
                 })
+            })
         })
     })
 
-    describe("for the other validators", () => {
+    describe("@ other validators", () => {
         const otherScripts = allScripts.filter((s) => s != "price_validator")
+        const configureContext = withScripts(
+            configureParentContext,
+            otherScripts
+        )
 
         it("returns the price data if the price UTxO is referenced", () => {
-            new ScriptContextBuilder()
-                .addPriceRef({
+            configureContext({ refer: true }).use((currentScript, ctx) => {
+                deepEqual(
+                    find.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    }),
                     price
-                })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    otherScripts.forEach((currentScript) => {
-                        deepEqual(
-                            find.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            }),
-                            price
-                        )
-                    })
-                })
+                )
+            })
         })
 
         it("throws an error if the price UTxO is spent", () => {
-            const price = makePrice()
-
-            new ScriptContextBuilder()
-                .addPriceInput({
-                    redeemer: new IntData(0),
-                    price
-                })
-                .use((ctx) => {
-                    otherScripts.forEach((currentScript) => {
-                        throws(() => {
-                            find.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            })
+            configureContext({ redeemer: new IntData(0) }).use(
+                (currentScript, ctx) => {
+                    throws(() => {
+                        find.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
                         })
                     })
-                })
+                }
+            )
         })
 
         it("throws an error if the referenced price UTxO doesn't contain the price token", () => {
-            new ScriptContextBuilder()
-                .addPriceRef({
-                    price,
-                    token: makeConfigToken()
-                })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    otherScripts.forEach((currentScript) => {
-                        throws(() => {
-                            find.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            })
+            configureContext({ refer: true, token: makeConfigToken() }).use(
+                (currentScript, ctx) => {
+                    throws(() => {
+                        find.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
                         })
                     })
-                })
+                }
+            )
         })
 
         it("throws an error if the referenced price UTxO isn't at the price_validator address", () => {
-            new ScriptContextBuilder()
-                .addPriceRef({
-                    price,
-                    address: Address.dummy(false)
-                })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    otherScripts.forEach((currentScript) => {
-                        throws(() => {
-                            find.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            })
-                        })
+            configureContext({
+                address: Address.dummy(false),
+                refer: true
+            }).use((currentScript, ctx) => {
+                throws(() => {
+                    find.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
                     })
                 })
+            })
         })
     })
 })
@@ -261,64 +261,116 @@ describe("PriceModule::Price::find_input", () => {
 describe("PriceModule::Price::find_output", () => {
     const price = makePrice()
 
-    describe("for all validators", () => {
+    const configureParentContext = (props?: {
+        address?: Address
+        datum?: UplcData
+        token?: Assets
+    }) => {
+        return new ScriptContextBuilder()
+            .addPriceOutput({
+                address: props?.address,
+                datum: props?.datum,
+                price,
+                token: props?.token
+            })
+            .redeemDummyTokenWithDvpPolicy()
+    }
+
+    describe("@ all validators", () => {
+        const configureContext = withScripts(configureParentContext, allScripts)
+
         it("returns the price data if the price UTxO is sent to the price_validator address with the price token", () => {
-            new ScriptContextBuilder()
-                .addPriceOutput({
+            configureContext().use((currentScript, ctx) => {
+                deepEqual(
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    }),
                     price
-                })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    allScripts.forEach((currentScript) => {
-                        deepEqual(
-                            find_output.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            }),
-                            price
-                        )
-                    })
-                })
+                )
+            })
         })
 
         it("throws an error if the price UTxO output doesn't contain the price token", () => {
-            new ScriptContextBuilder()
-                .addPriceOutput({
-                    price,
-                    token: makeConfigToken()
-                })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    allScripts.forEach((currentScript) => {
-                        throws(() => {
-                            find_output.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            })
+            configureContext({ token: makeConfigToken() }).use(
+                (currentScript, ctx) => {
+                    throws(() => {
+                        find_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
                         })
                     })
-                })
+                }
+            )
         })
 
         it("throws an error if the price UTxO output isn't sent to the price_validator address", () => {
-            const price = makePrice()
-
-            new ScriptContextBuilder()
-                .addPriceOutput({
-                    price,
-                    address: Address.dummy(false)
-                })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    allScripts.forEach((currentScript) => {
-                        throws(() => {
-                            find_output.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            })
+            configureContext({ address: Address.dummy(false) }).use(
+                (currentScript, ctx) => {
+                    throws(() => {
+                        find_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
                         })
                     })
+                }
+            )
+        })
+
+        it("throws an error if the value denominator is zero", () => {
+            const datum = ListData.expect(castPrice.toUplcData(price))
+            ListData.expect(datum.items[0]).items[1] = new IntData(0)
+
+            configureContext({ datum }).use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    })
                 })
+            })
+        })
+
+        it("throws an error if the value denominator is negative", () => {
+            const datum = ListData.expect(castPrice.toUplcData(price))
+            ListData.expect(datum.items[0]).items[1] = new IntData(-1)
+
+            configureContext({ datum }).use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    })
+                })
+            })
+        })
+
+        it("throws an error if the datum listData contains an additional field", () => {
+            const datum = ListData.expect(castPrice.toUplcData(price))
+            datum.items.push(new IntData(0))
+
+            configureContext({ datum }).use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    })
+                })
+            })
+        })
+
+        it("throws an error the datum listData time field isn't iData", () => {
+            const datum = ListData.expect(castPrice.toUplcData(price))
+            datum.items[1] = new ByteArrayData([])
+
+            configureContext({ datum }).use((currentScript, ctx) => {
+                throws(() => {
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    })
+                })
+            })
         })
     })
 })
