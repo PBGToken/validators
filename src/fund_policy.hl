@@ -71,7 +71,7 @@ func validate_initial_config() -> Bool {
                 minimum:  20_000 // 0.02 tokens, equivalent to 2 ADA
             },
             management_fee: ManagementFeeConfig{
-                relative: 0.00011, // 0.011% daily, about 4% annually
+                relative: 0.00011, // 0.011% daily, about 4% annually TODO: change this to 0.0001
                 period:   Duration::DAY
             },
             success_fee: SuccessFeeConfig{
@@ -123,7 +123,7 @@ func validate_initial_supply() -> Bool {
         success_fee: SuccessFeeState{
             period_id:   0,
             start_time:  Time::new(0),
-            period:      Duration::WEEK*2, // not yet 1 year, so we can test the success fee for a few periods
+            period:      Duration::WEEK*2, // TODO: not yet 1 year, so we can test the success fee for a few periods
             start_price: INITIAL_PRICE
         }
     }

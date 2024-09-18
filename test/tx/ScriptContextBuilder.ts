@@ -3,6 +3,7 @@ import { generateBytes, rand } from "@helios-lang/crypto"
 import {
     Address,
     Assets,
+    MintingPolicyHash,
     PubKeyHash,
     ScriptContextV2,
     ScriptPurpose,
@@ -346,11 +347,12 @@ export class ScriptContextBuilder {
 
     addDummyInput(props?: {
         address?: Address
+        id?: TxOutputId
         redeemer?: UplcData
         value?: Value
     }): ScriptContextBuilder {
         const address = props?.address ?? Address.dummy(false)
-        const id = this.newInputId()
+        const id = props?.id ?? this.newInputId()
         const value = props?.value ?? new Value(2_000_000)
 
         if (props?.redeemer) {
@@ -999,8 +1001,17 @@ export class ScriptContextBuilder {
         )
     }
 
-    mint(props?: { assets?: Assets }): ScriptContextBuilder {
+    mint(props?: { assets?: Assets, redeemer?: UplcData }): ScriptContextBuilder {
         const prev = this.tx.minted ?? new Assets()
+
+        if (props?.redeemer) {
+            const mph = props?.assets?.assets?.[0]?.[0] ?? MintingPolicyHash.dummy()
+
+            this.purpose = ScriptPurpose.Minting(
+                TxRedeemer.Minting(prev.assets.length, props.redeemer),
+                mph
+            )
+        }
 
         if (props?.assets) {
             this.tx.minted = prev.add(props.assets)
@@ -1092,10 +1103,12 @@ export class ScriptContextBuilder {
     }
 
     takeFromVault(props?: {
+        address?: Address
         datum?: UplcData
         redeemer?: UplcData
         value?: Value
     }): ScriptContextBuilder {
+        const address = props?.address ?? Addresses.vault
         const datum = props?.datum ?? new ByteArrayData([])
         const value = props?.value ?? new Value(2_000_000)
         const id = this.newInputId()
@@ -1111,7 +1124,7 @@ export class ScriptContextBuilder {
             new TxInput(
                 id,
                 new TxOutput(
-                    Addresses.vault,
+                    address,
                     value,
                     TxOutputDatum.Inline(datum)
                 )

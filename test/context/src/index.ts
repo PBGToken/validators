@@ -17,7 +17,7 @@ import {
     voucher_validator
 } from "pbg-token-validators"
 
-export const SEED_ID = TxOutputId.dummy()
+export const SEED_ID = TxOutputId.dummy(999999) // something very large in order not to conflict with auto-generated ids in ScriptContextBuilder
 export const INITIAL_AGENT = PubKeyHash.dummy()
 
 const context = ContractContextBuilder.new()

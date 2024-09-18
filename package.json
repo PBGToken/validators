@@ -40,8 +40,8 @@
     },
     "homepage": "https://github.com/PBGToken/validators#readme",
     "dependencies": {
-        "@helios-lang/compiler": "^0.17.0-86",
-        "@helios-lang/contract-utils": "^0.2.58"
+        "@helios-lang/compiler": "^0.17.0-89",
+        "@helios-lang/contract-utils": "^0.2.61"
     },
     "devDependencies": {
         "@helios-lang/codec-utils": "^0.1.34",
