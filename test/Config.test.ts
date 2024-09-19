@@ -77,6 +77,16 @@ describe("ConfigModule::MintFeeConfig::apply", () => {
                 100_000n
             )
         })
+
+        it("charges the correct fee for a very specific order", () => {
+            strictEqual(
+                apply_mint_fee.eval({
+                    self: mintFee,
+                    n: Math.floor(200000000/140)
+                }),
+                20_000n
+            )
+        })
     })
 
     describe("non-zero minimum mint fee, but zero relative mint fee", () => {
@@ -151,6 +161,16 @@ describe("ConfigModule::MintFeeConfig::deduct", () => {
                     n: 20_000_000
                 }),
                 19_900_000n
+            )
+        })
+
+        it("deducts the correct relative fee for a very specific order", () => {
+            strictEqual(
+                deduct_mint_fee_internal.eval({
+                    self: mintFee,
+                    n: Math.floor(200000000/140)
+                }),
+                1408571n
             )
         })
     })

@@ -28,7 +28,7 @@ func validate_add_asset_group(portfolio0: Portfolio, portfolio1: Portfolio, adde
     AssetGroup::nothing_spent()
     && portfolio0.reduction.is_idle()
     && portfolio1.reduction.is_idle()
-    && portfolio1.n_groups == added_id
+    && portfolio1.n_groups == added_id // this means AssetGroup ids are one-based
     && portfolio1.n_groups == portfolio0.n_groups + 1
     && added_group.is_empty()
 }

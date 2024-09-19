@@ -208,7 +208,7 @@ describe("burn_order_validator::main", () => {
         })
         const redeemer: BurnOrderRedeemerType = {
             Fulfill: {
-                ptrs: [makeAssetPtr()] // dummy AssetPtr
+                ptrs: [makeAssetPtr()] // dummy AssetPtr for ADA
             }
         }
         const agent = PubKeyHash.dummy(123)
