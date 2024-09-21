@@ -55,12 +55,12 @@ struct Reimbursement {
         (id, r0, n0, r1, n1)
     }
 
-    func calc_alpha(self, end_price: Ratio = self.end_price) -> Real {
-        (end_price/self.start_price).to_real()
+    func calc_alpha(self, start_price: Ratio = self.start_price) -> Real {
+        (self.end_price/start_price).to_real()
     }
 
-    func calc_phi_alpha_ratio(self, end_price: Ratio = self.end_price) -> Real {
-        alpha = self.calc_alpha(end_price);
+    func calc_phi_alpha_ratio(self, start_price: Ratio = self.start_price) -> Real {
+        alpha = self.calc_alpha(start_price);
 
         phi_alpha = self.success_fee.apply(alpha);
 

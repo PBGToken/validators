@@ -73,7 +73,7 @@ struct Supply {
     }
 
     func calc_success_fee_dilution(self, end_price: Ratio) -> Int {
-        config = Config::find_ref();
+        (config, _) = Config::find(); // Use Config::find() instead of Config::find_ref() because the config might be spent/changed during success fee dilution
 
         N = self.n_tokens;
         alpha = (end_price/self.success_fee.start_price).to_real();

@@ -90,10 +90,10 @@ func diff_counted(d_lovelace: Int, expected_tick: Int) -> Value {
 
             assets0.zip(assets1).fold((mi: Map[AssetClass]Int, a: Asset, b: Asset) -> {
                 assert(
-                    b.asset_class == a.asset_class
-                    && b.count_tick == expected_tick
-                    && b.price == a.price
-                    && b.price_timestamp == a.price_timestamp,
+                    (b.asset_class == a.asset_class).trace_if_false("asset class changed")
+                    && (b.count_tick == expected_tick).trace_if_false("count tick unexpected")
+                    && (b.price == a.price).trace_if_false("price changed")
+                    && (b.price_timestamp == a.price_timestamp).trace_if_false("price timestamp changed"),
                     "invalid asset change"
                 );
 

@@ -770,7 +770,7 @@ describe("Vault::diff_counted", () => {
             })
 
             it("throws an error if one of the asset prices changed", () => {
-                configureContext({ lastOutputPrice: [40, 10] }).use(
+                configureContext({ lastOutputPrice: [39, 10] }).use(
                     (currentScript, ctx) => {
                         throws(() => {
                             diff_counted.eval({

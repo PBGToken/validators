@@ -82,7 +82,7 @@ describe("ConfigModule::MintFeeConfig::apply", () => {
             strictEqual(
                 apply_mint_fee.eval({
                     self: mintFee,
-                    n: Math.floor(200000000/140)
+                    n: Math.floor(200000000 / 140)
                 }),
                 20_000n
             )
@@ -168,7 +168,7 @@ describe("ConfigModule::MintFeeConfig::deduct", () => {
             strictEqual(
                 deduct_mint_fee_internal.eval({
                     self: mintFee,
-                    n: Math.floor(200000000/140)
+                    n: Math.floor(200000000 / 140)
                 }),
                 1408571n
             )

@@ -14,7 +14,7 @@ describe("AssetModule::Asset::new", () => {
         count: 0,
         countTick: 0,
         priceTimestamp: 0,
-        price: [1, 1]
+        price: [0, 1]
     })
 
     it("initializes Asset with unit price and zeroes for other fields", () => {

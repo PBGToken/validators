@@ -53,6 +53,6 @@ export function makeVoucherUserToken(id: IntLike = 0, n: IntLike = 1) {
     return Assets.fromAssetClasses([[voucher_nft(id), n]])
 }
 
-export function makeVoucherPair(id: number = 0, n: IntLike = 1) {
+export function makeVoucherPair(id: IntLike = 0, n: IntLike = 1) {
     return makeVoucherRefToken(id, n).add(makeVoucherUserToken(id, n))
 }

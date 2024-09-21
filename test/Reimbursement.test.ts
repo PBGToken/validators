@@ -441,9 +441,9 @@ describe("ReimbursementModule::Reimbursement::calc_alpha", () => {
                         steps: []
                     }
                 },
-                end_price: [300_000_000n, 1_000_000n]
+                start_price: [200_000_000n, 1_000_000n]
             }),
-            3.0
+            1.0
         )
     })
 
@@ -458,8 +458,8 @@ describe("ReimbursementModule::Reimbursement::calc_alpha", () => {
             }
         })
 
-        const endPrice = new ListData([
-            new IntData(300_000_000),
+        const startPrice = new ListData([
+            new IntData(200_000_000),
             new IntData(1_000_000)
         ])
 
@@ -467,14 +467,14 @@ describe("ReimbursementModule::Reimbursement::calc_alpha", () => {
             calc_alpha
                 .evalUnsafe({
                     self: self,
-                    end_price: endPrice
+                    start_price: startPrice
                 })
                 .toString(),
-            "3000000"
+            "1000000"
         )
     })
 
-    it("correct ratio division with default end_price (typesafe eval)", () => {
+    it("correct ratio division with default start_price (typesafe eval)", () => {
         strictEqual(
             calc_alpha.eval({
                 self: {
@@ -491,7 +491,7 @@ describe("ReimbursementModule::Reimbursement::calc_alpha", () => {
         )
     })
 
-    it("correct ratio division with default end_price (evalUnsafe)", () => {
+    it("correct ratio division with default start_price (evalUnsafe)", () => {
         const self = contract.ReimbursementModule.Reimbursement.toUplcData({
             n_remaining_vouchers: 0,
             start_price: [100, 1],
@@ -530,7 +530,7 @@ describe("ReimbursementModule::Reimbursement::calc_phi_alpha_ratio", () => {
 
         const expected = 0.098901
 
-        it("returns the correct value with the implicit end price", () => {
+        it("returns the correct value with the implicit start price", () => {
             strictEqual(
                 calc_phi_alpha_ratio.eval({
                     self: reimbursement
@@ -539,11 +539,11 @@ describe("ReimbursementModule::Reimbursement::calc_phi_alpha_ratio", () => {
             )
         })
 
-        it("returns the correct value with the explicit end price", () => {
+        it("returns the correct value with the explicit start price", () => {
             strictEqual(
                 calc_phi_alpha_ratio.eval({
                     self: reimbursement,
-                    end_price: endPrice
+                    start_price: startPrice
                 }),
                 expected
             )

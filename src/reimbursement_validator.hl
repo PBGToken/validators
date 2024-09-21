@@ -32,7 +32,7 @@ func validate_burned_vouchers(reim: Reimbursement) -> (Int, Int) {
             voucher_phi_alpha_ratio = reim.calc_phi_alpha_ratio(voucher.price);
             expected_reimbursed_tokens = (voucher.tokens*(main_phi_alpha_ratio - voucher_phi_alpha_ratio)).floor().bound_min(0);
             
-            assert(reimbursed_tokens == expected_reimbursed_tokens, "can only reimburse precisely the expected amount");
+            assert(reimbursed_tokens == expected_reimbursed_tokens, "expected a reimbursement of " + expected_reimbursed_tokens.show() + ", actually reimbursed " + reimbursed_tokens.show());
 
             (
                 n_vouchers_burned + 1,

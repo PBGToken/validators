@@ -534,8 +534,20 @@ export class ScriptContextBuilder {
         )
     }
 
-    addOutput(output: TxOutput): ScriptContextBuilder {
-        this.tx.outputs.push(output)
+    addOutput(
+        props: TxOutput | { address?: Address; datum?: UplcData; value?: Value }
+    ): ScriptContextBuilder {
+        if (props instanceof TxOutput) {
+            this.tx.outputs.push(props)
+        } else {
+            this.tx.outputs.push(
+                new TxOutput(
+                    props.address ?? Address.dummy(false, 0),
+                    props.value ?? new Value(0),
+                    props.datum ? TxOutputDatum.Inline(props.datum) : None
+                )
+            )
+        }
 
         return this
     }
@@ -624,12 +636,16 @@ export class ScriptContextBuilder {
 
     addPortfolioThread(props?: {
         portfolio?: PortfolioType
+        inputPortfolio?: PortfolioType
+        outputPortfolio?: PortfolioType
         redeemer?: PortfolioActionType
     }): ScriptContextBuilder {
         return this.addPortfolioInput({
-            portfolio: props?.portfolio,
+            portfolio: props?.inputPortfolio ?? props?.portfolio,
             redeemer: props?.redeemer
-        }).addPortfolioOutput({ portfolio: props?.portfolio })
+        }).addPortfolioOutput({
+            portfolio: props?.outputPortfolio ?? props?.portfolio
+        })
     }
 
     addPriceInput(props?: {
@@ -722,13 +738,15 @@ export class ScriptContextBuilder {
     addReimbursementInput(props?: {
         address?: Address
         datum?: ReimbursementType
+        reimbursement?: ReimbursementType
         id?: IntLike
         nDvpTokens?: IntLike
         extraTokens?: Assets
         redeemer?: UplcData
     }): ScriptContextBuilder {
         const address = props?.address ?? Addresses.reimbursementValidator
-        const datum = props?.datum ?? makeReimbursement()
+        const datum =
+            props?.datum ?? props?.reimbursement ?? makeReimbursement()
         let tokens = makeReimbursementToken(props?.id ?? 0).add(
             makeDvpTokens(props?.nDvpTokens ?? 1000n)
         )
@@ -763,13 +781,15 @@ export class ScriptContextBuilder {
     addReimbursementOutput(props?: {
         address?: Address
         datum?: UplcData | ReimbursementType
+        reimbursement?: ReimbursementType
         id?: IntLike
         nDvpTokens?: IntLike
         token?: Assets
         extraTokens?: Assets
     }): ScriptContextBuilder {
         const address = props?.address ?? Addresses.reimbursementValidator
-        const datum = props?.datum ?? makeReimbursement()
+        const datum =
+            props?.datum ?? props?.reimbursement ?? makeReimbursement()
         let token =
             props?.token ??
             makeReimbursementToken(props?.id ?? 0).add(
@@ -1001,11 +1021,19 @@ export class ScriptContextBuilder {
         )
     }
 
-    mint(props?: { assets?: Assets, redeemer?: UplcData }): ScriptContextBuilder {
+    mint(props?: {
+        assets?: Assets | null
+        redeemer?: UplcData
+    }): ScriptContextBuilder {
+        if (props?.assets === null) {
+            return this
+        }
+
         const prev = this.tx.minted ?? new Assets()
 
         if (props?.redeemer) {
-            const mph = props?.assets?.assets?.[0]?.[0] ?? MintingPolicyHash.dummy()
+            const mph =
+                props?.assets?.assets?.[0]?.[0] ?? MintingPolicyHash.dummy()
 
             this.purpose = ScriptPurpose.Minting(
                 TxRedeemer.Minting(prev.assets.length, props.redeemer),
@@ -1123,11 +1151,7 @@ export class ScriptContextBuilder {
         this.tx.inputs.push(
             new TxInput(
                 id,
-                new TxOutput(
-                    address,
-                    value,
-                    TxOutputDatum.Inline(datum)
-                )
+                new TxOutput(address, value, TxOutputDatum.Inline(datum))
             )
         )
 

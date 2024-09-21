@@ -1,12 +1,23 @@
-import { describe, it } from "node:test";
-import contract from "pbg-token-validators-test-context";
-import { MintOrderRedeemerType, MintOrderType, RatioType, makeAsset, makeAssetPtr, makeConfig, makeMintOrder, makePrice, makeSupply, makeVoucher } from "./data";
-import { Address, PubKeyHash, Value } from "@helios-lang/ledger";
-import { ScriptContextBuilder } from "./tx";
-import { throws } from "node:assert";
-import { IntData, ListData, UplcData } from "@helios-lang/uplc";
-import { IntLike } from "@helios-lang/codec-utils";
-import { makeDvpTokens, makeVoucherUserToken } from "./tokens";
+import { describe, it } from "node:test"
+import contract from "pbg-token-validators-test-context"
+import {
+    MintOrderRedeemerType,
+    MintOrderType,
+    RatioType,
+    makeAsset,
+    makeAssetPtr,
+    makeConfig,
+    makeMintOrder,
+    makePrice,
+    makeSupply,
+    makeVoucher
+} from "./data"
+import { Address, PubKeyHash, Value } from "@helios-lang/ledger"
+import { ScriptContextBuilder } from "./tx"
+import { throws } from "node:assert"
+import { IntData, ListData, UplcData } from "@helios-lang/uplc"
+import { IntLike } from "@helios-lang/codec-utils"
+import { makeDvpTokens, makeVoucherUserToken } from "./tokens"
 
 const { main } = contract.mint_order_validator
 
@@ -23,7 +34,7 @@ describe("mint_order_validator::main", () => {
         })
 
         const configureContext = (props?: {
-            pkh?: PubKeyHash,
+            pkh?: PubKeyHash
             dummyInputAddr?: Address
         }) => {
             const scb = new ScriptContextBuilder()
@@ -117,7 +128,9 @@ describe("mint_order_validator::main", () => {
                 bottom: 1,
                 timestamp: props?.priceTimestamp ?? 120
             })
-            const priceIncreased = Number(price.value[0])/Number(price.value[1]) > Number(startPrice[0])/Number(startPrice[1])
+            const priceIncreased =
+                Number(price.value[0]) / Number(price.value[1]) >
+                Number(startPrice[0]) / Number(startPrice[1])
 
             const config = makeConfig({
                 agent,
@@ -131,7 +144,7 @@ describe("mint_order_validator::main", () => {
             })
 
             const periodId = 0
-            const supply = makeSupply({startPrice, successFee: {periodId}})
+            const supply = makeSupply({ startPrice, successFee: { periodId } })
 
             const nTokensReturned = props?.returnTokens ?? 1408571
             let returnedTokens = makeDvpTokens(nTokensReturned)
@@ -143,10 +156,10 @@ describe("mint_order_validator::main", () => {
             }
 
             const scb = new ScriptContextBuilder()
-                .addConfigRef({config})
-                .addSupplyInput({supply})
-                .addPriceRef({price})
-                .observeBenchmark({redeemer: [1, 1]})
+                .addConfigRef({ config })
+                .addSupplyInput({ supply })
+                .addPriceRef({ price })
+                .observeBenchmark({ redeemer: [1, 1] })
                 .addAssetGroupInput()
                 .addMintOrderInput({
                     datum: props?.mintOrder ?? mintOrder,
@@ -159,15 +172,19 @@ describe("mint_order_validator::main", () => {
                     value: new Value(0, returnedTokens)
                 })
                 .addSigner(props?.agent ?? agent)
-                .setTimeRange({end: 200})
+                .setTimeRange({ end: 200 })
 
             if (priceIncreased && props?.returnRefVoucher !== null) {
                 scb.addVoucherOutput({
                     id: props?.returnRefVoucher?.id ?? 0,
                     voucher: makeVoucher({
-                        address: props?.returnRefVoucher?.returnAddress ?? returnAddress,
-                        datum: props?.returnRefVoucher?.returnDatum ?? returnDatum,
-                        tokens: props?.returnRefVoucher?.nTokens ?? nTokensReturned,
+                        address:
+                            props?.returnRefVoucher?.returnAddress ??
+                            returnAddress,
+                        datum:
+                            props?.returnRefVoucher?.returnDatum ?? returnDatum,
+                        tokens:
+                            props?.returnRefVoucher?.nTokens ?? nTokensReturned,
                         price: props?.returnRefVoucher?.price ?? price.value,
                         periodId: props?.returnRefVoucher?.periodId ?? periodId
                     })
@@ -178,14 +195,13 @@ describe("mint_order_validator::main", () => {
         }
 
         it("succeeds if enough tokens are returned", () => {
-            configureContext()
-                .use(ctx => {
-                    main.eval({$scriptContext: ctx, order: mintOrder, redeemer})
-                })
+            configureContext().use((ctx) => {
+                main.eval({ $scriptContext: ctx, order: mintOrder, redeemer })
+            })
         })
 
         it("throws an error if not signed by agent", () => {
-            configureContext({agent: PubKeyHash.dummy()}).use(ctx => {
+            configureContext({ agent: PubKeyHash.dummy() }).use((ctx) => {
                 throws(() => {
                     main.eval({
                         $scriptContext: ctx,
@@ -197,7 +213,7 @@ describe("mint_order_validator::main", () => {
         })
 
         it("throws an error if the price timestamp is too old", () => {
-            configureContext({priceTimestamp: 99}).use(ctx => {
+            configureContext({ priceTimestamp: 99 }).use((ctx) => {
                 throws(() => {
                     main.eval({
                         $scriptContext: ctx,
@@ -209,112 +225,7 @@ describe("mint_order_validator::main", () => {
         })
 
         it("throws an error if not enough tokens are returned according to the contract", () => {
-            configureContext({returnTokens: 1_408_570})
-                .use(ctx => {
-                    throws(() => {
-                        main.eval({
-                            $scriptContext: ctx,
-                            order: mintOrder,
-                            redeemer
-                        })
-                    })
-                })
-        })
-
-        it("throws an error if not enough tokens are returned according to the order", () => {
-            configureContext({returnTokens: 1_399_999})
-                .use(ctx => {
-                    throws(() => {
-                        main.eval({
-                            $scriptContext: ctx,
-                            order: mintOrder,
-                            redeemer
-                        })
-                    })
-                })
-        })
-
-        it("throws an error if there has been some success since the start of the year but no voucher is returned", () => {
-            configureContext({returnUserVoucher: false})
-                .use(ctx => {
-                    throws(() => {
-                        main.eval({
-                            $scriptContext: ctx,
-                            order: mintOrder,
-                            redeemer
-                        })
-                    })
-                })
-        })
-
-        it("throws an error if only a user voucher is returned in the case there has been some success since the start of the year", () => {
-            configureContext({returnRefVoucher: null})
-                .use(ctx => {
-                    throws(() => {
-                        main.eval({
-                            $scriptContext: ctx,
-                            order: mintOrder,
-                            redeemer
-                        })
-                    })
-                })
-        })
-
-        it("throws an error if the ref voucher return address is wrong", () => {
-            configureContext({returnRefVoucher: {returnAddress: Address.dummy(false)}})
-                .use(ctx => {
-                    throws(() => {
-                        main.eval({
-                            $scriptContext: ctx,
-                            order: mintOrder,
-                            redeemer
-                        })
-                    })
-                })
-        })
-
-        it("throws an error if the ref voucher return datum is wrong", () => {
-            configureContext({returnRefVoucher: {returnDatum: new ListData([])}})
-                .use(ctx => {
-                    throws(() => {
-                        main.eval({
-                            $scriptContext: ctx,
-                            order: mintOrder,
-                            redeemer
-                        })
-                    })
-                })
-        })
-
-        it("throws an error if the ref voucher token count is too low", () => {
-            configureContext({returnRefVoucher: {nTokens: 1_400_000}})
-                .use(ctx => {
-                    throws(() => {
-                        main.eval({
-                            $scriptContext: ctx,
-                            order: mintOrder,
-                            redeemer
-                        })
-                    })
-                })
-        })
-
-        it("throws an error if the ref voucher period id is wrong", () => {
-            configureContext({returnRefVoucher: {periodId: 1}})
-                .use(ctx => {
-                    throws(() => {
-                        main.eval({
-                            $scriptContext: ctx,
-                            order: mintOrder,
-                            redeemer
-                        })
-                    })
-                })
-        })
-
-        it("throws an error if the ref voucher price is too low", () => {
-            configureContext({returnRefVoucher: {price: [139, 1]}})
-            .use(ctx => {
+            configureContext({ returnTokens: 1_408_570 }).use((ctx) => {
                 throws(() => {
                     main.eval({
                         $scriptContext: ctx,
@@ -325,17 +236,124 @@ describe("mint_order_validator::main", () => {
             })
         })
 
-        it("succeeds if no vouchers are returned but there was also no success", () => {
-            configureContext({returnRefVoucher: null, returnUserVoucher: false, startPrice: [140, 1]})
-                .use(ctx => {
+        it("throws an error if not enough tokens are returned according to the order", () => {
+            configureContext({ returnTokens: 1_399_999 }).use((ctx) => {
+                throws(() => {
                     main.eval({
                         $scriptContext: ctx,
                         order: mintOrder,
                         redeemer
                     })
                 })
+            })
+        })
+
+        it("throws an error if there has been some success since the start of the year but no voucher is returned", () => {
+            configureContext({ returnUserVoucher: false }).use((ctx) => {
+                throws(() => {
+                    main.eval({
+                        $scriptContext: ctx,
+                        order: mintOrder,
+                        redeemer
+                    })
+                })
+            })
+        })
+
+        it("throws an error if only a user voucher is returned in the case there has been some success since the start of the year", () => {
+            configureContext({ returnRefVoucher: null }).use((ctx) => {
+                throws(() => {
+                    main.eval({
+                        $scriptContext: ctx,
+                        order: mintOrder,
+                        redeemer
+                    })
+                })
+            })
+        })
+
+        it("throws an error if the ref voucher return address is wrong", () => {
+            configureContext({
+                returnRefVoucher: { returnAddress: Address.dummy(false) }
+            }).use((ctx) => {
+                throws(() => {
+                    main.eval({
+                        $scriptContext: ctx,
+                        order: mintOrder,
+                        redeemer
+                    })
+                })
+            })
+        })
+
+        it("throws an error if the ref voucher return datum is wrong", () => {
+            configureContext({
+                returnRefVoucher: { returnDatum: new ListData([]) }
+            }).use((ctx) => {
+                throws(() => {
+                    main.eval({
+                        $scriptContext: ctx,
+                        order: mintOrder,
+                        redeemer
+                    })
+                })
+            })
+        })
+
+        it("throws an error if the ref voucher token count is too low", () => {
+            configureContext({ returnRefVoucher: { nTokens: 1_400_000 } }).use(
+                (ctx) => {
+                    throws(() => {
+                        main.eval({
+                            $scriptContext: ctx,
+                            order: mintOrder,
+                            redeemer
+                        })
+                    })
+                }
+            )
+        })
+
+        it("throws an error if the ref voucher period id is wrong", () => {
+            configureContext({ returnRefVoucher: { periodId: 1 } }).use(
+                (ctx) => {
+                    throws(() => {
+                        main.eval({
+                            $scriptContext: ctx,
+                            order: mintOrder,
+                            redeemer
+                        })
+                    })
+                }
+            )
+        })
+
+        it("throws an error if the ref voucher price is too low", () => {
+            configureContext({ returnRefVoucher: { price: [139, 1] } }).use(
+                (ctx) => {
+                    throws(() => {
+                        main.eval({
+                            $scriptContext: ctx,
+                            order: mintOrder,
+                            redeemer
+                        })
+                    })
+                }
+            )
+        })
+
+        it("succeeds if no vouchers are returned but there was also no success", () => {
+            configureContext({
+                returnRefVoucher: null,
+                returnUserVoucher: false,
+                startPrice: [140, 1]
+            }).use((ctx) => {
+                main.eval({
+                    $scriptContext: ctx,
+                    order: mintOrder,
+                    redeemer
+                })
+            })
         })
     })
-
-    
 })

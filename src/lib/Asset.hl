@@ -12,7 +12,7 @@ struct Asset {
             asset_class,
             0,
             0,
-            Ratio::new(1, 1), 
+            Ratio::new(0, 1), 
             Time::new(0)
         }
     }
