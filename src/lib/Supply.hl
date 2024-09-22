@@ -72,6 +72,7 @@ struct Supply {
         (N*f/(1.0 - f)).floor()
     }
 
+    // return value is guarenteed to be >= 0
     func calc_success_fee_dilution(self, end_price: Ratio) -> Int {
         (config, _) = Config::find(); // Use Config::find() instead of Config::find_ref() because the config might be spent/changed during success fee dilution
 

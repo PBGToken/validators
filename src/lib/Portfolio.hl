@@ -89,11 +89,15 @@ struct Portfolio {
      * Throws an error if Idle
      * Throws an error if n_groups != group_iter
      */
-    func get_reduction_result(self) -> PortfolioReductionMode {
+    func get_reduction_result(self, expected_tick: Option[Int] = Option[Int]::None) -> PortfolioReductionMode {
         self.reduction.switch{
             Idle => error("expected Reducing"),
-            Reducing{ig, _, mode} => {
+            Reducing{ig, kp, mode} => {
                 assert(ig == self.n_groups, "reduction is incomplete");
+
+                expected_tick.switch{
+                    Some{k} => assert(k == kp, "unexpected tick")
+                };
 
                 mode
             }

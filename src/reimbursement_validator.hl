@@ -2,6 +2,7 @@ spending reimbursement_validator
 
 import Addresses
 import { signed_by_agent } from ConfigModule
+import { Price } from PriceModule
 import { Reimbursement } from ReimbursementModule
 import { tx } from ScriptContext
 import TokenNames
@@ -13,9 +14,10 @@ import { Voucher } from VoucherModule
  * Each voucher is also validated
  * Each spent voucher ref token
  */
-func validate_burned_vouchers(reim: Reimbursement) -> (Int, Int) {
+func validate_burned_vouchers(reim: Reimbursement, period_id: Int) -> (Int, Int) {
     minted_tokens = Tokens::get_minted();
     main_phi_alpha_ratio = reim.calc_phi_alpha_ratio();
+    price = Price::find_ref();
 
     tx.inputs.fold2((n_vouchers_burned: Int, n_tokens_reimbursed: Int, input: TxInput) -> (Int, Int) {
         if (input.address == Addresses::voucher) {
@@ -24,20 +26,38 @@ func validate_burned_vouchers(reim: Reimbursement) -> (Int, Int) {
             assert(minted_tokens.get(TokenNames::voucher_ref(id)) == -1, "voucher ref not burned");
 
             voucher = input.datum.inline.as[Voucher];
-
-            // voucher period id is checked by voucher_validator
-
-            return = voucher.find_return();
-            reimbursed_tokens = return.value.get_safe(Tokens::dvp_token);
             voucher_phi_alpha_ratio = reim.calc_phi_alpha_ratio(voucher.price);
             expected_reimbursed_tokens = (voucher.tokens*(main_phi_alpha_ratio - voucher_phi_alpha_ratio)).floor().bound_min(0);
-            
-            assert(reimbursed_tokens == expected_reimbursed_tokens, "expected a reimbursement of " + expected_reimbursed_tokens.show() + ", actually reimbursed " + reimbursed_tokens.show());
 
-            (
-                n_vouchers_burned + 1,
-                n_tokens_reimbursed + expected_reimbursed_tokens
-            )
+            // though the voucher period id is checked by voucher_validator, voucher period ids and reimbursement ids can be mixed here, as long as all reimbursement period ids are present
+            // hence we still need to check the voucher period id here in order to avoid mixing
+            assert(voucher.period_id == period_id, "voucher is from other period");
+
+            // the reimbursement is only necessary if it is worth more than 2 ADA
+            if ((expected_reimbursed_tokens*price.value).ceil() >= 2_000_000) {
+                return = voucher.find_return();
+
+                // avoid token dust attack
+                //   for which it is sufficient to check that returned value only contains a DVP policy or ADA
+                assert(return.value.to_map().all_keys((mph: MintingPolicyHash) -> {
+                    mph == MintingPolicyHash::new(#) // ADA
+                    || mph == Tokens::policy
+                }), "returned value can only contain DVP tokens"); 
+    
+                reimbursed_tokens = return.value.get_safe(Tokens::dvp_token);
+                
+                assert(reimbursed_tokens == expected_reimbursed_tokens, "expected a reimbursement of " + expected_reimbursed_tokens.show() + ", actually reimbursed " + reimbursed_tokens.show());
+    
+                (
+                    n_vouchers_burned + 1,
+                    n_tokens_reimbursed + expected_reimbursed_tokens
+                )
+            } else {
+                (
+                    n_vouchers_burned + 1,
+                    n_tokens_reimbursed
+                )
+            }
         } else {
             (n_vouchers_burned, n_tokens_reimbursed)
         }
@@ -47,7 +67,7 @@ func validate_burned_vouchers(reim: Reimbursement) -> (Int, Int) {
 func main(_: Reimbursement, _) -> Bool {
     (id, reim0, n0) = Reimbursement::find_input();
     
-    (n_vouchers_burned, n_tokens_reimbursed) = validate_burned_vouchers(reim0);
+    (n_vouchers_burned, n_tokens_reimbursed) = validate_burned_vouchers(reim0, id);
 
     signed_by_agent()
     && if (n_vouchers_burned >= reim0.n_remaining_vouchers) {

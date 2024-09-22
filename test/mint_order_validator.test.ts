@@ -314,6 +314,20 @@ describe("mint_order_validator::main", () => {
             )
         })
 
+        it("throws an error if the ref voucher token count is too high", () => {
+            configureContext({ returnRefVoucher: { nTokens: 2_400_000 } }).use(
+                (ctx) => {
+                    throws(() => {
+                        main.eval({
+                            $scriptContext: ctx,
+                            order: mintOrder,
+                            redeemer
+                        })
+                    })
+                }
+            )
+        })
+
         it("throws an error if the ref voucher period id is wrong", () => {
             configureContext({ returnRefVoucher: { periodId: 1 } }).use(
                 (ctx) => {
@@ -330,6 +344,20 @@ describe("mint_order_validator::main", () => {
 
         it("throws an error if the ref voucher price is too low", () => {
             configureContext({ returnRefVoucher: { price: [139, 1] } }).use(
+                (ctx) => {
+                    throws(() => {
+                        main.eval({
+                            $scriptContext: ctx,
+                            order: mintOrder,
+                            redeemer
+                        })
+                    })
+                }
+            )
+        })
+
+        it("throws an error if the ref voucher price is too high", () => {
+            configureContext({ returnRefVoucher: { price: [141, 1] } }).use(
                 (ctx) => {
                     throws(() => {
                         main.eval({

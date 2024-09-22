@@ -33,7 +33,7 @@ struct AssetGroup {
     func find_output_asset(asset_class: AssetClass) -> Asset {
         maybe_asset: Option[Asset] = tx.outputs.fold_lazy((output: TxOutput, next: () -> Option[Asset]) -> {
             if (output.address == Addresses::assets) {
-                assert(Tokens::contains_only_any_assets(output), "doesn't only contain assets token");
+                assert(Tokens::contains_only_any_one_assets(output), "doesn't only contain assets token");
 
                 group = output.datum.inline.as_strictly[AssetGroup];
 
@@ -56,7 +56,7 @@ struct AssetGroup {
     func find_input_asset(asset_class: AssetClass) -> Asset {
         maybe_asset: Option[Asset] = tx.inputs.fold_lazy((input: TxInput, next: () -> Option[Asset]) -> {
             if (input.address == Addresses::assets) {
-                assert(Tokens::contains_only_any_assets(input), "doesn't only contain assets token");
+                assert(Tokens::contains_any_one_assets(input), "doesn't only contain assets token");
 
                 group = input.datum.inline.as[AssetGroup];
 
@@ -162,7 +162,7 @@ func search_for_asset_class(asset_class: AssetClass, group_ptrs: []Int, first_id
 /**
  * This function is used by the portfolio validator
  */
-func sum_total_asset_value(group_ptrs: []Int, first_id: Int, max_tick: Int) -> (Time, Int) {
+func sum_total_asset_value(group_ptrs: []Int, first_id: Int) -> (Time, Int) {
     ref_inputs = tx.ref_inputs;
 
     (_, tp: Option[Time], dV: Int) = group_ptrs.fold3((expected_id: Int, tp: Option[Time], dV: Int, ptr: Int) -> (Int, Option[Time], Int) {
@@ -175,8 +175,6 @@ func sum_total_asset_value(group_ptrs: []Int, first_id: Int, max_tick: Int) -> (
         group = input.datum.inline.as[AssetGroup];
 
         (tp: Option[Time], dV: Int) = group.assets.fold2((tp: Option[Time], dV: Int, asset: Asset) -> {
-            assert(asset.count_tick <= max_tick, "asset changed count after reduction start");
-
             (
                 tp.switch{
                     None => Option[Time]::Some{asset.price_timestamp},

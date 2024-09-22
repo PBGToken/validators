@@ -68,6 +68,25 @@ func contains_assets[V: Valuable](v: V, id: Int) -> Bool {
     contains(v, assets(id))
 }
 
+func contains_any_one_assets[V: Valuable](v: V) -> Bool {
+    tokens = v.value.get_policy(policy);
+
+    if (tokens.length != 1) {
+        false
+    } else {
+        (token_name, qty) = tokens.head;
+
+        if (qty != 1) {
+            error("expected only 1 assets token")
+        } else {
+            TokenNames::parse_assets(token_name).switch{
+                Some => true,
+                None => false
+            }
+        }
+    }
+}
+
 func contains_config[V: Valuable](v: V) -> Bool {
     contains(v, config)
 }
@@ -100,7 +119,7 @@ func contains_voucher_ref[V: Valuable](v: V, id: Int) -> Bool {
 
 // being able to retrieve a specific DVP policy depends on state UTxOs only contain a single policy type
 func contains_only[V: Valuable](v: V, asset_class: AssetClass) -> Bool {
-    v.value.get_singleton_asset_class() == asset_class // TODO: this is much more restrictive than in the previous version of the code, check that this doesn't throw unintended errors
+    v.value.get_singleton_asset_class() == asset_class
 }
 
 func contains_only_assets[V: Valuable](v: V, id: Int) -> Bool {
@@ -135,22 +154,23 @@ func contains_only_voucher_ref[V: Valuable](v: V, id: Int) -> Bool {
     contains_only(v, voucher_ref_token(id))
 }
 
-func contains_only_any_assets[V: Valuable](v: V) -> Bool {
-    tokens = v.value.get_policy(policy);
+func contains_only_any_reimbursement[V: Valuable](v: V) -> Bool {
+    asset_class = v.value.get_singleton_asset_class();
 
-    if (tokens.length != 1) {
-        false
-    } else {
-        (token_name, qty) = tokens.head;
+    asset_class.mph == policy
+    &&  TokenNames::parse_reimbursement(asset_class.token_name).switch{
+        Some => true,
+        None => false
+    }
+}
 
-        if (qty != 1) {
-            error("expected only 1 assets token")
-        } else {
-            TokenNames::parse_assets(token_name).switch{
-                Some => true,
-                None => false
-            }
-        }
+func contains_only_any_one_assets[V: Valuable](v: V) -> Bool {
+    asset_class = v.value.get_singleton_asset_class();
+
+    asset_class.mph == policy
+    &&  TokenNames::parse_assets(asset_class.token_name).switch{
+        Some => true,
+        None => false
     }
 }
 

@@ -33,14 +33,13 @@ struct AssetPtr {
     func resolve_output(self, outputs: []TxOutput, asset_class: AssetClass) -> Asset {
         output = outputs.get(self.group_index);
 
-        tokens = output.value.get_policy(policy);
-
-        assert(tokens.any((token_name: ByteArray, _) -> {
-            TokenNames::has_assets_prefix(token_name)
-        }), "assets token not found");
+        group_asset_class = output.value.get_singleton_asset_class();
+        
+        assert(group_asset_class.mph == policy, "unexpected mph of assets token");
+        assert(TokenNames::has_assets_prefix(group_asset_class.token_name), "doesn't contain an assets token");
 
         // it is cleaner to cast to AssetGroup instead of the underlying []Asset
-        group = output.datum.inline.as[AssetGroup];
+        group = output.datum.inline.as_strictly[AssetGroup];
 
         asset = group.assets.get(self.asset_class_index);
 

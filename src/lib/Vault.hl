@@ -12,6 +12,9 @@ import Tokens
 
 const VAULT_DATUM: ByteArray = #
 
+/**
+ * Assures that nothing is spent from the vault, nor an asset groups are spent
+ */
 func nothing_spent() -> Bool {
     tx.inputs.all((input: TxInput) -> Bool {
         input.address.credential != Addresses::vault.credential
@@ -42,7 +45,7 @@ func diff() -> Value {
     in = tx.outputs.fold((prev: Value, output: TxOutput) -> {
         if (
             output.address == addr 
-            && output.datum.inline.as[ByteArray] == VAULT_DATUM 
+            && output.datum.inline.as_strictly[ByteArray] == VAULT_DATUM 
             && output.value.delete_lovelace().flatten().length <= 1
         ) {
             prev + output.value
@@ -62,8 +65,8 @@ func diff_lovelace(ptrs: []AssetPtr) -> Int {
     sum_lovelace(d, tx.inputs, ptrs, price_expiry())
 }
 
-func diff_counted(d_lovelace: Int, expected_tick: Int) -> Value {
-    m: Map[AssetClass]Int = tx.inputs.fold((mo: Map[AssetClass]Int, input: TxInput) -> {
+func diff_counted(d_lovelace: Int, asset_group_output_ptrs: []Int) -> Value {
+    (m: Map[AssetClass]Int, _) = tx.inputs.fold2((m: Map[AssetClass]Int, asset_group_output_ptrs: []Int, input: TxInput) -> {
         if (input.address == Addresses::assets) {
             // extract the token
             tokens = input.value.get_policy(Tokens::policy);
@@ -77,46 +80,50 @@ func diff_counted(d_lovelace: Int, expected_tick: Int) -> Value {
             id = TokenNames::parse_assets(token_name).unwrap();
             group_asset_class = Tokens::assets(id);
 
-            output = tx.outputs.find((output: TxOutput) -> {
-                output.address == Addresses::assets
-                && output.value.get_safe(group_asset_class) == 1
-            });
+            output_index = asset_group_output_ptrs.head;
+            output = tx.outputs.get(output_index);
+            assert(output.value.get_singleton_asset_class() == group_asset_class, "indexed output doesn't contain the expected assets token");
             
             assets0 = input.datum.inline.as[AssetGroup].assets;
-            assets1 = output.datum.inline.as[AssetGroup].assets;
+            assets1 = output.datum.inline.as_strictly[AssetGroup].assets;
 
             // the fold method iterates over the shortest of either, so the length equality must be checked explicitly
             assert(assets0.length == assets1.length, "assets list not same length");
 
-            assets0.zip(assets1).fold((mi: Map[AssetClass]Int, a: Asset, b: Asset) -> {
+            m_ = assets0.zip(assets1).fold((m: Map[AssetClass]Int, a: Asset, b: Asset) -> {
                 assert(
                     (b.asset_class == a.asset_class).trace_if_false("asset class changed")
-                    && (b.count_tick == expected_tick).trace_if_false("count tick unexpected")
                     && (b.price == a.price).trace_if_false("price changed")
                     && (b.price_timestamp == a.price_timestamp).trace_if_false("price timestamp changed"),
                     "invalid asset change"
                 );
 
                 // TODO: prepend is cheaper, it might also be better to ignore this if b.count == a.count
-                mi.append(a.asset_class, b.count - a.count)
-            }, mo)
-        } else {
-            mo
-        }
-    }, Map[AssetClass]Int{});
+                m.append(a.asset_class, b.count - a.count)
+            }, m);
 
-    // TODO: prepend is cheaper, and only do this if d_lovelace is non-zero?
-    m_ = m.append(AssetClass::ADA, d_lovelace);
+            (m_, asset_group_output_ptrs.tail)
+        } else {
+            (m, asset_group_output_ptrs)
+        }
+    }, Map[AssetClass]Int{}, asset_group_output_ptrs);
+
+    // TODO: prepend is cheaper
+    m = if (d_lovelace != 0) {
+        m.append(AssetClass::ADA, d_lovelace)
+    } else {
+        m
+    };
 
     // this function sorts by assetclass to make it easier to detect duplicates
-    Value::from_flat(m_)
+    Value::from_flat(m)
 }
 
 /**
  * This is an expensive function
  */
-func counters_are_consistent(d_lovelace: Int, tick: Int) -> Bool {
+func counters_are_consistent(d_lovelace: Int, asset_group_output_ptrs: []Int) -> Bool {
     d = diff().sort();
-    dc = diff_counted(d_lovelace, tick);
+    dc = diff_counted(d_lovelace, asset_group_output_ptrs);
     d.to_map() == dc.to_map()
 }

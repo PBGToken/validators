@@ -18,6 +18,7 @@ enum Redeemer {
     }
 }
 
+// can't be negative
 func calc_provisional_success_fee(
     price: Price,
     diff: Value, 
@@ -58,7 +59,7 @@ func calc_provisional_success_fee(
 
     alpha = (benchmark_price/p0).to_real();
     
-    delta_vouchers + ((n_burn - n_voucher_tokens)*config.fees.success_fee.fee.apply(alpha)/alpha).floor()
+    (delta_vouchers + ((n_burn - n_voucher_tokens)*config.fees.success_fee.fee.apply(alpha)/alpha).floor()).bound_min(0)
 }
 
 func main(order: BurnOrder, redeemer: Redeemer) -> Bool {

@@ -156,12 +156,24 @@ func main(args: MixedArgs) -> Bool {
             validate_vault_spending()
         },
         Other => {
-            if (tx.inputs.any((input: TxInput) -> {input.output_id == SEED_ID})) {
-                validate_initialization()
-            } else if (Tokens::get_minted().any_key(TokenNames::has_assets_prefix)) {
-                validate_mint_or_burn_asset_groups()
-            } else {
+            tokens = Tokens::get_minted();
+
+            if (tokens.get_safe(TokenNames::dvp_token) != Option[Int]::None) {
+                // voucher and reimbursement token minting is usually accompanied by DVP token minting
+                //  only in case of no success it is possible that a reimbursement token is minted without DVP tokens, that (rare) case is treated below
                 validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement()
+            } else if (tokens.any_key(TokenNames::has_assets_prefix)) {
+                validate_mint_or_burn_asset_groups()
+            } else if (tokens.all((token_name: ByteArray, qty: Int) -> {
+                qty == -1 && (TokenNames::has_voucher_ref_prefix(token_name) || TokenNames::has_reimbursement_prefix(token_name))
+            })) {
+                // there is no risk of this happening before initialization because then burned tokens wouldn't yet exist
+                true
+            } else if (tokens.any_key(TokenNames::has_reimbursement_prefix)) {
+                validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement()
+            } else {
+                tx.inputs.any((input: TxInput) -> {input.output_id == SEED_ID})
+                && validate_initialization()
             }
         }
     }   

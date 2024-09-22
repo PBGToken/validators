@@ -43,7 +43,18 @@ struct BurnOrder {
     }
 
     func value(self) -> Value {
-        (-1) * self.diff().delete_policy(Tokens::policy)
+        d = self.diff();
+
+        // prevent token dust attack with vouchers (other token dust attack prevention is in self.returned_enough())
+        assert(d.to_map().all((mph: MintingPolicyHash, tokens: Map[ByteArray]Int) -> {
+            if (mph == Tokens::policy) {
+                tokens.length <= 2
+            } else {
+                true
+            }
+        }), "can only return 1 voucher and dvp tokens when fulfilling a burn order");
+
+        (-1) * d.delete_policy(Tokens::policy)
     }
 
     func value_lovelace(self, ptrs: []AssetPtr) -> Int {
@@ -65,8 +76,33 @@ struct BurnOrder {
 
     func returned_enough(self, ptrs: []AssetPtr) -> Bool {
         self.min_return_value.switch{
-            L{lovelace} => self.value_lovelace(ptrs) >= lovelace,
-            V{value} => self.value() >= value
+            L{lovelace} => {
+                self.value_lovelace(ptrs) >= lovelace
+            },
+            V{value} => {
+                v = self.value();
+
+                // prevent token dust attack with other tokens by assuring that the returned value is either ADA, or exists in the requested value
+                //  we can do this while checking that sufficient value is being returned
+                v.to_map().all((mph: MintingPolicyHash, tokens: Map[ByteArray]Int) -> {
+                    if (mph == MintingPolicyHash::new(#) && value.to_map().all((other_mph: MintingPolicyHash, _) -> {other_mph != MintingPolicyHash::new(#)})) {
+                        // can always return ADA, even if it wasn't requested
+                        true
+                    } else {
+                        (_, other_tokens) = value.to_map().find((other_mph: MintingPolicyHash, _) -> {
+                            other_mph == mph
+                        });
+
+                        tokens.all((token_name: ByteArray, qty: Int) -> {
+                            (_, other_qty) = other_tokens.find((other_token_name: ByteArray, _) -> {
+                                other_token_name == token_name
+                            });
+
+                            qty >= other_qty
+                        })
+                    }
+                })
+            }
         }
     }
 }

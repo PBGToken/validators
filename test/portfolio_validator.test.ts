@@ -2,6 +2,7 @@ import { strict, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { IntLike } from "@helios-lang/codec-utils"
 import {
+    Address,
     AssetClass,
     Assets,
     PubKeyHash,
@@ -1757,71 +1758,23 @@ describe("portfolio_validator::validate_update_prices", () => {
 })
 
 describe("portfolio_validator::validate_move_assets", () => {
-    const portfolio = makePortfolio({
-        state: {
-            Idle: {}
-        }
-    })
-
-    const assetClass0 = AssetClass.dummy(0)
-    const assetClass1 = AssetClass.dummy(1)
-    const assetClass2 = AssetClass.dummy(2)
-
-    const inputAssets0: AssetType[] = [
-        makeAsset({
-            assetClass: assetClass0,
-            count: 100,
-            countTick: 0,
-            price: [100, 1],
-            priceTimestamp: 123
-        }),
-        makeAsset({
-            assetClass: assetClass1,
-            count: 100,
-            countTick: 0,
-            price: [100, 2],
-            priceTimestamp: 124
+    describe("two groups, one asset moved from the first to second", () => {
+        const portfolio = makePortfolio({
+            state: {
+                Idle: {}
+            }
         })
-    ]
-
-    const configureContext = (props?: {
-        portfolio?: PortfolioType
-        firstGroupOutputId?: IntLike
-        secondAssetOutputCount?: IntLike
-        additionalFirstGroupOutputAssets?: AssetType[]
-    }) => {
-        let outputAssets0: AssetType[] = [
+    
+        const assetClass0 = AssetClass.dummy(0)
+        const assetClass1 = AssetClass.dummy(1)
+        const assetClass2 = AssetClass.dummy(2)
+    
+        const inputAssets0: AssetType[] = [
             makeAsset({
                 assetClass: assetClass0,
                 count: 100,
                 countTick: 0,
                 price: [100, 1],
-                priceTimestamp: 123
-            })
-        ]
-
-        if (props?.additionalFirstGroupOutputAssets) {
-            outputAssets0 = outputAssets0.concat(
-                props.additionalFirstGroupOutputAssets
-            )
-        }
-
-        let inputAssets1: AssetType[] = [
-            makeAsset({
-                assetClass: assetClass2,
-                count: 100,
-                countTick: 0,
-                price: [100, 3],
-                priceTimestamp: 123
-            })
-        ]
-
-        let outputAssets1: AssetType[] = [
-            makeAsset({
-                assetClass: assetClass2,
-                count: props?.secondAssetOutputCount ?? 100,
-                countTick: 0,
-                price: [100, 3],
                 priceTimestamp: 123
             }),
             makeAsset({
@@ -1832,98 +1785,103 @@ describe("portfolio_validator::validate_move_assets", () => {
                 priceTimestamp: 124
             })
         ]
-
-        return new ScriptContextBuilder()
-            .addPortfolioInput({ portfolio, redeemer: { MoveAssets: {} } })
-            .addDummyInputs(10)
-            .addAssetGroupThread({
-                id: 1,
-                inputAssets: inputAssets0,
-                outputAssets: outputAssets0,
-                outputToken: props?.firstGroupOutputId
-                    ? makeAssetsToken(props.firstGroupOutputId)
-                    : undefined
-            })
-            .addDummyInputs(5)
-            .addAssetGroupThread({
-                id: 2,
-                inputAssets: inputAssets1,
-                outputAssets: outputAssets1
-            })
-    }
-
-    it("returns true if the portfolio reduction is in Idle state and all assets in the input groups are present in the output groups", () => {
-        configureContext().use((ctx) => {
-            strictEqual(
-                validate_move_assets.eval({
-                    $scriptContext: ctx,
-                    portfolio0: portfolio
+    
+        const configureContext = (props?: {
+            portfolio?: PortfolioType
+            firstGroupOutputId?: IntLike
+            secondAssetOutputCount?: IntLike
+            additionalFirstGroupOutputAssets?: AssetType[]
+        }) => {
+            let outputAssets0: AssetType[] = [
+                makeAsset({
+                    assetClass: assetClass0,
+                    count: 100,
+                    countTick: 0,
+                    price: [100, 1],
+                    priceTimestamp: 123
+                })
+            ]
+    
+            if (props?.additionalFirstGroupOutputAssets) {
+                outputAssets0 = outputAssets0.concat(
+                    props.additionalFirstGroupOutputAssets
+                )
+            }
+    
+            let inputAssets1: AssetType[] = [
+                makeAsset({
+                    assetClass: assetClass2,
+                    count: 100,
+                    countTick: 0,
+                    price: [100, 3],
+                    priceTimestamp: 123
+                })
+            ]
+    
+            let outputAssets1: AssetType[] = [
+                makeAsset({
+                    assetClass: assetClass2,
+                    count: props?.secondAssetOutputCount ?? 100,
+                    countTick: 0,
+                    price: [100, 3],
+                    priceTimestamp: 123
                 }),
-                true
-            )
+                makeAsset({
+                    assetClass: assetClass1,
+                    count: 100,
+                    countTick: 0,
+                    price: [100, 2],
+                    priceTimestamp: 124
+                })
+            ]
+    
+            return new ScriptContextBuilder()
+                .addPortfolioInput({ portfolio, redeemer: { MoveAssets: {} } })
+                .addDummyInputs(10)
+                .addAssetGroupThread({
+                    id: 1,
+                    inputAssets: inputAssets0,
+                    outputAssets: outputAssets0,
+                    outputToken: props?.firstGroupOutputId
+                        ? makeAssetsToken(props.firstGroupOutputId)
+                        : undefined
+                })
+                .addDummyInputs(5)
+                .addAssetGroupThread({
+                    id: 2,
+                    inputAssets: inputAssets1,
+                    outputAssets: outputAssets1
+                })
+        }
+    
+        it("returns true if the portfolio reduction is in Idle state and all assets in the input groups are present in the output groups", () => {
+            configureContext().use((ctx) => {
+                strictEqual(
+                    validate_move_assets.eval({
+                        $scriptContext: ctx,
+                        portfolio0: portfolio
+                    }),
+                    true
+                )
+            })
         })
-    })
-
-    it("returns false if the portfolio reduction isn't in Idle state", () => {
-        const portfolio = makePortfolio({
-            state: {
-                Reducing: {
-                    group_iter: 0,
-                    start_tick: 0,
-                    mode: {
-                        DoesNotExist: {
-                            asset_class: AssetClass.dummy()
+    
+        it("returns false if the portfolio reduction isn't in Idle state", () => {
+            const portfolio = makePortfolio({
+                state: {
+                    Reducing: {
+                        group_iter: 0,
+                        start_tick: 0,
+                        mode: {
+                            DoesNotExist: {
+                                asset_class: AssetClass.dummy()
+                            }
                         }
                     }
                 }
-            }
-        })
-
-        configureContext({ portfolio }).use((ctx) => {
-            strictEqual(
-                validate_move_assets.eval({
-                    $scriptContext: ctx,
-                    portfolio0: portfolio
-                }),
-                false
-            )
-        })
-    })
-
-    it("throws an error if an additional asset was added to the an asset group", () => {
-        configureContext({
-            additionalFirstGroupOutputAssets: [
-                makeAsset({
-                    assetClass: AssetClass.dummy(14),
-                    count: 10,
-                    price: [1000, 1]
-                })
-            ]
-        }).use((ctx) => {
-            throws(() => {
-                validate_move_assets.eval({
-                    $scriptContext: ctx,
-                    portfolio0: portfolio
-                })
             })
-        })
-    })
-
-    it("throws an error if an asset change", () => {
-        configureContext({ secondAssetOutputCount: 101 }).use((ctx) => {
-            throws(() => {
-                validate_move_assets.eval({
-                    $scriptContext: ctx,
-                    portfolio0: portfolio
-                })
-            })
-        })
-    })
-
-    it("returns false if a third asset group output is included without associated unique input", () => {
-        configureContext()
-            .addAssetGroupOutput({ id: 1, assets: inputAssets0 })
-            .use((ctx) => {
+    
+            configureContext({ portfolio }).use((ctx) => {
                 strictEqual(
                     validate_move_assets.eval({
                         $scriptContext: ctx,
@@ -1932,6 +1890,161 @@ describe("portfolio_validator::validate_move_assets", () => {
                     false
                 )
             })
+        })
+    
+        it("throws an error if an additional asset was added to the an asset group", () => {
+            configureContext({
+                additionalFirstGroupOutputAssets: [
+                    makeAsset({
+                        assetClass: AssetClass.dummy(14),
+                        count: 10,
+                        price: [1000, 1]
+                    })
+                ]
+            }).use((ctx) => {
+                throws(() => {
+                    validate_move_assets.eval({
+                        $scriptContext: ctx,
+                        portfolio0: portfolio
+                    })
+                })
+            })
+        })
+    
+        it("throws an error if an asset change", () => {
+            configureContext({ secondAssetOutputCount: 101 }).use((ctx) => {
+                throws(() => {
+                    validate_move_assets.eval({
+                        $scriptContext: ctx,
+                        portfolio0: portfolio
+                    })
+                })
+            })
+        })
+    
+        it("returns false if a third asset group output is included without associated unique input", () => {
+            configureContext()
+                .addAssetGroupOutput({ id: 1, assets: inputAssets0 })
+                .use((ctx) => {
+                    strictEqual(
+                        validate_move_assets.eval({
+                            $scriptContext: ctx,
+                            portfolio0: portfolio
+                        }),
+                        false
+                    )
+                })
+        })
+    })
+
+    describe("two groups, all assets moved from second to first", () => {
+        const portfolio = makePortfolio({
+            state: {
+                Idle: {}
+            }
+        })
+    
+        const assetClass0 = AssetClass.dummy(0)
+        const assetClass1 = AssetClass.dummy(1)
+        const assetClass2 = AssetClass.dummy(2)
+    
+        const inputAssets0: AssetType[] = [
+            makeAsset({
+                assetClass: assetClass0,
+                count: 100,
+                countTick: 0,
+                price: [100, 1],
+                priceTimestamp: 123
+            }),
+            makeAsset({
+                assetClass: assetClass1,
+                count: 100,
+                countTick: 0,
+                price: [100, 2],
+                priceTimestamp: 124
+            })
+        ]
+    
+        const configureContext = (props?: {
+            secondGroupAddress?: Address
+        }) => {
+            let outputAssets0: AssetType[] = [
+                makeAsset({
+                    assetClass: assetClass0,
+                    count: 100,
+                    countTick: 0,
+                    price: [100, 1],
+                    priceTimestamp: 123
+                }),
+                makeAsset({
+                    assetClass: assetClass2,
+                    count: 100,
+                    countTick: 0,
+                    price: [100, 3],
+                    priceTimestamp: 123
+                }),
+                makeAsset({
+                    assetClass: assetClass1,
+                    count: 100,
+                    countTick: 0,
+                    price: [100, 2],
+                    priceTimestamp: 124
+                })
+            ]
+    
+            let inputAssets1: AssetType[] = [
+                makeAsset({
+                    assetClass: assetClass2,
+                    count: 100,
+                    countTick: 0,
+                    price: [100, 3],
+                    priceTimestamp: 123
+                })
+            ]
+    
+            let outputAssets1: AssetType[] = [
+            ]
+    
+            return new ScriptContextBuilder()
+                .addPortfolioInput({ portfolio, redeemer: { MoveAssets: {} } })
+                .addDummyInputs(10)
+                .addAssetGroupThread({
+                    id: 1,
+                    inputAssets: inputAssets0,
+                    outputAssets: outputAssets0
+                })
+                .addDummyInputs(5)
+                .addAssetGroupThread({
+                    id: 2,
+                    inputAssets: inputAssets1,
+                    outputAssets: outputAssets1,
+                    outputAddress: props?.secondGroupAddress
+                })
+        }
+
+        it("returns true if the portfolio reduction is in Idle state and all assets in the input groups are present in the output groups", () => {
+            configureContext().use((ctx) => {
+                strictEqual(
+                    validate_move_assets.eval({
+                        $scriptContext: ctx,
+                        portfolio0: portfolio
+                    }),
+                    true
+                )
+            })
+        })
+
+        it("returns false if the second asset group isn't sent to the assets_validator address", () => {
+            configureContext({secondGroupAddress: Address.dummy(false)}).use((ctx) => {
+                strictEqual(
+                    validate_move_assets.eval({
+                        $scriptContext: ctx,
+                        portfolio0: portfolio
+                    }),
+                    false
+                )
+            })
+        })
     })
 })
 

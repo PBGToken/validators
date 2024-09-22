@@ -56,12 +56,12 @@ struct Voucher {
  * Asserts that token_name is either dvp token or voucher
  * Asserts that each minted voucher has a unique id
  */
-func validate_minted_vouchers(price: Ratio, period_id: Int, last_voucher_id: Int) -> (Int, Int) {
+func validate_minted_vouchers(price: Ratio, period_id: Int, last_voucher_id: Int) -> (Int, Int, Int) {
     tokens_minted = Tokens::get_minted();
 
-    n_vouchers_minted = tokens_minted.fold((n_vouchers: Int, token_name: ByteArray, qty: Int) -> {
+    (n_vouchers_minted, n_tokens_in_vouchers) = tokens_minted.fold2((n_vouchers: Int, n_tokens_in_vouchers: Int, token_name: ByteArray, qty: Int) -> {
         if (token_name == TokenNames::dvp_token) {
-            n_vouchers
+            (n_vouchers, n_tokens_in_vouchers)
         } else {
             assert(qty == 1, "not exactly 1");
 
@@ -80,7 +80,7 @@ func validate_minted_vouchers(price: Ratio, period_id: Int, last_voucher_id: Int
                         "invalid Voucher datum"
                     );
 
-                    n_vouchers + 1
+                    (n_vouchers + 1, n_tokens_in_vouchers + voucher.tokens)
                 },
                 else => {
                     id = TokenNames::parse_voucher_nft(token_name).unwrap();
@@ -89,11 +89,11 @@ func validate_minted_vouchers(price: Ratio, period_id: Int, last_voucher_id: Int
                     assert(tokens_minted.get(TokenNames::voucher_ref(id)) == 1, "not exactly one ref token minted");
                     
                     // the count is incremented via the ref token, not the user nft
-                    n_vouchers
+                    (n_vouchers, n_tokens_in_vouchers)
                 }
             }
         }
-    }, 0);
+    }, 0, 0);
 
     // assert each voucher has a unique id
     last_voucher_id = tx.outputs.fold((prev_id: Int, output: TxOutput) -> {
@@ -108,7 +108,7 @@ func validate_minted_vouchers(price: Ratio, period_id: Int, last_voucher_id: Int
         }
     }, last_voucher_id);
 
-    (n_vouchers_minted, last_voucher_id)
+    (n_vouchers_minted, n_tokens_in_vouchers, last_voucher_id)
 }
 
 /**

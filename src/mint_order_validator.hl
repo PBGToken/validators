@@ -40,8 +40,8 @@ func main(order: MintOrder, redeemer: Redeemer) -> Bool {
 
                 (voucher.return_address == order.return_address).trace_if_false("wrong voucher return address")
                 && (voucher.return_datum == order.return_datum).trace_if_false("wrong voucher datum")
-                && (voucher.tokens >= n_expected).trace_if_false("too few tokens in voucher") // TODO: upper limit?
-                && (voucher.price >= price.relative_to_benchmark()).trace_if_false("voucher price too low") // a high price is beneficial for the user, TODO: upper limit?
+                && (voucher.tokens == n_expected).trace_if_false("too few tokens in voucher")
+                && (voucher.price == price.relative_to_benchmark()).trace_if_false("voucher price too low")
                 && (voucher.period_id == supply.period_id()).trace_if_false("wrong voucher period id")
             } else {
                 true
