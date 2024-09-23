@@ -1,3 +1,4 @@
+import { IntLike, encodeUtf8 } from "@helios-lang/codec-utils"
 import { AssetClass } from "@helios-lang/ledger"
 import {
     cip68_100_prefix,
@@ -5,7 +6,6 @@ import {
     cip68_333_prefix
 } from "../constants/cip68"
 import { policy } from "../constants/policy"
-import { IntLike, encodeUtf8 } from "@helios-lang/codec-utils"
 
 export const config = new AssetClass(policy, encodeUtf8("config"))
 export const dvpToken = new AssetClass(policy, cip68_333_prefix)

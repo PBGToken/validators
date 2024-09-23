@@ -37,6 +37,7 @@ describe("MintOrderModule::MintOrder::find_return", () => {
             .addMintOrderReturn({ address, datum })
             .use((ctx) => {
                 const output = find_return.eval({
+                    $currentScript: "mint_order_validator",
                     $scriptContext: ctx,
                     self: mintOrder
                 })
@@ -55,6 +56,7 @@ describe("MintOrderModule::MintOrder::find_return", () => {
             .addMintOrderReturn({ address, datum })
             .use((ctx) => {
                 const output = find_return.eval({
+                    $currentScript: "mint_order_validator",
                     $scriptContext: ctx,
                     self: mintOrder
                 })
@@ -73,6 +75,7 @@ describe("MintOrderModule::MintOrder::find_return", () => {
             .use((ctx) => {
                 throws(() => [
                     find_return.eval({
+                        $currentScript: "mint_order_validator",
                         $scriptContext: ctx,
                         self: mintOrder
                     })
@@ -87,6 +90,7 @@ describe("MintOrderModule::MintOrder::find_return", () => {
             .use((ctx) => {
                 throws(() => [
                     find_return.eval({
+                        $currentScript: "mint_order_validator",
                         $scriptContext: ctx,
                         self: mintOrder
                     })

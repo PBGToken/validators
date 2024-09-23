@@ -79,26 +79,23 @@ struct BurnOrder {
             L{lovelace} => {
                 self.value_lovelace(ptrs) >= lovelace
             },
-            V{value} => {
-                v = self.value();
+            V{requested_value} => {
+                actual_value = self.value();
 
                 // prevent token dust attack with other tokens by assuring that the returned value is either ADA, or exists in the requested value
-                //  we can do this while checking that sufficient value is being returned
-                v.to_map().all((mph: MintingPolicyHash, tokens: Map[ByteArray]Int) -> {
-                    if (mph == MintingPolicyHash::new(#) && value.to_map().all((other_mph: MintingPolicyHash, _) -> {other_mph != MintingPolicyHash::new(#)})) {
+                //  we sadly can't do this while checking that sufficient value is being returned (for which need to iterate over the requested_value instead of over the actual_value)
+                actual_value >= requested_value
+                && actual_value.to_map().all((actual_mph: MintingPolicyHash, actual_tokens: Map[ByteArray]Int) -> {
+                    if (actual_mph == MintingPolicyHash::new(#)) {
                         // can always return ADA, even if it wasn't requested
                         true
                     } else {
-                        (_, other_tokens) = value.to_map().find((other_mph: MintingPolicyHash, _) -> {
-                            other_mph == mph
-                        });
+                        requested_tokens = requested_value.to_map().get(actual_mph);
 
-                        tokens.all((token_name: ByteArray, qty: Int) -> {
-                            (_, other_qty) = other_tokens.find((other_token_name: ByteArray, _) -> {
-                                other_token_name == token_name
-                            });
-
-                            qty >= other_qty
+                        actual_tokens.all_keys((actual_token_name: ByteArray) -> {
+                            requested_tokens.any_key((requested_token_name: ByteArray) -> {
+                                requested_token_name == actual_token_name
+                            })
                         })
                     }
                 })

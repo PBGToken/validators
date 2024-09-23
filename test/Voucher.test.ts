@@ -359,7 +359,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                             period_id: periodId,
                             last_voucher_id: lastVoucherId
                         }),
-                        [1, 0]
+                        [1n, 1000n, 0n]
                     )
                 })
             })
@@ -518,7 +518,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 scripts
             )
 
-            it("returns the fact that three vouchers is minted and that the id of the last voucher is 2", () => {
+            it("returns the fact that three vouchers is minted, that 1000 DVP tokens are mentioned in the vouchers, and that the id of the last voucher is 2", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         validate_minted_vouchers.eval({
@@ -528,7 +528,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                             period_id: periodId,
                             last_voucher_id: lastVoucherId
                         }),
-                        [3, 2]
+                        [3n, 1000n, 2n]
                     )
                 })
             })

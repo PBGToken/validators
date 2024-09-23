@@ -11,14 +11,12 @@ type AssetStrictType = StrictType<typeof castAsset>
 export function makeAsset(props?: {
     assetClass?: AssetClass
     count?: IntLike
-    countTick?: IntLike
     price?: [IntLike, IntLike]
     priceTimestamp?: TimeLike
 }): AssetStrictType {
     return {
         asset_class: props?.assetClass ?? AssetClass.dummy(),
         count: BigInt(props?.count ?? 0n),
-        count_tick: BigInt(props?.countTick ?? 0n),
         price: props?.price
             ? [BigInt(props?.price[0]), BigInt(props?.price[1])]
             : [0n, 1n],

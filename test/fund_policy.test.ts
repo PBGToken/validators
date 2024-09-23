@@ -7,8 +7,6 @@ import contract, {
 import {
     RatioType,
     SuccessFeeType,
-    castMetadata,
-    makeAssetGroup,
     makeConfig,
     makeMetadata,
     makePortfolio,

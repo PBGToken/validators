@@ -4,7 +4,7 @@ import { Address, Assets } from "@helios-lang/ledger"
 import { ByteArrayData, IntData, ListData, UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { scripts as allScripts } from "./constants"
-import { castPrice, castRatio, makeConfig, makePrice } from "./data"
+import { castPrice, makeConfig, makePrice } from "./data"
 import { makeConfigToken } from "./tokens"
 import { ScriptContextBuilder, withScripts } from "./tx"
 

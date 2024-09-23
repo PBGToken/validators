@@ -112,6 +112,7 @@ func validate_continue_reduction(
             found = search_for_asset_class(asset_class0, group_ptrs, next_id);
 
             asset_class0 == asset_class1
+            && !found0 // can't continue reduction if already found before
             && if (found) {
                 found1 == true
                 && ig1 == n_all_groups
@@ -119,8 +120,6 @@ func validate_continue_reduction(
                 found1 == false
                 && ig1 == ig0 + n_groups
             }
-            
-            && found1 == (found0 || found)
         },
         (DoesNotExist{asset_class0}, DoesNotExist{asset_class1}) => {
             found = search_for_asset_class(asset_class0, group_ptrs, next_id);

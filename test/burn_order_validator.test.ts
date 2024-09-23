@@ -13,6 +13,7 @@ import {
     BurnOrderRedeemerType,
     BurnOrderType,
     RatioType,
+    makeAsset,
     makeAssetPtr,
     makeBurnOrder,
     makeConfig,
@@ -196,7 +197,7 @@ describe("burn_order_validator::main", () => {
         })
     })
 
-    describe("Fulfill redeemer with pure lovelace diff", () => {
+    describe("Fulfill redeemer", () => {
         const pkh = PubKeyHash.dummy(10)
         const returnAddress = Address.fromHash(false, pkh)
         const returnDatum = new IntData(1)
@@ -218,6 +219,7 @@ describe("burn_order_validator::main", () => {
             burnOrder?: BurnOrderType
             priceTimestamp?: number
             returnLovelace?: IntLike
+            returnValue?: Value
             voucher?: {
                 price: RatioType
                 nTokens: IntLike
@@ -269,7 +271,7 @@ describe("burn_order_validator::main", () => {
                 .addBurnOrderReturn({
                     address: returnAddress,
                     datum: returnDatum,
-                    value: new Value(props?.returnLovelace ?? 644_262_500)
+                    value: props?.returnValue ?? new Value(props?.returnLovelace ?? 644_262_500)
                 })
                 .addSigner(props?.agent ?? agent)
                 .setTimeRange({ end: 200 })
@@ -377,6 +379,18 @@ describe("burn_order_validator::main", () => {
             )
         })
 
+        it("throws an error when attempting to return something that isn't listed in a referenced asset group", () => {
+            configureContext({returnValue: new Value(644_262_500, Assets.fromAssetClasses([[AssetClass.dummy(10), 100]]))}).use((ctx) => {
+                throws(() => {
+                    main.eval({
+                        $scriptContext: ctx,
+                        order: burnOrder,
+                        redeemer
+                    })
+                })
+            })
+        })
+
         it("throws an error if not all the requested assets are returned", () => {
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
@@ -435,6 +449,68 @@ describe("burn_order_validator::main", () => {
                         redeemer
                     })
                 })
+            })
+        })
+
+        it("succeeds all the requested assets are returned", () => {
+            const redeemer: BurnOrderRedeemerType = {
+                Fulfill: {
+                    ptrs: [makeAssetPtr(), makeAssetPtr({groupIndex: 2, assetClassIndex: 0})] // the first is the dummy AssetPtr for ADA
+                }
+            }
+
+            const assetClass = AssetClass.dummy()
+            const value = new Value(
+                644_262_500,
+                Assets.fromAssetClasses([[assetClass, 10]])
+            )
+
+            const burnOrder = makeBurnOrder({
+                address: returnAddress,
+                datum: returnDatum,
+                value
+            })
+
+            configureContext({ burnOrder, returnValue: value })
+                .addAssetGroupInput({assets: [makeAsset({assetClass, price: [1, 1], priceTimestamp: 200})]})
+                .use((ctx) => {
+                main.eval({
+                    $scriptContext: ctx,
+                    order: burnOrder,
+                    redeemer
+                })
+            })
+        })
+
+        it("throws an error if an unknown asset class is returned", () => {
+            const redeemer: BurnOrderRedeemerType = {
+                Fulfill: {
+                    ptrs: [makeAssetPtr(), makeAssetPtr({groupIndex: 2, assetClassIndex: 0})] // the first is the dummy AssetPtr for ADA
+                }
+            }
+
+            const assetClass = AssetClass.dummy()
+            const value = new Value(
+                644_262_500,
+                Assets.fromAssetClasses([[assetClass, 10]])
+            )
+
+            const burnOrder = makeBurnOrder({
+                address: returnAddress,
+                datum: returnDatum,
+                value
+            })
+
+            configureContext({ burnOrder, returnValue: value.add(new Value(0, Assets.fromAssetClasses([[AssetClass.dummy(1), 10]]))) })
+                .addAssetGroupInput({assets: [makeAsset({assetClass, price: [1, 1], priceTimestamp: 200})]})
+                .use((ctx) => {
+                    throws(() => {
+                        main.eval({
+                            $scriptContext: ctx,
+                            order: burnOrder,
+                            redeemer
+                        })
+                    })
             })
         })
 

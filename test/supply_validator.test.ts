@@ -514,12 +514,16 @@ describe("charge the success fee by diluting the token supply", () => {
     })
 
     describe("supply_validator::main", () => {
+        const defaultTestArgs = {
+            _: supply0,
+            ptrs: {asset_group_output_ptrs: [], asset_input_ptrs: []}
+        }
+
         it("succeeds if the config UTxO is referenced and precisely the expected dilution is minted", () => {
             configureContext().use((ctx) => {
                 main.eval({
                     $scriptContext: ctx,
-                    _: supply0,
-                    ptrs: []
+                    ...defaultTestArgs
                 })
             })
         })
@@ -530,8 +534,7 @@ describe("charge the success fee by diluting the token supply", () => {
                     throws(() => {
                         main.eval({
                             $scriptContext: ctx,
-                            _: supply0,
-                            ptrs: []
+                            ...defaultTestArgs
                         })
                     })
                 }
@@ -544,8 +547,7 @@ describe("charge the success fee by diluting the token supply", () => {
                     throws(() => {
                         main.eval({
                             $scriptContext: ctx,
-                            _: supply0,
-                            ptrs: []
+                            ...defaultTestArgs
                         })
                     })
                 }
@@ -558,8 +560,7 @@ describe("charge the success fee by diluting the token supply", () => {
                     throws(() => {
                         main.eval({
                             $scriptContext: ctx,
-                            _: supply0,
-                            ptrs: []
+                            ...defaultTestArgs
                         })
                     })
                 }
@@ -573,8 +574,7 @@ describe("charge the success fee by diluting the token supply", () => {
                     throws(() => {
                         main.eval({
                             $scriptContext: ctx,
-                            _: supply0,
-                            ptrs: []
+                            ...defaultTestArgs
                         })
                     })
                 })
@@ -587,8 +587,7 @@ describe("charge the success fee by diluting the token supply", () => {
                     throws(() => {
                         main.eval({
                             $scriptContext: ctx,
-                            _: supply0,
-                            ptrs: []
+                            ...defaultTestArgs
                         })
                     })
                 })
@@ -627,7 +626,7 @@ describe("charge the management fee by diluting the token supply", () => {
             nLovelace: props?.nLovelace ?? 14_000_000_000_000n,
             lastVoucherId: props?.lastVoucherId ?? 0,
             nVouchers: props?.nVouchers ?? 0,
-            managementFeeTimestamp: props?.managementFeeTimestamp ?? 200,
+            managementFeeTimestamp: props?.managementFeeTimestamp ?? 99,
             successFee: {
                 start_time: props?.successFeeStartTime
             }
@@ -662,7 +661,7 @@ describe("charge the management fee by diluting the token supply", () => {
     }
 
     describe("supply_validator::validate_reward_management", () => {
-        it("returns true if the not precisely the allowed amount is minted", () => {
+        it("returns true if precisely the allowed amount is minted", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_management.eval({
@@ -719,7 +718,7 @@ describe("charge the management fee by diluting the token supply", () => {
         })
 
         it("returns false if the management fee period hasn't yet passed (i.e. it's still too soon)", () => {
-            configureContext({ timeOffset: -10 }).use((ctx) => {
+            configureContext({ timeOffset: -100 }).use((ctx) => {
                 strictEqual(
                     validate_reward_management.eval({
                         $scriptContext: ctx,
@@ -856,12 +855,16 @@ describe("charge the management fee by diluting the token supply", () => {
     })
 
     describe("supply_validator::main", () => {
+        const defaultTestArgs = {
+            _: supply0,
+            ptrs: {asset_group_output_ptrs: [], asset_input_ptrs: []}
+        }
+
         it("succeeds if the not precisely the allowed amount is minted", () => {
             configureContext().use((ctx) => {
                 main.eval({
                     $scriptContext: ctx,
-                    _: supply0,
-                    ptrs: []
+                    ...defaultTestArgs                
                 }),
                     true
             })
@@ -873,8 +876,7 @@ describe("charge the management fee by diluting the token supply", () => {
                     throws(() => {
                         main.eval({
                             $scriptContext: ctx,
-                            _: supply0,
-                            ptrs: []
+                            ...defaultTestArgs
                         })
                     })
                 }
@@ -887,8 +889,7 @@ describe("charge the management fee by diluting the token supply", () => {
                 throws(() => {
                     main.eval({
                         $scriptContext: ctx,
-                        _: supply0,
-                        ptrs: []
+                        ...defaultTestArgs
                     })
                 })
             })
@@ -900,8 +901,7 @@ describe("charge the management fee by diluting the token supply", () => {
                 throws(() => {
                     main.eval({
                         $scriptContext: ctx,
-                        _: supply0,
-                        ptrs: []
+                        ...defaultTestArgs
                     })
                 })
             })
@@ -914,8 +914,7 @@ describe("charge the management fee by diluting the token supply", () => {
                     throws(() => {
                         main.eval({
                             $scriptContext: ctx,
-                            _: supply0,
-                            ptrs: []
+                            ...defaultTestArgs
                         })
                     })
                 })
@@ -929,8 +928,7 @@ describe("charge the management fee by diluting the token supply", () => {
                     throws(() => {
                         main.eval({
                             $scriptContext: ctx,
-                            _: supply0,
-                            ptrs: []
+                            ...defaultTestArgs
                         })     
                     })
                 })
@@ -1008,15 +1006,19 @@ describe("supply_validator::validate_mint_user_tokens", () => {
                 .addSupplyInput({ supply: supply0, redeemer: [] })
         }
 
+        const defaultTestArgs = {
+            supply0,
+            supply1,
+            D: mintedTokens,
+            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: []} 
+        }
+
         it("succeeds if an equivalent amount of lovelace is sent to the vault as has been minted", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_mint_user_tokens.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: mintedTokens,
-                        ptrs: [makeAssetPtr()] // dummy needed for ADA
+                        ...defaultTestArgs
                     }),
                     true
                 )
@@ -1028,10 +1030,7 @@ describe("supply_validator::validate_mint_user_tokens", () => {
                 strictEqual(
                     validate_mint_user_tokens.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: mintedTokens,
-                        ptrs: [makeAssetPtr()] // dummy needed for ADA
+                        ...defaultTestArgs
                     }),
                     false
                 )
@@ -1043,10 +1042,7 @@ describe("supply_validator::validate_mint_user_tokens", () => {
                 strictEqual(
                     validate_mint_user_tokens.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: mintedTokens,
-                        ptrs: [makeAssetPtr()] // dummy needed for ADA
+                        ...defaultTestArgs
                     }),
                     false
                 )
@@ -1058,10 +1054,7 @@ describe("supply_validator::validate_mint_user_tokens", () => {
                 strictEqual(
                     validate_mint_user_tokens.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: mintedTokens,
-                        ptrs: [makeAssetPtr()] // dummy needed for ADA
+                        ...defaultTestArgs
                     }),
                     false
                 )
@@ -1074,10 +1067,8 @@ describe("supply_validator::validate_mint_user_tokens", () => {
                 strictEqual(
                     validate_mint_user_tokens.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: mintedTokens,
-                        ptrs: [makeAssetPtr()] // dummy needed for ADA
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
@@ -1090,10 +1081,8 @@ describe("supply_validator::validate_mint_user_tokens", () => {
                 strictEqual(
                     validate_mint_user_tokens.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: mintedTokens,
-                        ptrs: [makeAssetPtr()] // dummy needed for ADA
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
@@ -1106,10 +1095,8 @@ describe("supply_validator::validate_mint_user_tokens", () => {
                 strictEqual(
                     validate_mint_user_tokens.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: mintedTokens,
-                        ptrs: [makeAssetPtr()] // dummy needed for ADA
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
@@ -1122,10 +1109,8 @@ describe("supply_validator::validate_mint_user_tokens", () => {
                 strictEqual(
                     validate_mint_user_tokens.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: mintedTokens,
-                        ptrs: [makeAssetPtr()] // dummy needed for ADA
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
@@ -1137,16 +1122,14 @@ describe("supply_validator::validate_mint_user_tokens", () => {
                 .addAssetGroupThread({
                     id: 0,
                     inputAssets: [makeAsset()],
-                    outputAssets: [makeAsset({ count: 0, countTick: 1 })]
+                    outputAssets: [makeAsset({ count: 0 })]
                 })
                 .use((ctx) => {
                     strictEqual(
                         validate_mint_user_tokens.eval({
                             $scriptContext: ctx,
-                            supply0,
-                            supply1,
-                            D: mintedTokens,
-                            ptrs: [makeAssetPtr()] // dummy needed for ADA
+                            ...defaultTestArgs,
+                            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: [2]} 
                         }),
                         true
                     )
@@ -1158,39 +1141,17 @@ describe("supply_validator::validate_mint_user_tokens", () => {
                 .addAssetGroupThread({
                     id: 0,
                     inputAssets: [makeAsset()],
-                    outputAssets: [makeAsset({ count: 10, countTick: 1 })]
+                    outputAssets: [makeAsset({ count: 10 })]
                 })
                 .use((ctx) => {
                     strictEqual(
                         validate_mint_user_tokens.eval({
                             $scriptContext: ctx,
-                            supply0,
-                            supply1,
-                            D: mintedTokens,
-                            ptrs: [makeAssetPtr()] // dummy needed for ADA
+                            ...defaultTestArgs,
+                            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: [2]}
                         }),
                         false
                     )
-                })
-        })
-
-        it("throws an error if the updated asset group doesn't have the correct tick", () => {
-            configureContext()
-                .addAssetGroupThread({
-                    id: 0,
-                    inputAssets: [makeAsset()],
-                    outputAssets: [makeAsset({ countTick: 2 })]
-                })
-                .use((ctx) => {
-                    throws(() => {
-                        validate_mint_user_tokens.eval({
-                            $scriptContext: ctx,
-                            supply0,
-                            supply1,
-                            D: mintedTokens,
-                            ptrs: [makeAssetPtr()] // dummy needed for ADA
-                        })
-                    })
                 })
         })
     })
@@ -1269,7 +1230,7 @@ describe("supply_validator::validate_burn_user_tokens", () => {
             supply0,
             supply1,
             D: -burnedTokens,
-            ptrs: [makeAssetPtr()] // dummy for lovelace
+            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: []} // dummy for lovelace
         }
 
         it("returns true if the lovelace value taken taken out of the vault is equivalent to the tokens burned", () => {
@@ -1370,13 +1331,14 @@ describe("supply_validator::validate_burn_user_tokens", () => {
                 .addAssetGroupThread({
                     id: 0,
                     inputAssets: [makeAsset()],
-                    outputAssets: [makeAsset({ count: 0, countTick: 1 })]
+                    outputAssets: [makeAsset({ count: 0 })]
                 })
                 .use((ctx) => {
                     strictEqual(
                         validate_burn_user_tokens.eval({
                             $scriptContext: ctx,
-                            ...defaultTestArgs
+                            ...defaultTestArgs,
+                            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: [0]} 
                         }),
                         true
                     )
@@ -1388,33 +1350,17 @@ describe("supply_validator::validate_burn_user_tokens", () => {
                 .addAssetGroupThread({
                     id: 0,
                     inputAssets: [makeAsset()],
-                    outputAssets: [makeAsset({ count: 10, countTick: 1 })]
+                    outputAssets: [makeAsset({ count: 10 })]
                 })
                 .use((ctx) => {
                     strictEqual(
                         validate_burn_user_tokens.eval({
                             $scriptContext: ctx,
-                            ...defaultTestArgs
+                            ...defaultTestArgs,
+                            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: [0]} 
                         }),
                         false
                     )
-                })
-        })
-
-        it("throws an error if the updated asset group doesn't have the correct tick", () => {
-            configureContext()
-                .addAssetGroupThread({
-                    id: 0,
-                    inputAssets: [makeAsset()],
-                    outputAssets: [makeAsset({ countTick: 2 })]
-                })
-                .use((ctx) => {
-                    throws(() => {
-                        validate_burn_user_tokens.eval({
-                            $scriptContext: ctx,
-                            ...defaultTestArgs
-                        })
-                    })
                 })
         })
     })
@@ -1459,7 +1405,7 @@ describe("supply_validate::validate_swap", () => {
         const defaultTestArgs = {
             supply0,
             supply1,
-            ptrs: [makeAssetPtr()] // dummy for lovelace
+            ptrs: { asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: []} // dummy for lovelace
         }
 
         it("returns true if nothing is minted and the supply datum is correctly updated", () => {
@@ -1565,13 +1511,14 @@ describe("supply_validate::validate_swap", () => {
                 .addAssetGroupThread({
                     id: 0,
                     inputAssets: [makeAsset()],
-                    outputAssets: [makeAsset({ count: 0, countTick: 1 })]
+                    outputAssets: [makeAsset({ count: 0 })]
                 })
                 .use((ctx) => {
                     strictEqual(
                         validate_swap.eval({
                             $scriptContext: ctx,
-                            ...defaultTestArgs
+                            ...defaultTestArgs,
+                            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: [1]} 
                         }),
                         true
                     )
@@ -1583,33 +1530,17 @@ describe("supply_validate::validate_swap", () => {
                 .addAssetGroupThread({
                     id: 0,
                     inputAssets: [makeAsset()],
-                    outputAssets: [makeAsset({ count: 10, countTick: 1 })]
+                    outputAssets: [makeAsset({ count: 10 })]
                 })
                 .use((ctx) => {
                     strictEqual(
                         validate_swap.eval({
                             $scriptContext: ctx,
-                            ...defaultTestArgs
+                            ...defaultTestArgs,
+                            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: [1]} 
                         }),
                         false
                     )
-                })
-        })
-
-        it("throws an error if the updated asset group doesn't have the correct tick", () => {
-            configureContext()
-                .addAssetGroupThread({
-                    id: 0,
-                    inputAssets: [makeAsset()],
-                    outputAssets: [makeAsset({ countTick: 2 })]
-                })
-                .use((ctx) => {
-                    throws(() => {
-                        validate_swap.eval({
-                            $scriptContext: ctx,
-                            ...defaultTestArgs
-                        })
-                    })
                 })
         })
     })

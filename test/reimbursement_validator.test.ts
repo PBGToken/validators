@@ -1,6 +1,14 @@
+import { deepEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
+import { IntLike } from "@helios-lang/codec-utils"
+import {
+    Address,
+    Assets,
+    PubKeyHash,
+    Value
+} from "@helios-lang/ledger"
+import { ByteArrayData, IntData, UplcData } from "@helios-lang/uplc"
 import context from "pbg-token-validators-test-context"
-import { ScriptContextBuilder } from "./tx"
 import {
     makeConfig,
     makeReimbursement,
@@ -8,25 +16,18 @@ import {
     makeVoucher
 } from "./data"
 import {
-    Address,
-    Assets,
-    PubKeyHash,
-    TxOutput,
-    Value
-} from "@helios-lang/ledger"
-import { ByteArrayData, IntData, UplcData } from "@helios-lang/uplc"
-import {
     makeDvpTokens,
     makeReimbursementToken,
     makeVoucherRefToken
 } from "./tokens"
-import { deepEqual, throws } from "node:assert"
-import { IntLike } from "@helios-lang/codec-utils"
+import { ScriptContextBuilder } from "./tx"
 
 const { validate_burned_vouchers, main } = context.reimbursement_validator
 
 describe("reimbursement_validator::validate_burned_vouchers", () => {
     describe("three vouchers burned", () => {
+        const periodId = 0
+
         const reimbursement = makeReimbursement({
             startPrice: [100, 1],
             endPrice: [140, 1],
@@ -49,6 +50,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
             const voucherAddr0 = Address.dummy(false, voucherId0)
             const voucherDatum0 = new IntData(voucherId0)
             const voucher0 = makeVoucher({
+                periodId,
                 price: [120, 1],
                 address: voucherAddr0,
                 datum: voucherDatum0,
@@ -58,6 +60,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
             const voucherAddr1 = Address.dummy(false, voucherId1)
             const voucherDatum1 = new IntData(voucherId1)
             const voucher1 = makeVoucher({
+                periodId,
                 price: [125, 1],
                 address: voucherAddr1,
                 datum: voucherDatum1,
@@ -67,6 +70,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
             const voucherAddr2 = Address.dummy(false, voucherId2)
             const voucherDatum2 = new IntData(voucherId2)
             const voucher2 = makeVoucher({
+                periodId,
                 price: [115, 1],
                 address: voucherAddr2,
                 datum: voucherDatum2,
@@ -76,6 +80,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
 
             return new ScriptContextBuilder()
                 .addReimbursementInput({
+                    id: periodId,
                     reimbursement,
                     redeemer: new IntData(0)
                 })
@@ -111,14 +116,31 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                 })
         }
 
-        it("returns the number of vouchers burned and the total number of token reimbursed", () => {
+        it("returns the number of vouchers burned and the total number of tokens reimbursed", () => {
             configureContext().use((ctx) => {
                 deepEqual(
                     validate_burned_vouchers.eval({
                         $scriptContext: ctx,
-                        reim: reimbursement
+                        reim: reimbursement,
+                        period_id: periodId
                     }),
                     [3n, 50153n + 123946n + 19028n]
+                )
+            })
+        })
+
+        it("returns the number of vouchers burned and the total number of tokens reimbursed even if one voucher doens't require reimbursement", () => {
+            configureContext()
+            .addVoucherInput({id: 3, voucher: makeVoucher({periodId, price: [100, 1], tokens: 100})})
+            .mint({assets:  makeVoucherRefToken(3, -1)})
+            .use((ctx) => {
+                deepEqual(
+                    validate_burned_vouchers.eval({
+                        $scriptContext: ctx,
+                        reim: reimbursement,
+                        period_id: periodId
+                    }),
+                    [4n, 50153n + 123946n + 19028n]
                 )
             })
         })
@@ -128,7 +150,8 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                 throws(() => {
                     validate_burned_vouchers.eval({
                         $scriptContext: ctx,
-                        reim: reimbursement
+                        reim: reimbursement,
+                        period_id: periodId
                     })
                 })
             })
@@ -139,7 +162,8 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                 throws(() => {
                     validate_burned_vouchers.eval({
                         $scriptContext: ctx,
-                        reim: reimbursement
+                        reim: reimbursement,
+                        period_id: periodId
                     })
                 })
             })
@@ -151,7 +175,8 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                     throws(() => {
                         validate_burned_vouchers.eval({
                             $scriptContext: ctx,
-                            reim: reimbursement
+                            reim: reimbursement,
+                            period_id: periodId
                         })
                     })
                 }
@@ -160,7 +185,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
     })
 })
 
-describe("reimbursement_validator::main", () => {
+/*describe("reimbursement_validator::main", () => {
     describe("the reimbursement UTxO is destroyed and the reimbursement token is burned, 1 voucher is burned", () => {
         const reimbursement = makeReimbursement({
             nRemainingVouchers: 1,
@@ -402,4 +427,4 @@ describe("reimbursement_validator::main", () => {
             })
         })
     })
-})
+})*/

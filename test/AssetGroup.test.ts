@@ -1122,8 +1122,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                             $currentScript: currentScript,
                             $scriptContext: ctx,
                             group_ptrs: [0],
-                            first_id: 0,
-                            max_tick: 1
+                            first_id: 0
                         })
                     })
                 })
@@ -1156,8 +1155,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                             $currentScript: currentScript,
                             $scriptContext: ctx,
                             group_ptrs: [0],
-                            first_id: 0,
-                            max_tick: 1
+                            first_id: 0
                         }),
                         [priceTimestamp, 1_000_000n]
                     )
@@ -1205,8 +1203,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                             $currentScript: currentScript,
                             $scriptContext: ctx,
                             group_ptrs: [0, 6],
-                            first_id: 0,
-                            max_tick: 1
+                            first_id: 0
                         }),
                         [oldestPriceTimestamp, 2_230_000n]
                     )
@@ -1251,8 +1248,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                             $currentScript: currentScript,
                             $scriptContext: ctx,
                             group_ptrs: [0, 1, 2],
-                            first_id: 0,
-                            max_tick: 1
+                            first_id: 0
                         }),
                         [oldestPriceTimestamp, 1_000_000n]
                     )
@@ -1309,6 +1305,11 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                 scripts
             )
 
+            const defaultTestArgs = {
+                group_ptrs: [0, 1, 2],
+                first_id: 0
+            }
+
             it("throws an error if one of the referenced asset groups is not at the assets_validator address", () => {
                 configureContext({
                     thirdGroupAddress: Address.dummy(false)
@@ -1317,9 +1318,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                         sum_total_asset_value.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
-                            group_ptrs: [0, 1, 2],
-                            first_id: 0,
-                            max_tick: 1
+                            ...defaultTestArgs
                         })
                     })
                 })
@@ -1332,9 +1331,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                             sum_total_asset_value.eval({
                                 $currentScript: currentScript,
                                 $scriptContext: ctx,
-                                group_ptrs: [0, 1, 2],
-                                first_id: 0,
-                                max_tick: 1
+                                ...defaultTestArgs
                             })
                         })
                     }
@@ -1347,9 +1344,9 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                         sum_total_asset_value.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
+                            ...defaultTestArgs,
                             group_ptrs: [0, 1, 2, 3],
-                            first_id: 0,
-                            max_tick: 1
+                            first_id: 0
                         })
                     })
                 })
@@ -1362,9 +1359,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                             sum_total_asset_value.eval({
                                 $currentScript: currentScript,
                                 $scriptContext: ctx,
-                                group_ptrs: [0, 1, 2],
-                                first_id: 0,
-                                max_tick: 1
+                                ...defaultTestArgs
                             })
                         })
                     }
@@ -1378,9 +1373,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                             sum_total_asset_value.eval({
                                 $currentScript: currentScript,
                                 $scriptContext: ctx,
-                                group_ptrs: [0, 1, 2],
-                                first_id: 0,
-                                max_tick: 1
+                                ...defaultTestArgs                                
                             })
                         })
                     }

@@ -2,7 +2,6 @@ spending reimbursement_validator
 
 import Addresses
 import { signed_by_agent } from ConfigModule
-import { Price } from PriceModule
 import { Reimbursement } from ReimbursementModule
 import { tx } from ScriptContext
 import TokenNames
@@ -17,7 +16,6 @@ import { Voucher } from VoucherModule
 func validate_burned_vouchers(reim: Reimbursement, period_id: Int) -> (Int, Int) {
     minted_tokens = Tokens::get_minted();
     main_phi_alpha_ratio = reim.calc_phi_alpha_ratio();
-    price = Price::find_ref();
 
     tx.inputs.fold2((n_vouchers_burned: Int, n_tokens_reimbursed: Int, input: TxInput) -> (Int, Int) {
         if (input.address == Addresses::voucher) {
@@ -34,7 +32,7 @@ func validate_burned_vouchers(reim: Reimbursement, period_id: Int) -> (Int, Int)
             assert(voucher.period_id == period_id, "voucher is from other period");
 
             // the reimbursement is only necessary if it is worth more than 2 ADA
-            if ((expected_reimbursed_tokens*price.value).ceil() >= 2_000_000) {
+            if ((expected_reimbursed_tokens*reim.end_price).ceil() >= 2_000_000) {
                 return = voucher.find_return();
 
                 // avoid token dust attack

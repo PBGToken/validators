@@ -14,13 +14,26 @@ struct MintOrder {
 
     func find_return(self) -> TxOutput {
         // TODO: take invariants out of loop for performance
-        tx.outputs.find((output: TxOutput) -> {
+        return = tx.outputs.find((output: TxOutput) -> {
             output.address == self.return_address 
             && output.datum.switch{ // using output.datum.inline fails if an unrelated output is sent to same address without an inline datum, so we must use a switch to be safe
                 Inline{d} => d == self.return_datum,
                 else => false   
             }
-        })
+        });
+
+        // prevent token dust attack by only allowing ADA and DVP tokens (including at most one voucher) to be returned
+        assert(return.value.to_map().all((mph: MintingPolicyHash, tokens: Map[ByteArray]Int) -> {
+            if (mph == MintingPolicyHash::new(#)) {
+                true
+            } else if (mph == Tokens::policy) {
+                tokens.length <= 2 // at most the DVP tokens and a voucher
+            } else {
+                false
+            }
+        }), "can only return ADA and DVP tokens");
+
+        return
     }
 
     func diff(self) -> Value {
@@ -39,20 +52,7 @@ struct MintOrder {
     }
 
     func returned_tokens(self) -> Int {
-        d = self.diff();
-
-        // prevent token dust attack by only allowing ADA and DVP tokens (including at most one voucher) to be returned
-        assert(d.to_map().all((mph: MintingPolicyHash, tokens: Map[ByteArray]Int) -> {
-            if (mph == MintingPolicyHash::new(#)) {
-                true
-            } else if (mph == Tokens::policy) {
-                tokens.length <= 2 // at most the DVP tokens and a voucher
-            } else {
-                false
-            }
-        }), "can only return ADA and DVP tokens");
-
-        (-1) * d.get(Tokens::dvp_token)
+        (-1) * self.diff().get(Tokens::dvp_token)
     }
 
     func value(self) -> Value {

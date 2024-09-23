@@ -9,7 +9,6 @@ import {
     ConfigType,
     SuccessFeeType,
     makeAsset,
-    makeAssetGroup,
     makeConfig,
     makePortfolio,
     makeSuccessFee,

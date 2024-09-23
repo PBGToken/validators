@@ -2,7 +2,6 @@ import { IntLike } from "@helios-lang/codec-utils"
 import { PermissiveType, StrictType } from "@helios-lang/contract-utils"
 import { Address } from "@helios-lang/ledger"
 import { IntData, UplcData } from "@helios-lang/uplc"
-import { describe } from "node:test"
 import contract from "pbg-token-validators-test-context"
 import { RatioType } from "./Price"
 

@@ -82,6 +82,7 @@ func diff_counted(d_lovelace: Int, asset_group_output_ptrs: []Int) -> Value {
 
             output_index = asset_group_output_ptrs.head;
             output = tx.outputs.get(output_index);
+            assert(output.address == Addresses::assets, "asset group not sent to assets_validator");
             assert(output.value.get_singleton_asset_class() == group_asset_class, "indexed output doesn't contain the expected assets token");
             
             assets0 = input.datum.inline.as[AssetGroup].assets;

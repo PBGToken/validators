@@ -1,3 +1,4 @@
+import { IntLike } from "@helios-lang/codec-utils"
 import { Assets } from "@helios-lang/ledger"
 import {
     assets,
@@ -11,7 +12,6 @@ import {
     voucher_nft,
     voucher_ref
 } from "./asset-classes"
-import { IntLike } from "@helios-lang/codec-utils"
 
 export function makeAssetsToken(id: IntLike, n: IntLike = 1) {
     return Assets.fromAssetClasses([[assets(id), n]])

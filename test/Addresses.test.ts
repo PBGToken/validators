@@ -4,8 +4,7 @@ import contract from "pbg-token-validators-test-context"
 import {
     Addresses,
     directPolicyScripts,
-    indirectPolicyScripts,
-    scripts
+    indirectPolicyScripts
 } from "./constants"
 import { ScriptContextBuilder } from "./tx"
 

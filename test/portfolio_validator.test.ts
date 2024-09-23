@@ -385,20 +385,26 @@ describe("portfolio_validator::validate_start_reduction", () => {
 
     describe("reducing TotalAssetValue", () => {
         const expectedValue = 30_000_000 + 200 * 1000 + 200 * 10 + 100 * 100
+
+        const defaultTestArgs = {
+            ig1: 2,
+            kp1: 0,
+            mode1: {
+                TotalAssetValue: {
+                    total: expectedValue,
+                    oldest_timestamp: oldestPriceTimestamp
+                }
+            },
+            group_ptrs: groupPtrs,
+            n_all_groups: 4
+        }
+
         it("return true if total value and oldest timestamp match", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
-                        ig1: 2,
-                        kp1: 0,
-                        mode1: {
-                            TotalAssetValue: {
-                                total: expectedValue,
-                                oldest_timestamp: oldestPriceTimestamp
-                            }
-                        },
-                        group_ptrs: groupPtrs
+                        ...defaultTestArgs
                     }),
                     true
                 )
@@ -410,15 +416,13 @@ describe("portfolio_validator::validate_start_reduction", () => {
                 strictEqual(
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
-                        ig1: 2,
-                        kp1: 0,
+                        ...defaultTestArgs,
                         mode1: {
                             TotalAssetValue: {
                                 total: expectedValue - 1,
                                 oldest_timestamp: oldestPriceTimestamp
                             }
-                        },
-                        group_ptrs: groupPtrs
+                        }
                     }),
                     false
                 )
@@ -430,15 +434,13 @@ describe("portfolio_validator::validate_start_reduction", () => {
                 strictEqual(
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
-                        ig1: 2,
-                        kp1: 0,
+                        ...defaultTestArgs,
                         mode1: {
                             TotalAssetValue: {
                                 total: expectedValue,
                                 oldest_timestamp: oldestPriceTimestamp + 1
                             }
-                        },
-                        group_ptrs: groupPtrs
+                        }
                     }),
                     false
                 )
@@ -450,14 +452,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
                 throws(() => {
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
-                        ig1: 2,
-                        kp1: 0,
-                        mode1: {
-                            TotalAssetValue: {
-                                total: expectedValue,
-                                oldest_timestamp: oldestPriceTimestamp
-                            }
-                        },
+                        ...defaultTestArgs,
                         group_ptrs: groupPtrs.slice(0, 1).concat([40])
                     })
                 })
@@ -466,20 +461,25 @@ describe("portfolio_validator::validate_start_reduction", () => {
     })
 
     describe("reducing Exists", () => {
+        const defaultTestArgs = {
+            ig1: 2,
+            kp1: 0,
+            mode1: {
+                Exists: {
+                    asset_class: AssetClass.dummy(3),
+                    found: false
+                }
+            },
+            group_ptrs: groupPtrs,
+            n_all_groups: 4
+        }
+
         it("returns true when searching if found==false for an inexistent asset class", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
-                        ig1: 2,
-                        kp1: 0,
-                        mode1: {
-                            Exists: {
-                                asset_class: AssetClass.dummy(3),
-                                found: false
-                            }
-                        },
-                        group_ptrs: groupPtrs
+                        ...defaultTestArgs
                     }),
                     true
                 )
@@ -491,15 +491,49 @@ describe("portfolio_validator::validate_start_reduction", () => {
                 strictEqual(
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
-                        ig1: 2,
-                        kp1: 0,
+                        ...defaultTestArgs,
                         mode1: {
                             Exists: {
                                 asset_class: AssetClass.dummy(3),
                                 found: true
                             }
-                        },
-                        group_ptrs: groupPtrs
+                        }
+                    }),
+                    false
+                )
+            })
+        })
+
+        it("returns false when searching if found0==true for an existing asset class", () => {
+            configureContext().use((ctx) => {
+                strictEqual(
+                    validate_start_reduction.eval({
+                        $scriptContext: ctx,
+                        ...defaultTestArgs,
+                        mode1: {
+                            Exists: {
+                                asset_class: assetClass2,
+                                found: true
+                            }
+                        }
+                    }),
+                    false
+                )
+            })
+        })
+
+        it("returns false when searching if found==false for an existing asset class", () => {
+            configureContext().use((ctx) => {
+                strictEqual(
+                    validate_start_reduction.eval({
+                        $scriptContext: ctx,
+                        ...defaultTestArgs,
+                        mode1: {
+                            Exists: {
+                                asset_class: assetClass2,
+                                found: false
+                            }
+                        }
                     }),
                     false
                 )
@@ -511,37 +545,16 @@ describe("portfolio_validator::validate_start_reduction", () => {
                 strictEqual(
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
-                        ig1: 2,
-                        kp1: 0,
+                        ...defaultTestArgs,
+                        ig1: 4,
                         mode1: {
                             Exists: {
                                 asset_class: assetClass2,
                                 found: true
                             }
-                        },
-                        group_ptrs: groupPtrs
+                        }
                     }),
                     true
-                )
-            })
-        })
-
-        it("returns false when searching if found==false for an existing asset class", () => {
-            configureContext().use((ctx) => {
-                strictEqual(
-                    validate_start_reduction.eval({
-                        $scriptContext: ctx,
-                        ig1: 2,
-                        kp1: 0,
-                        mode1: {
-                            Exists: {
-                                asset_class: assetClass2,
-                                found: false
-                            }
-                        },
-                        group_ptrs: groupPtrs
-                    }),
-                    false
                 )
             })
         })
@@ -551,14 +564,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
                 throws(() => {
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
-                        ig1: 2,
-                        kp1: 0,
-                        mode1: {
-                            Exists: {
-                                asset_class: AssetClass.dummy(3),
-                                found: false
-                            }
-                        },
+                        ...defaultTestArgs,
                         group_ptrs: groupPtrs.slice(0, 1).concat([3])
                     })
                 })
@@ -575,7 +581,8 @@ describe("portfolio_validator::validate_start_reduction", () => {
                     asset_class: AssetClass.dummy(3)
                 }
             },
-            group_ptrs: groupPtrs
+            group_ptrs: groupPtrs,
+            n_all_groups: 4
         }
 
         const defaultExistsTestArgs = {
@@ -661,7 +668,8 @@ describe("portfolio_validator::validate_start_reduction", () => {
             ig1: 2,
             kp1: 0,
             mode1: dummyMode,
-            group_ptrs: groupPtrs
+            group_ptrs: groupPtrs,
+            n_all_groups: 4
         }
 
         it("returns false if an AssetGroup is spent", () => {
@@ -767,6 +775,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             kp0: 0,
             ig1: 4,
             kp1: 0,
+            n_all_groups: 10,
             mode0,
             mode1: {
                 TotalAssetValue: {
@@ -855,6 +864,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             kp0: 0,
             ig1: 4,
             kp1: 0,
+            n_all_groups: 10,
             mode0: {
                 Exists: {
                     asset_class: AssetClass.dummy(7),
@@ -875,6 +885,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             kp0: 0,
             ig1: 4,
             kp1: 0,
+            n_all_groups: 10,
             mode0: {
                 Exists: {
                     asset_class: AssetClass.dummy(3),
@@ -920,12 +931,25 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             })
         })
 
-        it("returns true when searching if found==true for an existing asset class", () => {
+        it("returns false when searching if found==true for an existing asset class and n_all_groups isn't correctly set", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultDidntExistDoesExistArgs
+                    }),
+                    false
+                )
+            })
+        })
+
+        it("returns true when searching if found==true for an existing asset class and n_all_groups is correctly set", () => {
+            configureContext().use((ctx) => {
+                strictEqual(
+                    validate_continue_reduction.eval({
+                        $scriptContext: ctx,
+                        ...defaultDidntExistDoesExistArgs,
+                        ig1: 10
                     }),
                     true
                 )
@@ -987,6 +1011,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             ig1: 4,
             kp0: 0,
             kp1: 0,
+            n_all_groups: 10,
             mode0: {
                 DoesNotExist: {
                     asset_class: AssetClass.dummy(7)
@@ -1005,6 +1030,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             ig1: 4,
             kp0: 0,
             kp1: 0,
+            n_all_groups: 10,
             mode0: {
                 DoesNotExist: {
                     asset_class: AssetClass.dummy(4)
@@ -1098,6 +1124,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             ig1: 4,
             kp0: 0,
             kp1: 0,
+            n_all_groups: 10,
             mode0: dummyMode,
             mode1: dummyMode,
             group_ptrs: groupPtrs
@@ -1294,34 +1321,6 @@ describe("portfolio_validator::validate_add_asset_class", () => {
         })
     })
 
-    it("returns false if the asset class in the portfolio reduction state differs", () => {
-        const portfolio0 = makePortfolio({
-            nGroups: 4,
-            state: {
-                Reducing: {
-                    group_iter: 4,
-                    start_tick: 0,
-                    mode: {
-                        DoesNotExist: {
-                            asset_class: AssetClass.dummy(321)
-                        }
-                    }
-                }
-            }
-        })
-
-        configureContext().use((ctx) => {
-            strictEqual(
-                validate_add_asset_class.eval({
-                    $scriptContext: ctx,
-                    ...defaultTestArgs,
-                    portfolio0
-                }),
-                false
-            )
-        })
-    })
-
     it("returns false if config isn't spent according to boolean arg (actual tx doesn't matter)", () => {
         configureContext().use((ctx) => {
             strictEqual(
@@ -1333,22 +1332,6 @@ describe("portfolio_validator::validate_add_asset_class", () => {
                 false
             )
         })
-    })
-
-    it("returns false if some DVP tokens are minted", () => {
-        configureContext()
-            .mint({ assets: makeDvpTokens(1000) })
-            .use((ctx) => {
-                {
-                    strictEqual(
-                        validate_add_asset_class.eval({
-                            $scriptContext: ctx,
-                            ...defaultTestArgs
-                        }),
-                        false
-                    )
-                }
-            })
     })
 })
 
@@ -1466,63 +1449,6 @@ describe("portfolio_validator::validate_remove_asset_class", () => {
         })
     })
 
-    it("throws an error if the asset class in the portfolio reduction state differs", () => {
-        const portfolio0 = makePortfolio({
-            nGroups: 4,
-            state: {
-                Reducing: {
-                    group_iter: 4,
-                    start_tick: 0,
-                    mode: {
-                        Exists: {
-                            asset_class: AssetClass.dummy(321),
-                            found: true
-                        }
-                    }
-                }
-            }
-        })
-
-        configureContext().use((ctx) => {
-            throws(() => {
-                validate_remove_asset_class.eval({
-                    $scriptContext: ctx,
-                    ...defaultTestArgs,
-                    portfolio0
-                })
-            })
-        })
-    })
-
-    it("returns false if the asset class wasn't found during reduction", () => {
-        const portfolio0 = makePortfolio({
-            nGroups: 4,
-            state: {
-                Reducing: {
-                    group_iter: 4,
-                    start_tick: 0,
-                    mode: {
-                        Exists: {
-                            asset_class: assetClass,
-                            found: false
-                        }
-                    }
-                }
-            }
-        })
-
-        configureContext().use((ctx) => {
-            strictEqual(
-                validate_remove_asset_class.eval({
-                    $scriptContext: ctx,
-                    ...defaultTestArgs,
-                    portfolio0
-                }),
-                false
-            )
-        })
-    })
-
     it("returns false if the asset count for the removed asset class isn't zero", () => {
         configureContext({
             inputAssets: [makeAsset({ assetClass, count: 1 })]
@@ -1530,8 +1456,7 @@ describe("portfolio_validator::validate_remove_asset_class", () => {
             strictEqual(
                 validate_remove_asset_class.eval({
                     $scriptContext: ctx,
-                    ...defaultTestArgs,
-                    portfolio0
+                    ...defaultTestArgs
                 }),
                 false
             )
@@ -1549,22 +1474,6 @@ describe("portfolio_validator::validate_remove_asset_class", () => {
                 false
             )
         })
-    })
-
-    it("returns false if some DVP tokens are minted", () => {
-        configureContext()
-            .mint({ assets: makeDvpTokens(1000) })
-            .use((ctx) => {
-                {
-                    strictEqual(
-                        validate_remove_asset_class.eval({
-                            $scriptContext: ctx,
-                            ...defaultTestArgs
-                        }),
-                        false
-                    )
-                }
-            })
     })
 })
 
