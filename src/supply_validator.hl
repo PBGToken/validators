@@ -20,7 +20,7 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> Bool {
     price = Price::find_ref();
 
     end_price = price.relative_to_benchmark();
-    Dalpha = supply0.calc_success_fee_dilution(end_price); // TODO: should this be bound by 0
+    Dalpha = supply0.calc_success_fee_dilution(end_price); // internally bound by 0
     (reimbursement, _) = Reimbursement::find_output(supply0.period_id(), Dalpha);
     (config0, is_updated) = Config::find();
     tokens_minted = Tokens::get_minted();

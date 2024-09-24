@@ -1,13 +1,13 @@
+import { throws } from "node:assert"
 import { describe, it } from "node:test"
+import { PubKeyHash } from "@helios-lang/ledger"
+import { IntData } from "@helios-lang/uplc"
 import contract, {
     ORACLE_KEY_1,
     ORACLE_KEY_2,
     ORACLE_KEY_3
 } from "pbg-token-validators-test-context"
 import { ScriptContextBuilder } from "./tx"
-import { PubKeyHash } from "@helios-lang/ledger"
-import { IntData } from "@helios-lang/uplc"
-import { throws } from "node:assert"
 
 const { main } = contract.oracle_delegate
 
@@ -23,19 +23,19 @@ describe("oracle_delegate::main", () => {
             .addSigner(props?.oracleKey3 ?? ORACLE_KEY_3)
     }
 
-    it("succeeds if signed by all gov keys", () => {
+    it("oracle_delegate::main #01 (succeeds if signed by all gov keys)", () => {
         configureContext().use((ctx) => {
             main.eval({ $scriptContext: ctx, _: redeemer })
         })
     })
 
-    it("succeeds if signed by majority", () => {
+    it("oracle_delegate::main #02 (succeeds if signed by majority)", () => {
         configureContext({ oracleKey3: PubKeyHash.dummy() }).use((ctx) => {
             main.eval({ $scriptContext: ctx, _: redeemer })
         })
     })
 
-    it("throws an error if only signed by one key", () => {
+    it("oracle_delegate::main #03 (throws an error if only signed by one key)", () => {
         configureContext({
             oracleKey2: PubKeyHash.dummy(),
             oracleKey3: PubKeyHash.dummy()
@@ -46,7 +46,7 @@ describe("oracle_delegate::main", () => {
         })
     })
 
-    it("throws an error if not signed by any keys", () => {
+    it("oracle_delegate::main #04 (throws an error if not signed by any keys)", () => {
         new ScriptContextBuilder().use((ctx) => {
             throws(() => {
                 main.eval({ $scriptContext: ctx, _: redeemer })

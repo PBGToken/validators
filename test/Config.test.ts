@@ -12,6 +12,7 @@ import contract from "pbg-token-validators-test-context"
 import { orderValidatorScripts, scripts } from "./constants"
 import {
     ConfigChangeProposal,
+    ConfigType,
     RatioType,
     castConfig,
     equalsConfig,
@@ -1809,110 +1810,122 @@ describe("ConfigModule::signed_by_agent", () => {
     const agent = PubKeyHash.dummy(0)
     const config = makeConfig({ agent })
 
-    describe("for the config_validator", () => {
-        it("returns true if the config UTxO is the current input and the tx is signed by the agent", () => {
-            new ScriptContextBuilder()
-                .addConfigInput({ config, redeemer: new IntData(0) })
-                .addSigner(agent)
-                .use((ctx) => {
-                    strictEqual(
-                        signed_by_agent.eval({
-                            $currentScript: "config_validator",
-                            $scriptContext: ctx
-                        }),
-                        true
-                    )
-                })
+    const configureParentContext = (props?: {
+        config?: ConfigType
+        signingAgent?: PubKeyHash
+        referConfig?: boolean
+    }) => {
+        const scb = new ScriptContextBuilder()
+
+        if (props?.referConfig) {
+            scb.addConfigRef({
+                config: props?.config ?? config
+            }).redeemDummyTokenWithDvpPolicy()
+        } else {
+            scb.addConfigInput({
+                config: props?.config ?? config,
+                redeemer: new IntData(0)
+            })
+        }
+
+        return scb.addSigner(props?.signingAgent ?? agent)
+    }
+
+    describe("@ config_validator", () => {
+        const configureContext = withScripts(configureParentContext, [
+            "config_validator"
+        ])
+
+        it("ConfigModule::signed_by_agent #01 (returns true if the config UTxO is the current input and the tx is signed by the agent)", () => {
+            configureContext().use((currentScript, ctx) => {
+                strictEqual(
+                    signed_by_agent.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    }),
+                    true
+                )
+            })
         })
 
-        it("returns true if the config UTxO is the current input and the tx is signed by an explicitly specified agent", () => {
-            new ScriptContextBuilder()
-                .addConfigInput({ redeemer: new IntData(0) })
-                .addSigner(agent)
-                .use((ctx) => {
+        it("ConfigModule::signed_by_agent #02 (returns true if the config UTxO is the current input and the tx is signed by an explicitly specified agent)", () => {
+            configureContext({ config: makeConfig() }).use(
+                (currentScript, ctx) => {
                     strictEqual(
                         signed_by_agent.eval({
-                            $currentScript: "config_validator",
+                            $currentScript: currentScript,
                             $scriptContext: ctx,
                             agent
                         }),
                         true
                     )
-                })
+                }
+            )
         })
 
-        it("returns false if the config UTxO is the current input but the tx isn't signed by the agent", () => {
-            new ScriptContextBuilder()
-                .addConfigInput({ config, redeemer: new IntData(0) })
-                .addSigner(PubKeyHash.dummy(1))
-                .use((ctx) => {
+        it("ConfigModule::signed_by_agent #03 (returns false if the config UTxO is the current input but the tx isn't signed by the agent)", () => {
+            configureContext({ signingAgent: PubKeyHash.dummy(1) }).use(
+                (currentScript, ctx) => {
                     strictEqual(
                         signed_by_agent.eval({
-                            $currentScript: "config_validator",
+                            $currentScript: currentScript,
                             $scriptContext: ctx
                         }),
                         false
                     )
-                })
+                }
+            )
         })
     })
 
-    describe("for the other validators", () => {
-        const otherScripts = scripts.filter((s) => s != "config_validator")
+    describe("@ other validators", () => {
+        const configureContext = withScripts(
+            configureParentContext,
+            scripts.filter((s) => s != "config_validator")
+        )
 
-        it("returns true if the config UTxO is referenced and the tx is signed by the agent", () => {
-            new ScriptContextBuilder()
-                .addConfigRef({ config })
-                .addSigner(agent)
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    otherScripts.forEach((currentScript) => {
-                        strictEqual(
-                            signed_by_agent.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            }),
-                            true
-                        )
-                    })
-                })
+        it("ConfigModule::signed_by_agent #04 (returns true if the config UTxO is referenced and the tx is signed by the agent)", () => {
+            configureContext({ referConfig: true }).use(
+                (currentScript, ctx) => {
+                    strictEqual(
+                        signed_by_agent.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }),
+                        true
+                    )
+                }
+            )
         })
 
-        it("returns true if the config UTxO is referenced and the tx is signed by an explicitly specified agent", () => {
-            new ScriptContextBuilder()
-                .addConfigRef()
-                .addSigner(agent)
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    otherScripts.forEach((currentScript) => {
-                        strictEqual(
-                            signed_by_agent.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx,
-                                agent
-                            }),
-                            true
-                        )
-                    })
-                })
+        it("ConfigModule::signed_by_agent #05 (returns true if the config UTxO is referenced and the tx is signed by an explicitly specified agent)", () => {
+            configureContext({ config: makeConfig(), referConfig: true }).use(
+                (currentScript, ctx) => {
+                    strictEqual(
+                        signed_by_agent.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            agent
+                        }),
+                        true
+                    )
+                }
+            )
         })
 
-        it("returns false if the config UTxO referenced but the tx isn't signed by the agent", () => {
-            new ScriptContextBuilder()
-                .addConfigRef({ config })
-                .addSigner(PubKeyHash.dummy(1))
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    otherScripts.forEach((currentScript) => {
-                        strictEqual(
-                            signed_by_agent.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            }),
-                            false
-                        )
-                    })
-                })
+        it("ConfigModule::signed_by_agent #06 (returns false if the config UTxO referenced but the tx isn't signed by the agent)", () => {
+            configureContext({
+                referConfig: true,
+                signingAgent: PubKeyHash.dummy(1)
+            }).use((currentScript, ctx) => {
+                strictEqual(
+                    signed_by_agent.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    }),
+                    false
+                )
+            })
         })
     })
 })
@@ -1921,117 +1934,142 @@ describe("ConfigModule::witnessed_by_oracle", () => {
     const oracle = contract.oracle_delegate.$hash
     const config = makeConfig({ oracle })
 
-    describe("for the config_validator", () => {
-        it("returns true if the config UTxO is the current input and the transaction is witnessed by the oracle_delegate", () => {
-            new ScriptContextBuilder()
-                .addConfigInput({ config, redeemer: new IntData(0) })
-                .observeDummy()
-                .observeOracle({ hash: oracle })
-                .use((ctx) => {
-                    strictEqual(
-                        witnessed_by_oracle.eval({
-                            $currentScript: "config_validator",
-                            $scriptContext: ctx
-                        }),
-                        true
-                    )
+    const configureParentContext = (props?: {
+        config?: ConfigType | null
+        oracle?: StakingValidatorHash | null
+        reward?: StakingValidatorHash
+        referConfig?: boolean
+    }) => {
+        const scb = new ScriptContextBuilder().observeDummy()
+
+        if (props?.referConfig) {
+            if (props?.config !== null) {
+                scb.addConfigRef({ config: props?.config ?? config })
+            }
+
+            scb.redeemDummyTokenWithDvpPolicy()
+        } else {
+            if (props?.config !== null) {
+                scb.addConfigInput({
+                    config: props?.config ?? config,
+                    redeemer: new IntData(0)
                 })
+            } else {
+                scb.redeemDummyTokenWithDvpPolicy()
+            }
+        }
+
+        if (props?.oracle !== null) {
+            scb.observeOracle({ hash: oracle })
+        }
+
+        if (props?.reward) {
+            scb.reward({
+                hash: props.reward,
+                redeemer: new IntData(0)
+            })
+        }
+
+        return scb
+    }
+
+    describe("@ config_validator", () => {
+        const configureContext = withScripts(configureParentContext, [
+            "config_validator"
+        ])
+
+        it("ConfigModule::witnessed_by_oracle #01 (returns true if the config UTxO is the current input and the transaction is witnessed by the oracle_delegate)", () => {
+            configureContext().use((currentScript, ctx) => {
+                strictEqual(
+                    witnessed_by_oracle.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    }),
+                    true
+                )
+            })
         })
 
-        it("returns false if the config UTxO is the current input but the transaction isn't witnessed by the oracle_delegate", () => {
-            new ScriptContextBuilder()
-                .addConfigInput({ config, redeemer: new IntData(0) })
-                .observeDummy()
-                .reward({
-                    hash: StakingValidatorHash.dummy(1),
-                    redeemer: new IntData(0)
-                }) // dummy
-                .use((ctx) => {
+        it("ConfigModule::witnessed_by_oracle #02 (returns false if the config UTxO is the current input but the transaction isn't witnessed by the oracle_delegate)", () => {
+            configureContext({
+                oracle: null,
+                reward: StakingValidatorHash.dummy(1)
+            }).use((currentScript, ctx) => {
+                strictEqual(
+                    witnessed_by_oracle.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    }),
+                    false
+                )
+            })
+        })
+
+        it("ConfigModule::witnessed_by_oracle #03 (returns true of the transaction is witnessed by an explicitly specified oracle, even if the config UTxO isn't the current input)", () => {
+            configureContext({ config: null }).use((currentScript, ctx) => {
+                strictEqual(
+                    witnessed_by_oracle.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx,
+                        oracle
+                    }),
+                    true
+                )
+            })
+        })
+    })
+
+    describe("@ other validators", () => {
+        const otherScripts = scripts.filter((s) => s != "config_validator")
+
+        const configureContext = withScripts(
+            configureParentContext,
+            otherScripts
+        )
+
+        it("ConfigModule::witnessed_by_oracle #04 (returns true if the config UTxO is referenced and the transaction is witnessed by the oracle_delegate)", () => {
+            configureContext({ referConfig: true }).use(
+                (currentScript, ctx) => {
+                    otherScripts.forEach((currentScript) => {
+                        strictEqual(
+                            witnessed_by_oracle.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx
+                            }),
+                            true
+                        )
+                    })
+                }
+            )
+        })
+
+        it("ConfigModule::witnessed_by_oracle #05 (returns false if the config UTxO is referenced but the transaction isn't witnessed by the oracle_delegate)", () => {
+            configureContext({ referConfig: true, oracle: null }).use(
+                (currentScript, ctx) => {
                     strictEqual(
                         witnessed_by_oracle.eval({
-                            $currentScript: "config_validator",
+                            $currentScript: currentScript,
                             $scriptContext: ctx
                         }),
                         false
                     )
-                })
+                }
+            )
         })
 
-        it("returns true of the transaction is witnessed by an explicitly specified oracle, even if the config UTxO isn't the current input", () => {
-            new ScriptContextBuilder()
-                .observeDummy() // dummy
-                .observeOracle({ hash: oracle })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
+        it("ConfigModule::witnessed_by_oracle #06 (returns true if the transaction is witnessed by an explicitly specified oracle delegate, even if the config UTxO isn't referenced)", () => {
+            configureContext({ config: null, referConfig: true }).use(
+                (currentScript, ctx) => {
                     strictEqual(
                         witnessed_by_oracle.eval({
-                            $currentScript: "config_validator",
+                            $currentScript: currentScript,
                             $scriptContext: ctx,
                             oracle
                         }),
                         true
                     )
-                })
-        })
-    })
-
-    describe("for the other validators", () => {
-        const otherScripts = scripts.filter((s) => s != "config_validator")
-
-        it("returns true if the config UTxO is referenced and the transaction is witnessed by the oracle_delegate", () => {
-            new ScriptContextBuilder()
-                .addConfigRef({ config })
-                .observeDummy()
-                .observeOracle({ hash: oracle })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    otherScripts.forEach((currentScript) => {
-                        strictEqual(
-                            witnessed_by_oracle.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            }),
-                            true
-                        )
-                    })
-                })
-        })
-
-        it("returns false if the config UTxO is referenced but the transaction isn't witnessed by the oracle_delegate", () => {
-            new ScriptContextBuilder()
-                .addConfigRef({ config })
-                .observeDummy()
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    otherScripts.forEach((currentScript) => {
-                        strictEqual(
-                            witnessed_by_oracle.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            }),
-                            false
-                        )
-                    })
-                })
-        })
-
-        it("returns true if the transaction is witnessed by an explicitly specified oracle delegate, even if the config UTxO isn't referenced", () => {
-            new ScriptContextBuilder()
-                .observeDummy()
-                .observeOracle({ hash: oracle })
-                .redeemDummyTokenWithDvpPolicy()
-                .use((ctx) => {
-                    otherScripts.forEach((currentScript) => {
-                        strictEqual(
-                            witnessed_by_oracle.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx,
-                                oracle
-                            }),
-                            true
-                        )
-                    })
-                })
+                }
+            )
         })
     })
 })

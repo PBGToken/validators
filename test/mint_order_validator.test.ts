@@ -52,7 +52,7 @@ describe("mint_order_validator::main", () => {
             return scb
         }
 
-        it("succeeds if the tx signed by the address pubkey", () => {
+        it("mint_order_validator::main #01 (succeeds if the tx signed by the address pubkey)", () => {
             configureContext().use((ctx) => {
                 main.eval({
                     $scriptContext: ctx,
@@ -62,7 +62,7 @@ describe("mint_order_validator::main", () => {
             })
         })
 
-        it("throws an error if the tx isn't signed by the address pubkey", () => {
+        it("mint_order_validator::main #02 (throws an error if the tx isn't signed by the address pubkey)", () => {
             configureContext({ pkh: PubKeyHash.dummy(1) }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -74,7 +74,7 @@ describe("mint_order_validator::main", () => {
             })
         })
 
-        it("succeeds if the tx isn't signed by the address pubkey but an input is spent from the same address", () => {
+        it("mint_order_validator::main #03 (succeeds if the tx isn't signed by the address pubkey but an input is spent from the same address)", () => {
             configureContext({
                 pkh: PubKeyHash.dummy(1),
                 dummyInputAddr: returnAddress
@@ -194,13 +194,13 @@ describe("mint_order_validator::main", () => {
             return scb
         }
 
-        it("succeeds if enough tokens are returned", () => {
+        it("mint_order_validator::main #04 (succeeds if enough tokens are returned)", () => {
             configureContext().use((ctx) => {
                 main.eval({ $scriptContext: ctx, order: mintOrder, redeemer })
             })
         })
 
-        it("throws an error if not signed by agent", () => {
+        it("mint_order_validator::main #05 (throws an error if not signed by agent)", () => {
             configureContext({ agent: PubKeyHash.dummy() }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -212,7 +212,7 @@ describe("mint_order_validator::main", () => {
             })
         })
 
-        it("throws an error if the price timestamp is too old", () => {
+        it("mint_order_validator::main #06 (throws an error if the price timestamp is too old)", () => {
             configureContext({ priceTimestamp: 99 }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -224,7 +224,7 @@ describe("mint_order_validator::main", () => {
             })
         })
 
-        it("throws an error if not enough tokens are returned according to the contract", () => {
+        it("mint_order_validator::main #07 (throws an error if not enough tokens are returned according to the contract)", () => {
             configureContext({ returnTokens: 1_408_570 }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -236,7 +236,7 @@ describe("mint_order_validator::main", () => {
             })
         })
 
-        it("throws an error if not enough tokens are returned according to the order", () => {
+        it("mint_order_validator::main #08 (throws an error if not enough tokens are returned according to the order)", () => {
             configureContext({ returnTokens: 1_399_999 }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -248,7 +248,7 @@ describe("mint_order_validator::main", () => {
             })
         })
 
-        it("throws an error if there has been some success since the start of the year but no voucher is returned", () => {
+        it("mint_order_validator::main #09 (throws an error if there has been some success since the start of the year but no voucher is returned)", () => {
             configureContext({ returnUserVoucher: false }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -260,7 +260,7 @@ describe("mint_order_validator::main", () => {
             })
         })
 
-        it("throws an error if only a user voucher is returned in the case there has been some success since the start of the year", () => {
+        it("mint_order_validator::main #10 (throws an error if only a user voucher is returned in the case there has been some success since the start of the year)", () => {
             configureContext({ returnRefVoucher: null }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -272,7 +272,7 @@ describe("mint_order_validator::main", () => {
             })
         })
 
-        it("throws an error if the ref voucher return address is wrong", () => {
+        it("mint_order_validator::main #11 (throws an error if the ref voucher return address is wrong)", () => {
             configureContext({
                 returnRefVoucher: { returnAddress: Address.dummy(false) }
             }).use((ctx) => {
@@ -286,7 +286,7 @@ describe("mint_order_validator::main", () => {
             })
         })
 
-        it("throws an error if the ref voucher return datum is wrong", () => {
+        it("mint_order_validator::main #12 (throws an error if the ref voucher return datum is wrong)", () => {
             configureContext({
                 returnRefVoucher: { returnDatum: new ListData([]) }
             }).use((ctx) => {
@@ -300,7 +300,7 @@ describe("mint_order_validator::main", () => {
             })
         })
 
-        it("throws an error if the ref voucher token count is too low", () => {
+        it("mint_order_validator::main #13 (throws an error if the ref voucher token count is too low)", () => {
             configureContext({ returnRefVoucher: { nTokens: 1_400_000 } }).use(
                 (ctx) => {
                     throws(() => {
@@ -314,7 +314,7 @@ describe("mint_order_validator::main", () => {
             )
         })
 
-        it("throws an error if the ref voucher token count is too high", () => {
+        it("mint_order_validator::main #14 (throws an error if the ref voucher token count is too high)", () => {
             configureContext({ returnRefVoucher: { nTokens: 2_400_000 } }).use(
                 (ctx) => {
                     throws(() => {
@@ -328,7 +328,7 @@ describe("mint_order_validator::main", () => {
             )
         })
 
-        it("throws an error if the ref voucher period id is wrong", () => {
+        it("mint_order_validator::main #15 (throws an error if the ref voucher period id is wrong)", () => {
             configureContext({ returnRefVoucher: { periodId: 1 } }).use(
                 (ctx) => {
                     throws(() => {
@@ -342,7 +342,7 @@ describe("mint_order_validator::main", () => {
             )
         })
 
-        it("throws an error if the ref voucher price is too low", () => {
+        it("mint_order_validator::main #16 (throws an error if the ref voucher price is too low)", () => {
             configureContext({ returnRefVoucher: { price: [139, 1] } }).use(
                 (ctx) => {
                     throws(() => {
@@ -356,7 +356,7 @@ describe("mint_order_validator::main", () => {
             )
         })
 
-        it("throws an error if the ref voucher price is too high", () => {
+        it("mint_order_validator::main #17 (throws an error if the ref voucher price is too high)", () => {
             configureContext({ returnRefVoucher: { price: [141, 1] } }).use(
                 (ctx) => {
                     throws(() => {
@@ -370,7 +370,7 @@ describe("mint_order_validator::main", () => {
             )
         })
 
-        it("succeeds if no vouchers are returned but there was also no success", () => {
+        it("mint_order_validator::main #18 (succeeds if no vouchers are returned but there was also no success)", () => {
             configureContext({
                 returnRefVoucher: null,
                 returnUserVoucher: false,

@@ -21,14 +21,14 @@ const {
     counters_are_consistent
 } = contract.Vault
 
-/*describe("Vault::VAULT_DATUM", () => {
-    it("equal to empty bytearray", () => {
+describe("Vault::VAULT_DATUM", () => {
+    it("Vault::VAULT_DATUM #01 (equal to empty bytearray)", () => {
         deepEqual(VAULT_DATUM.eval({}), [])
     })
 })
 
 describe("Vault::nothing_spent", () => {
-    it("false if vault asset is spent", () => {
+    it("Vault::nothing_spent #01 (returns false if a vault asset UTxO is spent)", () => {
         new ScriptContextBuilder()
             .takeFromVault({ value: new Value(2_000_000n) })
             .use((ctx) => {
@@ -59,7 +59,7 @@ describe("Vault::nothing_spent", () => {
             })
     })
 
-    it("false if asset group is spent", () => {
+    it("Vault::nothing_spent #02 (returns false if an asset group is spent)", () => {
         const assets = [makeAsset()]
 
         new ScriptContextBuilder()
@@ -84,7 +84,7 @@ describe("Vault::nothing_spent", () => {
             })
     })
 
-    it("true if nothing from vault is spent", () => {
+    it("Vault::nothing_spent #03 (true if nothing from vault nor from assets_validator address is spent)", () => {
         new ScriptContextBuilder()
             .addPriceThread({ redeemer: new IntData(0) })
             .use((ctx) => {
@@ -123,7 +123,7 @@ describe("Vault::diff", () => {
                 indirectPolicyScripts
             )
 
-            it("retruns zero if no real change", () => {
+            it("Vault::diff #01 (returns zero if no real change to vault)", () => {
                 configureContext().use((currentScript, ctx) => {
                     const v = diff.eval({
                         $currentScript: currentScript,
@@ -134,7 +134,7 @@ describe("Vault::diff", () => {
                 })
             })
 
-            it("throws an error if the current input doesn't contain a policy token", () => {
+            it("Vault::diff #02 (throws an error if the current input doesn't contain a policy token)", () => {
                 configureContext({ omitDummyPolicyRedeemer: true }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -154,7 +154,7 @@ describe("Vault::diff", () => {
                 directPolicyScripts
             )
 
-            it("returns zero if no real change", () => {
+            it("Vault::diff #03 (returns zero if no real change to vault)", () => {
                 configureContext({ omitDummyPolicyRedeemer: true }).use(
                     (currentScript, ctx) => {
                         const v = diff.eval({
@@ -169,7 +169,7 @@ describe("Vault::diff", () => {
         })
 
         describe("@ all validators", () => {
-            it("returns the correct sum over multiple inputs and outputs", () => {
+            it("Vault::diff #04 (returns the correct sum over multiple inputs and outputs)", () => {
                 new ScriptContextBuilder()
                     .takeFromVault({ value: new Value(1_000_000) })
                     .takeFromVault({ value: new Value(2_000_000) })
@@ -189,7 +189,7 @@ describe("Vault::diff", () => {
                     })
             })
 
-            it("ignores outputs sent to vault with multiple assets", () => {
+            it("Vault::diff #05 (ignores outputs sent to vault with multiple assets)", () => {
                 new ScriptContextBuilder()
                     .takeFromVault({ value: new Value(1_000_000) })
                     .takeFromVault({ value: new Value(2_000_000) })
@@ -232,7 +232,7 @@ describe("Vault::diff", () => {
                     })
             })
 
-            it("throws an error for outputs sent back to vault with wrong datum", () => {
+            it("Vault::diff #06 (throws an error for outputs sent back to vault with wrong datum)", () => {
                 new ScriptContextBuilder()
                     .takeFromVault({ value: new Value(2_000_000) })
                     .sendToVault({
@@ -252,7 +252,7 @@ describe("Vault::diff", () => {
                     })
             })
 
-            it("returns a negative asset value if assets are taken out (i.e. value into transaction)", () => {
+            it("Vault::diff #07 (returns a negative asset value if assets are taken out (i.e. value into transaction))", () => {
                 const ac = AssetClass.dummy()
 
                 new ScriptContextBuilder()
@@ -280,7 +280,7 @@ describe("Vault::diff", () => {
 })
 
 describe("Vault::diff_lovelace", () => {
-    it("fails if config token isn't referenced or spent", () => {
+    it("Vault::diff_lovelace #01 (throws an error if the config UTxO isn't referenced or spent)", () => {
         new ScriptContextBuilder()
             .takeFromVault({ value: new Value(1_000_000) })
             .sendToVault({ value: new Value(10_000_000) })
@@ -303,7 +303,7 @@ describe("Vault::diff_lovelace", () => {
             })
     })
 
-    it("fails if time-range not set", () => {
+    it("Vault::diff_lovelace #02 (throws an error if the tx validity time-range isn't set)", () => {
         new ScriptContextBuilder()
             .takeFromVault({ value: new Value(1_000_000) })
             .sendToVault({ value: new Value(10_000_000) })
@@ -327,7 +327,7 @@ describe("Vault::diff_lovelace", () => {
             })
     })
 
-    it("correctly sums pure lovelace without asset counters (in scripts that have direct access to policy without dummy redeemer)", () => {
+    it("Vault::diff_lovelace #03 (returns the correctly summed pure lovelace without asset counters (in scripts that have direct access to policy without dummy redeemer))", () => {
         new ScriptContextBuilder()
             .takeFromVault({ value: new Value(1_000_000) })
             .sendToVault({ value: new Value(10_000_000) })
@@ -353,7 +353,7 @@ describe("Vault::diff_lovelace", () => {
             })
     })
 
-    it("correctly sums pure lovelace without asset counters (in scripts that don't have direct access to policy, so with dummy redeemer)", () => {
+    it("Vault::diff_lovelace #04 (returns the correctly summed pure lovelace without asset counters (in scripts that don't have direct access to policy, so with dummy redeemer))", () => {
         new ScriptContextBuilder()
             .takeFromVault({ value: new Value(1_000_000) })
             .sendToVault({ value: new Value(10_000_000) })
@@ -397,7 +397,7 @@ describe("Vault::diff_lovelace", () => {
             })
     })
 
-    it("fails for scripts that don't have direct access to policy if current input doesn't contain a policy token", () => {
+    it("Vault::diff_lovelace #05 (throws an error for scripts that don't have direct access to policy if current input doesn't contain a policy token)", () => {
         new ScriptContextBuilder()
             .takeFromVault({ value: new Value(1_000_000) })
             .sendToVault({ value: new Value(10_000_000) })
@@ -420,14 +420,11 @@ describe("Vault::diff_lovelace", () => {
                 })
             })
     })
-})*/
+})
 
 describe("Vault::diff_counted", () => {
     describe("one asset group thread with a single asset that remains unchanged", () => {
-        const assets = [
-            makeAsset({
-            })
-        ]
+        const assets = [makeAsset({})]
         const groupId = 0
         const configureParentContext = (props?: {
             inputToken?: Assets
@@ -459,7 +456,7 @@ describe("Vault::diff_counted", () => {
                 asset_group_output_ptrs: [5]
             }
 
-            it("returns zero", () => {
+            it("Vault::diff_counted #01 (returns zero)", () => {
                 configureContext().use((currentScript, ctx) => {
                     const actual = diff_counted.eval({
                         $currentScript: currentScript,
@@ -471,7 +468,7 @@ describe("Vault::diff_counted", () => {
                 })
             })
 
-            it("throws an error if the thread input doesn't contain an assets group token", () => {
+            it("Vault::diff_counted #02 (throws an error if the thread input doesn't contain an assets group token)", () => {
                 configureContext({ inputToken: makeConfigToken() }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -485,7 +482,7 @@ describe("Vault::diff_counted", () => {
                 )
             })
 
-            it("throws an error if the thread input contains an assets group token with a negative quantity", () => {
+            it("Vault::diff_counted #03 (throws an error if the thread input contains an assets group token with a negative quantity)", () => {
                 configureContext({
                     inputToken: makeAssetsToken(groupId, -1)
                 }).use((currentScript, ctx) => {
@@ -499,7 +496,7 @@ describe("Vault::diff_counted", () => {
                 })
             })
 
-            it("throws an error if the thread output isn't at the assets_validator address", () => {
+            it("Vault::diff_counted #04 (throws an error if the thread output isn't at the assets_validator address)", () => {
                 configureContext({
                     outputAddress: Address.dummy(false)
                 }).use((currentScript, ctx) => {
@@ -513,7 +510,7 @@ describe("Vault::diff_counted", () => {
                 })
             })
 
-            it("throws an error if the thread output doesn't contain an assets group token", () => {
+            it("Vault::diff_counted #05 (throws an error if the thread output doesn't contain an assets group token)", () => {
                 configureContext({
                     outputToken: makeConfigToken()
                 }).use((currentScript, ctx) => {
@@ -527,7 +524,7 @@ describe("Vault::diff_counted", () => {
                 })
             })
 
-            it("throws an error if the thread output contains more than one assets group token", () => {
+            it("Vault::diff_counted #06 (throws an error if the thread output contains more than one assets group token)", () => {
                 configureContext({
                     outputToken: makeAssetsToken(groupId, 2)
                 }).use((currentScript, ctx) => {
@@ -541,7 +538,7 @@ describe("Vault::diff_counted", () => {
                 })
             })
 
-            it("returns a pure lovelace value if the amount of lovelace changed", () => {
+            it("Vault::diff_counted #07 (returns a pure lovelace value if the amount of lovelace changed)", () => {
                 configureContext().use((currentScript, ctx) => {
                     const lovelace = 2_000_000n
                     const actual = diff_counted.eval({
@@ -558,10 +555,7 @@ describe("Vault::diff_counted", () => {
         })
     })
 
-    return
     describe("two asset groups threads, the first with a one asset, the second with three assets", () => {
-        const expectedTick = 0
-
         const groupId0 = 0
         const ac0 = AssetClass.dummy(0)
         const groupId1 = 1
@@ -573,6 +567,7 @@ describe("Vault::diff_counted", () => {
         const configureParentContext = (props?: {
             secondGroupOutputLength?: number
             secondGroupInputLength?: number
+            secondGroupExtraTokens?: Assets
             lastOutputAssetClass?: AssetClass
             lastOutputPrice?: RatioType
             lastOutputPriceTimestamp?: number
@@ -636,6 +631,13 @@ describe("Vault::diff_counted", () => {
                 })
             ]
 
+            let secondGroupToken = makeAssetsToken(groupId1)
+            if (props?.secondGroupExtraTokens) {
+                secondGroupToken = secondGroupToken.add(
+                    props.secondGroupExtraTokens
+                )
+            }
+
             return new ScriptContextBuilder()
                 .addDummyInputs(5)
                 .addDummyOutputs(5)
@@ -655,7 +657,8 @@ describe("Vault::diff_counted", () => {
                     outputAssets: outputAssets1.slice(
                         0,
                         props?.secondGroupOutputLength ?? outputAssets1.length
-                    )
+                    ),
+                    outputToken: secondGroupToken
                 })
                 .redeemDummyTokenWithDvpPolicy()
         }
@@ -671,7 +674,17 @@ describe("Vault::diff_counted", () => {
                 asset_group_output_ptrs: [5, 8]
             }
 
-            it("returns the expected value", () => {
+            const expected = new Value(
+                2_000_000n,
+                Assets.fromAssetClasses([
+                    [ac0, 12],
+                    [ac1, 5],
+                    [ac2, 5],
+                    [ac3, -30]
+                ])
+            )
+
+            it("Vault::diff_counted #08 (returns the expected value)", () => {
                 configureContext().use((currentScript, ctx) => {
                     const actual = diff_counted.eval({
                         $currentScript: currentScript,
@@ -679,21 +692,11 @@ describe("Vault::diff_counted", () => {
                         ...defaultTestArgs
                     })
 
-                    const expected = new Value(
-                        2_000_000n,
-                        Assets.fromAssetClasses([
-                            [ac0, 12],
-                            [ac1, 5],
-                            [ac2, 5],
-                            [ac3, -30]
-                        ])
-                    )
-
                     strictEqual(actual.isEqual(expected), true)
                 })
             })
 
-            it("throws an error if the output assets list is shorter than the input assets list", () => {
+            it("Vault::diff_counted #09 (throws an error if the output assets list is shorter than the input assets list)", () => {
                 configureContext({ secondGroupOutputLength: 2 }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -707,7 +710,7 @@ describe("Vault::diff_counted", () => {
                 )
             })
 
-            it("throws an error if the input assets list is shorter than the output assets list", () => {
+            it("Vault::diff_counted #10 (throws an error if the input assets list is shorter than the output assets list)", () => {
                 configureContext({ secondGroupInputLength: 2 }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -721,7 +724,7 @@ describe("Vault::diff_counted", () => {
                 )
             })
 
-            it("throws an error if one of the asset classes changed", () => {
+            it("Vault::diff_counted #11 (throws an error if one of the asset classes changed)", () => {
                 configureContext({
                     lastOutputAssetClass: AssetClass.dummy(5)
                 }).use((currentScript, ctx) => {
@@ -735,7 +738,7 @@ describe("Vault::diff_counted", () => {
                 })
             })
 
-            it("throws an error if one of the asset prices changed", () => {
+            it("Vault::diff_counted #12 (throws an error if one of the asset prices changed)", () => {
                 configureContext({ lastOutputPrice: [39, 10] }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -749,7 +752,7 @@ describe("Vault::diff_counted", () => {
                 )
             })
 
-            it("throws an error if one of the asset price timestamps changed", () => {
+            it("Vault::diff_counted #13 (throws an error if one of the asset price timestamps changed)", () => {
                 configureContext({ lastOutputPriceTimestamp: 124 }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -762,11 +765,43 @@ describe("Vault::diff_counted", () => {
                     }
                 )
             })
+
+            it("Vault::diff_counted #14 (throws an error if the second asset group output contains an additional token)", () => {
+                configureContext({
+                    secondGroupExtraTokens: Assets.fromAssetClasses([
+                        [AssetClass.dummy(123), 1]
+                    ])
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        diff_counted.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            ...defaultTestArgs
+                        })
+                    })
+                })
+            })
+
+            it("Vault::diff_counted #15 (throws an error if the second asset group output pointer is wrong)", () => {
+                configureContext().use((currentScript, ctx) => {
+                    throws(() => {
+                        diff_counted.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            ...defaultTestArgs,
+                            asset_group_output_ptrs:
+                                defaultTestArgs.asset_group_output_ptrs
+                                    .slice(0, 1)
+                                    .concat([9])
+                        })
+                    })
+                })
+            })
         })
     })
 })
 
-/*describe("Vault::counters_are_consistent", () => {
+describe("Vault::counters_are_consistent", () => {
     describe("only lovelace difference", () => {
         const configureParentContext = () => {
             return new ScriptContextBuilder()
@@ -786,7 +821,7 @@ describe("Vault::diff_counted", () => {
                 asset_group_output_ptrs: []
             }
 
-            it("returns true if d_lovelace matches the actual lovelace difference", () => {
+            it("Vault::counters_are_consistent #01 (returns true if d_lovelace matches the actual lovelace difference)", () => {
                 configureContext().use((currentScript, ctx) => {
                     strictEqual(
                         counters_are_consistent.eval({
@@ -799,7 +834,7 @@ describe("Vault::diff_counted", () => {
                 })
             })
 
-            it("returns false if d_lovelace doesn't match the actual lovelace difference", () => {
+            it("Vault::counters_are_consistent #02 (returns false if d_lovelace doesn't match the actual lovelace difference)", () => {
                 configureContext().use((currentScript, ctx) => {
                     strictEqual(
                         counters_are_consistent.eval({
@@ -816,8 +851,6 @@ describe("Vault::diff_counted", () => {
     })
 
     describe("two asset groups, the first with one asset, the second with three assets", () => {
-        const expectedTick = 0
-
         const groupId0 = 0
         const ac0 = AssetClass.dummy(0)
         const groupId1 = 1
@@ -829,6 +862,7 @@ describe("Vault::diff_counted", () => {
         const configureParentContext = (props?: {
             reverseSecondGroup?: boolean
             reverseSecondGroupOutputs?: boolean
+            secondGroupExtraTokens?: Assets
             lovelaceDiff?: number
         }) => {
             const inputAssets0 = [
@@ -877,7 +911,7 @@ describe("Vault::diff_counted", () => {
                 }),
                 makeAsset({
                     assetClass: ac2,
-                    count: 25,                    
+                    count: 25,
                     price: [3, 1],
                     priceTimestamp
                 }),
@@ -898,6 +932,13 @@ describe("Vault::diff_counted", () => {
             }
 
             const lovelaceDiff = props?.lovelaceDiff ?? 0
+
+            let secondGroupToken = makeAssetsToken(groupId1)
+            if (props?.secondGroupExtraTokens) {
+                secondGroupToken = secondGroupToken.add(
+                    props.secondGroupExtraTokens
+                )
+            }
 
             return new ScriptContextBuilder()
                 .takeFromVault({
@@ -933,7 +974,8 @@ describe("Vault::diff_counted", () => {
                 .addAssetGroupThread({
                     id: groupId1,
                     inputAssets: inputAssets1,
-                    outputAssets: outputAssets1
+                    outputAssets: outputAssets1,
+                    outputToken: secondGroupToken
                 })
                 .redeemDummyTokenWithDvpPolicy()
         }
@@ -949,7 +991,7 @@ describe("Vault::diff_counted", () => {
                 asset_group_output_ptrs: [8, 11]
             }
 
-            it("returns true if d_lovelace is 0", () => {
+            it("Vault::counters_are_consistent #03 (returns true if d_lovelace is 0)", () => {
                 configureContext().use((currentScript, ctx) => {
                     strictEqual(
                         counters_are_consistent.eval({
@@ -962,7 +1004,7 @@ describe("Vault::diff_counted", () => {
                 })
             })
 
-            it("returns false if d_lovelace larger than zero, but the actual vault lovelace value change is zero", () => {
+            it("Vault::counters_are_consistent #04 (returns false if d_lovelace larger than zero, but the actual vault lovelace value change is zero)", () => {
                 configureContext().use((currentScript, ctx) => {
                     strictEqual(
                         counters_are_consistent.eval({
@@ -976,7 +1018,7 @@ describe("Vault::diff_counted", () => {
                 })
             })
 
-            it("returns false if d_lovelace is smaller than zero, but the actual vault lovelace value change is zero", () => {
+            it("Vault::counters_are_consistent #04 (returns false if d_lovelace is smaller than zero, but the actual vault lovelace value change is zero)", () => {
                 configureContext().use((currentScript, ctx) => {
                     strictEqual(
                         counters_are_consistent.eval({
@@ -990,7 +1032,7 @@ describe("Vault::diff_counted", () => {
                 })
             })
 
-            it("returns false if d_lovelace is 0, but the actual vault lovelace value change is larger than zero", () => {
+            it("Vault::counters_are_consistent #05 (returns false if d_lovelace is 0, but the actual vault lovelace value change is larger than zero)", () => {
                 configureContext({ lovelaceDiff: 1000 }).use(
                     (currentScript, ctx) => {
                         strictEqual(
@@ -1005,14 +1047,14 @@ describe("Vault::diff_counted", () => {
                 )
             })
 
-            it("returns false if d_lovelace is 0, but the actual vault lovelace value change is smaller than zero", () => {
+            it("Vault::counters_are_consistent #06 (returns false if d_lovelace is 0, but the actual vault lovelace value change is smaller than zero)", () => {
                 configureContext({ lovelaceDiff: -1000 }).use(
                     (currentScript, ctx) => {
                         strictEqual(
                             counters_are_consistent.eval({
                                 $currentScript: currentScript,
                                 $scriptContext: ctx,
-                                ...defaultTestArgs          
+                                ...defaultTestArgs
                             }),
                             false
                         )
@@ -1020,7 +1062,7 @@ describe("Vault::diff_counted", () => {
                 )
             })
 
-            it("returns true if d_lovelace is larger than zero and equal to the actual vault lovelace value change", () => {
+            it("Vault::counters_are_consistent #07 (returns true if d_lovelace is larger than zero and equal to the actual vault lovelace value change)", () => {
                 configureContext({ lovelaceDiff: 1000 }).use(
                     (currentScript, ctx) => {
                         strictEqual(
@@ -1036,7 +1078,7 @@ describe("Vault::diff_counted", () => {
                 )
             })
 
-            it("returns true if d_lovelace is smaller than zero and equal to the actual vault lovelace value change", () => {
+            it("Vault::counters_are_consistent #08 (returns true if d_lovelace is smaller than zero and equal to the actual vault lovelace value change)", () => {
                 configureContext({ lovelaceDiff: -1000 }).use(
                     (currentScript, ctx) => {
                         strictEqual(
@@ -1052,7 +1094,7 @@ describe("Vault::diff_counted", () => {
                 )
             })
 
-            it("returns true if assets in second group are reversed", () => {
+            it("Vault::counters_are_consistent #09 (returns true if assets in second group are reversed)", () => {
                 configureContext({ reverseSecondGroup: true }).use(
                     (currentScript, ctx) => {
                         strictEqual(
@@ -1067,7 +1109,7 @@ describe("Vault::diff_counted", () => {
                 )
             })
 
-            it("throws an error if the output assets are in a different order from the input assets", () => {
+            it("Vault::counters_are_consistent #10 (throws an error if the output assets are in a different order from the input assets)", () => {
                 configureContext({ reverseSecondGroupOutputs: true }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -1080,6 +1122,22 @@ describe("Vault::diff_counted", () => {
                     }
                 )
             })
+
+            it("Vault::counters_are_consistent #11 (throws an error if second asset group output contains additional tokens)", () => {
+                configureContext({
+                    secondGroupExtraTokens: Assets.fromAssetClasses([
+                        [AssetClass.dummy(123), 1]
+                    ])
+                }).use((currentScript, ctx) => {
+                    throws(() => {
+                        counters_are_consistent.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            ...defaultTestArgs
+                        })
+                    })
+                })
+            })
         })
     })
-})*/
+})

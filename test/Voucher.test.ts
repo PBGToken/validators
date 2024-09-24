@@ -52,7 +52,7 @@ describe("VoucherModule::Voucher::get_current", () => {
     describe("@ all validators", () => {
         const configureContext = withScripts(configureParentContext, scripts)
 
-        it("returns the voucher id and voucher data if the current input is a voucher UTxO", () => {
+        it("VoucherModule::Voucher::get_current #01 (returns the voucher id and voucher data if the current input is a voucher UTxO)", () => {
             configureContext().use((currentScript, ctx) => {
                 deepEqual(
                     get_current.eval({
@@ -64,7 +64,7 @@ describe("VoucherModule::Voucher::get_current", () => {
             })
         })
 
-        it("throws an error if the current input doesn't contain a voucher token", () => {
+        it("VoucherModule::Voucher::get_current #02 (throws an error if the current input doesn't contain a voucher token)", () => {
             configureContext({ token: makeConfigToken() }).use(
                 (currentScript, ctx) => {
                     throws(() => {
@@ -96,7 +96,7 @@ describe("VoucherModule::Voucher::find_input", () => {
     describe("@ all validators", () => {
         const configureContext = withScripts(configureParentContext, scripts)
 
-        it("returns the voucher data if the voucher UTxO with the given id is spent", () => {
+        it("VoucherModule::Voucher::find_input #01 (returns the voucher data if the voucher UTxO with the given id is spent)", () => {
             configureContext().use((currentScript, ctx) => {
                 deepEqual(
                     find_input.eval({
@@ -109,7 +109,7 @@ describe("VoucherModule::Voucher::find_input", () => {
             })
         })
 
-        it("throws an error if no voucher input is found with the given id", () => {
+        it("VoucherModule::Voucher::find_input #02 (throws an error if no voucher input is found with the given id)", () => {
             configureContext().use((currentScript, ctx) => {
                 throws(() => {
                     find_input.eval({
@@ -121,7 +121,7 @@ describe("VoucherModule::Voucher::find_input", () => {
             })
         })
 
-        it("throws an error if the voucher UTxO with the given id isn't at the voucher_validator address", () => {
+        it("VoucherModule::Voucher::find_input #03 (throws an error if the voucher UTxO with the given id isn't at the voucher_validator address)", () => {
             configureContext({ address: Address.dummy(false) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
@@ -157,7 +157,7 @@ describe("VoucherModule::Voucher::find_output", () => {
     describe("@ all validators", () => {
         const configureContext = withScripts(configureParentContext, scripts)
 
-        it("returns the voucher data if a voucher output is found with the given id", () => {
+        it("VoucherModule::Voucher::find_output #01 (returns the voucher data if a voucher output is found with the given id)", () => {
             configureContext().use((currentScript, ctx) => {
                 deepEqual(
                     find_output.eval({
@@ -170,7 +170,7 @@ describe("VoucherModule::Voucher::find_output", () => {
             })
         })
 
-        it("throws an error if no voucher output is found with the given id", () => {
+        it("VoucherModule::Voucher::find_output #02 (throws an error if no voucher output is found with the given id)", () => {
             configureContext().use((currentScript, ctx) => {
                 throws(() => {
                     find_output.eval({
@@ -182,7 +182,7 @@ describe("VoucherModule::Voucher::find_output", () => {
             })
         })
 
-        it("throws an error if the voucher output with the given id isn't at the voucher_validator address", () => {
+        it("VoucherModule::Voucher::find_output #03 (throws an error if the voucher output with the given id isn't at the voucher_validator address)", () => {
             configureContext({ address: Address.dummy(false) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
@@ -196,7 +196,7 @@ describe("VoucherModule::Voucher::find_output", () => {
             )
         })
 
-        it("throws an error if the return_address data isn't Address", () => {
+        it("VoucherModule::Voucher::find_output #04 (throws an error if the return_address data isn't Address)", () => {
             const datum = ConstrData.expect(castVoucher.toUplcData(voucher))
             const cip68Fields = MapData.expect(datum.fields[0])
             cip68Fields.items[0][1] = new IntData(0)
@@ -212,7 +212,7 @@ describe("VoucherModule::Voucher::find_output", () => {
             })
         })
 
-        it('throws an error if the return_address key isn\'t "owner"', () => {
+        it('VoucherModule::Voucher::find_output #05 (throws an error if the return_address key isn\'t "owner")', () => {
             const datum = ConstrData.expect(castVoucher.toUplcData(voucher))
             const cip68Fields = MapData.expect(datum.fields[0])
             cip68Fields.items[0][0] = new ByteArrayData(encodeUtf8("@owner"))
@@ -229,7 +229,7 @@ describe("VoucherModule::Voucher::find_output", () => {
         })
 
         // TODO: make Cast.fromUplcData less strict, so that additional fields are ignored
-        //it("succeeds and returns the voucher data if an additional field is included", () => {
+        //it("VoucherModule::Voucher::find_output #06 (succeeds and returns the voucher data if an additional field is included)", () => {
         //    const datum = ConstrData.expect(castVoucher.toUplcData(voucher))
         //    const cip68Fields = MapData.expect(datum.fields[0])
         //    cip68Fields.items.push([
@@ -278,7 +278,7 @@ describe("VoucherModule::Voucher::find_return", () => {
             )
     }
 
-    it("returns the output matching the address and datum", () => {
+    it("VoucherModule::Voucher::find_return #01 (returns the output matching the address and datum)", () => {
         configureContext().use((ctx) => {
             const actual = find_return.eval({
                 self: voucher,
@@ -289,7 +289,7 @@ describe("VoucherModule::Voucher::find_return", () => {
         })
     })
 
-    it("throws an error if the voucher return output doesn't have a datum", () => {
+    it("VoucherModule::Voucher::find_return #02 (throws an error if the voucher return output doesn't have a datum)", () => {
         configureContext({ datum: null }).use((ctx) => {
             throws(() => {
                 find_return.eval({
@@ -300,7 +300,7 @@ describe("VoucherModule::Voucher::find_return", () => {
         })
     })
 
-    it("throws an error if the voucher return output isn't at the requested address", () => {
+    it("VoucherModule::Voucher::find_return #03 (throws an error if the voucher return output isn't at the requested address)", () => {
         configureContext({ address: Address.dummy(false, 6) }).use((ctx) => {
             throws(() => {
                 find_return.eval({
@@ -349,7 +349,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 scripts
             )
 
-            it("returns the fact that one voucher is minted and that its id is 0", () => {
+            it("VoucherModule::validate_minted_vouchers #01 (returns the fact that one voucher is minted and that its id is 0)", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         validate_minted_vouchers.eval({
@@ -364,7 +364,24 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 })
             })
 
-            it("throws an error if the corresponding voucher user token isn't minted", () => {
+            it("VoucherModule::validate_minted_vouchers #02 (returns the fact that the number of tokens in the voucher is equal to the expected amount)", () => {
+                configureContext({ datumTokens: 500n }).use(
+                    (currentScript, ctx) => {
+                        deepEqual(
+                            validate_minted_vouchers.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                price: currentPrice.value,
+                                period_id: periodId,
+                                last_voucher_id: lastVoucherId
+                            }),
+                            [1n, 500n, 0n]
+                        )
+                    }
+                )
+            })
+
+            it("VoucherModule::validate_minted_vouchers #03 (throws an error if the corresponding voucher user token isn't minted)", () => {
                 configureContext({
                     minted: makeVoucherRefToken(voucherId)
                 }).use((currentScript, ctx) => {
@@ -380,7 +397,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 })
             })
 
-            it("throws an error if the corresponding voucher user token is minted more than once", () => {
+            it("VoucherModule::validate_minted_vouchers #04 (throws an error if the corresponding voucher user token is minted more than once)", () => {
                 configureContext({
                     minted: makeVoucherRefToken(voucherId).add(
                         makeVoucherUserToken(voucherId, 2)
@@ -398,7 +415,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 })
             })
 
-            it("throws an error if the number of tokens in the voucher datum is <= 0", () => {
+            it("VoucherModule::validate_minted_vouchers #05 (throws an error if the number of tokens in the voucher datum is <= 0)", () => {
                 configureContext({ datumTokens: 0 }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -414,7 +431,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 )
             })
 
-            it("throws an error if the voucher output isn't sent to the voucher_validator address", () => {
+            it("VoucherModule::validate_minted_vouchers #06 (throws an error if the voucher output isn't sent to the voucher_validator address)", () => {
                 configureContext({ address: Address.dummy(false) }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -430,7 +447,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 )
             })
 
-            it("throws an error if the voucher ref token isn't minted", () => {
+            it("VoucherModule::validate_minted_vouchers #07 (throws an error if the voucher ref token isn't minted)", () => {
                 configureContext({
                     minted: makeVoucherUserToken(voucherId)
                 }).use((currentScript, ctx) => {
@@ -446,7 +463,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 })
             })
 
-            it("throws an error if the voucher ref token is minted more than once", () => {
+            it("VoucherModule::validate_minted_vouchers #08 (throws an error if the voucher ref token is minted more than once)", () => {
                 configureContext({
                     minted: makeVoucherUserToken(voucherId).add(
                         makeVoucherRefToken(voucherId, 2)
@@ -482,16 +499,18 @@ describe("VoucherModule::validate_minted_vouchers", () => {
         })
 
         const voucherId2 = 2
-        const voucher2 = makeVoucher({
-            price: priceRatio,
-            periodId,
-            tokens: 400
-        })
 
         const configureParentContext = (props?: {
             extraMinted?: Assets
             voucherId2?: number
+            tokensMentionedInVoucher2?: IntLike
         }) => {
+            const voucher2 = makeVoucher({
+                price: priceRatio,
+                periodId,
+                tokens: props?.tokensMentionedInVoucher2 ?? 400
+            })
+
             const vId2 = props?.voucherId2 ?? voucherId2
             let minted = makeVoucherPair(voucherId0)
                 .add(makeVoucherPair(voucherId1))
@@ -518,7 +537,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 scripts
             )
 
-            it("returns the fact that three vouchers is minted, that 1000 DVP tokens are mentioned in the vouchers, and that the id of the last voucher is 2", () => {
+            it("VoucherModule::validate_minted_vouchers #09 (returns the fact that three vouchers is minted, that 1000 DVP tokens are mentioned in the vouchers, and that the id of the last voucher is 2)", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         validate_minted_vouchers.eval({
@@ -533,7 +552,24 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 })
             })
 
-            it("throws an error if one of the minted voucher has a non-unit quantity", () => {
+            it("VoucherModule::validate_minted_vouchers #10 (returns the fact that only 900 DVP tokens are mentioned in the vouchers even if 1000 DVP tokens are actually minted)", () => {
+                configureContext({ tokensMentionedInVoucher2: 300n }).use(
+                    (currentScript, ctx) => {
+                        deepEqual(
+                            validate_minted_vouchers.eval({
+                                $scriptContext: ctx,
+                                $currentScript: currentScript,
+                                price: currentPrice.value,
+                                period_id: periodId,
+                                last_voucher_id: lastVoucherId
+                            }),
+                            [3n, 900n, 2n]
+                        )
+                    }
+                )
+            })
+
+            it("VoucherModule::validate_minted_vouchers #11 (throws an error if one of the minted voucher has a non-unit quantity)", () => {
                 configureContext({
                     extraMinted: makeVoucherPair(voucherId2, 1)
                 }).use((currentScript, ctx) => {
@@ -549,7 +585,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 })
             })
 
-            it("throws an error if the new voucher ids aren't consecutive", () => {
+            it("VoucherModule::validate_minted_vouchers #12 (throws an error if the new voucher ids aren't consecutive)", () => {
                 configureContext({ voucherId2: 3 }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -601,7 +637,7 @@ describe("VoucherModule::validate_burned_vouchers", () => {
                 scripts
             )
 
-            it("returns 1 if both the voucher ref and user token are burned", () => {
+            it("VoucherModule::validate_burned_vouchers #01 (returns 1 if both the voucher ref and user token are burned)", () => {
                 configureContext().use((currentScript, ctx) => {
                     strictEqual(
                         validate_burned_vouchers.eval({
@@ -614,7 +650,7 @@ describe("VoucherModule::validate_burned_vouchers", () => {
                 })
             })
 
-            it("throws an error if not exactly 1 voucher pair is burned", () => {
+            it("VoucherModule::validate_burned_vouchers #02 (throws an error if not exactly 1 voucher pair is burned)", () => {
                 configureContext({
                     extraMinted: makeVoucherPair(voucherId, -1)
                 }).use((currentScript, ctx) => {
@@ -628,7 +664,7 @@ describe("VoucherModule::validate_burned_vouchers", () => {
                 })
             })
 
-            it("throws an error if not exactly 1 voucher ref token is burned", () => {
+            it("VoucherModule::validate_burned_vouchers #03 (throws an error if not exactly 1 voucher ref token is burned)", () => {
                 configureContext({
                     extraMinted: makeVoucherRefToken(voucherId, -1)
                 }).use((currentScript, ctx) => {
@@ -642,7 +678,7 @@ describe("VoucherModule::validate_burned_vouchers", () => {
                 })
             })
 
-            it("throws an error if the voucher ref token isn't burned", () => {
+            it("VoucherModule::validate_burned_vouchers #04 (throws an error if the voucher ref token isn't burned)", () => {
                 configureContext({
                     extraMinted: makeVoucherRefToken(voucherId, 1)
                 }).use((currentScript, ctx) => {
@@ -656,7 +692,7 @@ describe("VoucherModule::validate_burned_vouchers", () => {
                 })
             })
 
-            it("throws an error if not exactly 1 voucher user token burned", () => {
+            it("VoucherModule::validate_burned_vouchers #05 (throws an error if not exactly 1 voucher user token burned)", () => {
                 configureContext({
                     extraMinted: makeVoucherUserToken(voucherId, -1)
                 }).use((currentScript, ctx) => {
@@ -670,7 +706,7 @@ describe("VoucherModule::validate_burned_vouchers", () => {
                 })
             })
 
-            it("throws an error if the voucher user token isn't burned", () => {
+            it("VoucherModule::validate_burned_vouchers #06 (throws an error if the voucher user token isn't burned)", () => {
                 configureContext({
                     extraMinted: makeVoucherUserToken(voucherId, 1)
                 }).use((currentScript, ctx) => {
@@ -728,7 +764,7 @@ describe("VoucherModule::validate_burned_vouchers", () => {
                 scripts
             )
 
-            it("returns 3 if three voucher token pairs are burned", () => {
+            it("VoucherModule::validate_burned_vouchers #07 (returns 3 if three voucher token pairs are burned)", () => {
                 configureContext().use((currentScript, ctx) => {
                     strictEqual(
                         validate_burned_vouchers.eval({
@@ -741,7 +777,7 @@ describe("VoucherModule::validate_burned_vouchers", () => {
                 })
             })
 
-            it("throws an error if the period id of voucher three doesn't match the current period id", () => {
+            it("VoucherModule::validate_burned_vouchers #08 (throws an error if the period id of voucher three doesn't match the current period id)", () => {
                 configureContext({ lastVoucherPeriodId: periodId + 1 }).use(
                     (currentScript, ctx) => {
                         throws(() => {

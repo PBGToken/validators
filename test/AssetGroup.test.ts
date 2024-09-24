@@ -1373,7 +1373,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                             sum_total_asset_value.eval({
                                 $currentScript: currentScript,
                                 $scriptContext: ctx,
-                                ...defaultTestArgs                                
+                                ...defaultTestArgs
                             })
                         })
                     }

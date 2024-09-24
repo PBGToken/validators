@@ -11,6 +11,7 @@ import context from "pbg-token-validators-test-context"
 import {
     ConfigStateType,
     RatioType,
+    SuccessFeeType,
     SupplyType,
     makeAsset,
     makeAssetPtr,
@@ -44,13 +45,14 @@ describe("charge the success fee by diluting the token supply", () => {
     const periodDuration = 1000
     const periodId = 1
     const expectedDilution = 8108108108n
+    const lastVoucherId = 0
     const supply0 = makeSupply({
         startPrice,
         tick: 0,
         nTokens: 100_000_000_000,
         nLovelace: 14_000_000_000_000,
         nVouchers: 0,
-        lastVoucherId: 0,
+        lastVoucherId,
         successFee: {
             start_time: 0,
             period: periodDuration,
@@ -61,6 +63,7 @@ describe("charge the success fee by diluting the token supply", () => {
         periodId?: IntLike
         periodDuration?: IntLike
         startTime?: IntLike
+        lastVoucherId?: IntLike
         nVouchers?: IntLike
         nLovelace?: IntLike
         nTokens?: IntLike
@@ -72,7 +75,7 @@ describe("charge the success fee by diluting the token supply", () => {
             startPrice: props?.startPrice ?? endPrice,
             nTokens: props?.nTokens ?? 100_000_000_000n + expectedDilution,
             nLovelace: props?.nLovelace ?? 14_000_000_000_000n,
-            lastVoucherId: 0,
+            lastVoucherId: props?.lastVoucherId ?? lastVoucherId,
             nVouchers: props?.nVouchers ?? 0,
             successFee: {
                 start_time: props?.startTime ?? 0 + periodDuration,
@@ -93,6 +96,7 @@ describe("charge the success fee by diluting the token supply", () => {
         nVouchersToBeReimbursed?: IntLike
         reimbursementStartPrice?: RatioType
         reimbursementEndPrice?: RatioType
+        reimbursementSuccessFee?: SuccessFeeType
         signingAgent?: PubKeyHash
         supply1?: SupplyType
     }) => {
@@ -101,12 +105,13 @@ describe("charge the success fee by diluting the token supply", () => {
             timestamp: props?.priceTimestamp ?? 1000
         })
         const agent = PubKeyHash.dummy(12)
+        const successFee = makeSuccessFee({
+            c0: 0,
+            steps: [{ c: 0.3, sigma: 1.05 }]
+        })
         const config0 = makeConfig({
             state: props?.configState ?? { Idle: {} },
-            successFee: makeSuccessFee({
-                c0: 0,
-                steps: [{ c: 0.3, sigma: 1.05 }]
-            }),
+            successFee,
             token: {
                 maxPriceAge: 100
             },
@@ -116,8 +121,10 @@ describe("charge the success fee by diluting the token supply", () => {
         const reimbursement = makeReimbursement({
             nRemainingVouchers: props?.nVouchersToBeReimbursed ?? 0,
             startPrice: props?.reimbursementStartPrice ?? startPrice,
-            endPrice: props?.reimbursementEndPrice ?? endPrice
+            endPrice: props?.reimbursementEndPrice ?? endPrice,
+            successFee: props?.reimbursementSuccessFee ?? successFee
         })
+
         const nMinted = props?.dilution ?? expectedDilution
 
         const scb = new ScriptContextBuilder()
@@ -162,27 +169,30 @@ describe("charge the success fee by diluting the token supply", () => {
     }
 
     describe("supply_validator::validate_reward_success", () => {
-        it("returns true of the config UTxO is referenced and precisely the expected dilution is minted", () => {
+        const defaultTestArgs = {
+            supply0,
+            supply1,
+            D: expectedDilution
+        }
+
+        it("supply_validator::validate_reward_success #01 (returns true of the config UTxO is referenced and precisely the expected dilution is minted)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs
                     }),
                     true
                 )
             })
         })
 
-        it("returns false if too many DVP tokens are minted", () => {
+        it("supply_validator::validate_reward_success #02 (returns false if too many DVP tokens are minted)", () => {
             configureContext({ dilution: expectedDilution + 1n }).use((ctx) => {
                 strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
+                        ...defaultTestArgs,
                         D: expectedDilution + 1n
                     }),
                     false
@@ -190,13 +200,12 @@ describe("charge the success fee by diluting the token supply", () => {
             })
         })
 
-        it("returns false if too few DVP tokens are minted", () => {
+        it("supply_validator::validate_reward_success #03 (returns false if too few DVP tokens are minted)", () => {
             configureContext({ dilution: expectedDilution - 1n }).use((ctx) => {
                 strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
+                        ...defaultTestArgs,
                         D: expectedDilution - 1n
                     }),
                     false
@@ -204,88 +213,79 @@ describe("charge the success fee by diluting the token supply", () => {
             })
         })
 
-        it("returns false if the token price is too old", () => {
+        it("supply_validator::validate_reward_success #04 (returns false if the token price is too old)", () => {
             configureContext({ priceTimestamp: 899 }).use((ctx) => {
                 strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if the new start time is not set to the expected value", () => {
+        it("supply_validator::validate_reward_success #05 (returns false if the new start time is not set to the expected value)", () => {
             const supply1 = configureSupply1({ startTime: 1001 })
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if the new period id isn't incremented by 1", () => {
+        it("supply_validator::validate_reward_success #06 (returns false if the new period id isn't incremented by 1)", () => {
             const supply1 = configureSupply1({ periodId: periodId })
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if the lovelace count in the new supply datum differs from that in the old supply datum", () => {
+        it("supply_validator::validate_reward_success #07 (returns false if the lovelace count in the new supply datum differs from that in the old supply datum)", () => {
             const supply1 = configureSupply1({ nLovelace: 0 })
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if the remaining vouchers count in the new reimbursement datum isn't copied from the old supply datum", () => {
+        it("supply_validator::validate_reward_success #08 (returns false if the remaining vouchers count in the new reimbursement datum isn't copied from the old supply datum)", () => {
             configureContext({ nVouchersToBeReimbursed: 10 }).use((ctx) => {
                 strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if the start price in the new reimbursement datum isn't copied from the old supply datum", () => {
+        it("supply_validator::validate_reward_success #09 (returns false if the start price in the new reimbursement datum isn't copied from the old supply datum)", () => {
             configureContext({ reimbursementStartPrice: [101, 1] }).use(
                 (ctx) => {
                     strictEqual(
                         validate_reward_success.eval({
                             $scriptContext: ctx,
-                            supply0,
-                            supply1,
-                            D: expectedDilution
+                            ...defaultTestArgs
                         }),
                         false
                     )
@@ -293,21 +293,19 @@ describe("charge the success fee by diluting the token supply", () => {
             )
         })
 
-        it("returns false if the end price in the new reimbursement datum isn't the current price relative to the benchmark", () => {
+        it("supply_validator::validate_reward_success #10 (returns false if the end price in the new reimbursement datum isn't the current price relative to the benchmark)", () => {
             configureContext({ reimbursementEndPrice: [139, 1] }).use((ctx) => {
                 strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs
                     }),
                     false
                 )
             })
         })
 
-        it("returns true if the config UTxO is spent and new supply start price is correctly set using the new benchmark", () => {
+        it("supply_validator::validate_reward_success #11 (returns true if the config UTxO is spent and new supply start price is correctly set using the new benchmark)", () => {
             const benchmark = StakingValidatorHash.dummy(12)
             const supply1 = configureSupply1({
                 startPrice: [280, 1],
@@ -333,16 +331,15 @@ describe("charge the success fee by diluting the token supply", () => {
                 strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     true
                 )
             })
         })
 
-        it("returns false if the config UTxO is spent but the new supply success fee period duration isn't set correctly", () => {
+        it("supply_validator::validate_reward_success #12 (returns false if the config UTxO is spent but the new supply success fee period duration isn't set correctly)", () => {
             const benchmark = StakingValidatorHash.dummy(12)
             const supply1 = configureSupply1({
                 startPrice: [280, 1],
@@ -368,16 +365,15 @@ describe("charge the success fee by diluting the token supply", () => {
                 strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if the config UTxO is spent but the new supply success start price isn't set correctly", () => {
+        it("supply_validator::validate_reward_success #13 (returns false if the config UTxO is spent but the new supply success start price isn't set correctly)", () => {
             const benchmark = StakingValidatorHash.dummy(12)
             const supply1 = configureSupply1({
                 startPrice: [281, 1],
@@ -403,48 +399,43 @@ describe("charge the success fee by diluting the token supply", () => {
                 strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if other tokens are minted", () => {
+        it("supply_validator::validate_reward_success #14 (returns false if other tokens are minted)", () => {
             configureContext()
                 .mint({ assets: makeConfigToken() })
                 .use((ctx) => {
                     strictEqual(
                         validate_reward_success.eval({
                             $scriptContext: ctx,
-                            supply0,
-                            supply1,
-                            D: expectedDilution
+                            ...defaultTestArgs
                         }),
                         false
                     )
                 })
         })
 
-        it("returns false if the reimbursement token is minted more than once", () => {
+        it("supply_validator::validate_reward_success #15 (returns false if the reimbursement token is minted more than once)", () => {
             configureContext()
                 .mint({ assets: makeReimbursementToken(periodId, 1) })
                 .use((ctx) => {
                     strictEqual(
                         validate_reward_success.eval({
                             $scriptContext: ctx,
-                            supply0,
-                            supply1,
-                            D: expectedDilution
+                            ...defaultTestArgs
                         }),
                         false
                     )
                 })
         })
 
-        it("returns true if the config datum is in Changing state, but not in UpdatingSuccessFee state", () => {
+        it("supply_validator::validate_reward_success #16 (returns true if the config datum is in Changing state, but not in UpdatingSuccessFee state)", () => {
             configureContext({
                 configState: {
                     Changing: {
@@ -460,16 +451,14 @@ describe("charge the success fee by diluting the token supply", () => {
                 strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs
                     }),
                     true
                 )
             })
         })
 
-        it("returns false if the config datum is in Changing::UpdatingSuccessFee state", () => {
+        it("supply_validator::validate_reward_success #17 (returns false if the config datum is in Changing::UpdatingSuccessFee state)", () => {
             configureContext({
                 configState: {
                     Changing: {
@@ -487,39 +476,66 @@ describe("charge the success fee by diluting the token supply", () => {
                 strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if something is spent from the vault", () => {
+        it("supply_validator::validate_reward_success #18 (returns false if something is spent from the vault)", () => {
             configureContext()
                 .takeFromVault()
                 .use((ctx) => {
                     strictEqual(
                         validate_reward_success.eval({
                             $scriptContext: ctx,
-                            supply0,
-                            supply1,
-                            D: expectedDilution
+                            ...defaultTestArgs
                         }),
                         false
                     )
                 })
+        })
+
+        it("supply_validator::validate_reward_success #19 (returns false if the success fee in the reimbursement datum doesn't match the success fee in the config datum)", () => {
+            configureContext({
+                reimbursementSuccessFee: makeSuccessFee({
+                    c0: 0,
+                    steps: [{ sigma: 1.06, c: 0.3 }]
+                })
+            }).use((ctx) => {
+                strictEqual(
+                    validate_reward_success.eval({
+                        $scriptContext: ctx,
+                        ...defaultTestArgs
+                    }),
+                    false
+                )
+            })
+        })
+
+        it("supply_validator::validate_reward_success #20 (returns false if the supply output last voucher id isn't equal to the supply input last voucher id)", () => {
+            const supply1 = configureSupply1({ lastVoucherId: 123 })
+            configureContext().use((ctx) => {
+                strictEqual(
+                    validate_reward_success.eval({
+                        $scriptContext: ctx,
+                        ...defaultTestArgs,
+                        supply1
+                    }),
+                    false
+                )
+            })
         })
     })
 
     describe("supply_validator::main", () => {
         const defaultTestArgs = {
             _: supply0,
-            ptrs: {asset_group_output_ptrs: [], asset_input_ptrs: []}
+            ptrs: { asset_group_output_ptrs: [], asset_input_ptrs: [] }
         }
 
-        it("succeeds if the config UTxO is referenced and precisely the expected dilution is minted", () => {
+        it("supply_validator::main #01 (succeeds if the config UTxO is referenced and precisely the expected dilution is minted)", () => {
             configureContext().use((ctx) => {
                 main.eval({
                     $scriptContext: ctx,
@@ -528,7 +544,7 @@ describe("charge the success fee by diluting the token supply", () => {
             })
         })
 
-        it("throws an error if not signed by the correct agent", () => {
+        it("supply_validator::main #02 (throws an error if not signed by the correct agent)", () => {
             configureContext({ signingAgent: PubKeyHash.dummy(4) }).use(
                 (ctx) => {
                     throws(() => {
@@ -541,7 +557,7 @@ describe("charge the success fee by diluting the token supply", () => {
             )
         })
 
-        it("throws an error if tick in the supply datum hasn't increased by 1", () => {
+        it("supply_validator::main #03 (throws an error if tick in the supply datum hasn't increased by 1)", () => {
             configureContext({ supply1: configureSupply1({ tick: 2 }) }).use(
                 (ctx) => {
                     throws(() => {
@@ -554,7 +570,7 @@ describe("charge the success fee by diluting the token supply", () => {
             )
         })
 
-        it("throws an error if the token count didn't increase by the number of minted tokens", () => {
+        it("supply_validator::main #04 (throws an error if the token count didn't increase by the number of minted tokens)", () => {
             configureContext({ supply1: configureSupply1({ nTokens: 0 }) }).use(
                 (ctx) => {
                     throws(() => {
@@ -567,7 +583,7 @@ describe("charge the success fee by diluting the token supply", () => {
             )
         })
 
-        it("throws an error if the tx validity interval is large than 1 day", () => {
+        it("supply_validator::main #05 (throws an error if the tx validity interval is large than 1 day)", () => {
             configureContext()
                 .setTimeRange({ start: 0, end: 25 * 60 * 60 * 1000 })
                 .use((ctx) => {
@@ -580,7 +596,7 @@ describe("charge the success fee by diluting the token supply", () => {
                 })
         })
 
-        it("throws an error if the cycle hasn't been completed yet", () => {
+        it("supply_validator::main #06 (throws an error if the cycle hasn't been completed yet)", () => {
             configureContext()
                 .setTimeRange({ start: 0, end: 999 })
                 .use((ctx) => {
@@ -592,6 +608,34 @@ describe("charge the success fee by diluting the token supply", () => {
                     })
                 })
         })
+
+        it("supply_validator::main #07 (throws an error if the success fee in the reimbursement datum doesn't match the success fee in the config datum)", () => {
+            configureContext({
+                reimbursementSuccessFee: makeSuccessFee({
+                    c0: 0.1,
+                    steps: [{ c: 0.3, sigma: 1.05 }]
+                })
+            }).use((ctx) => {
+                throws(() => {
+                    main.eval({
+                        $scriptContext: ctx,
+                        ...defaultTestArgs
+                    })
+                })
+            })
+        })
+
+        it("supply_validator::main #08 (throws an error if the last voucher id isn't persisted", () => {
+            const supply1 = configureSupply1({ lastVoucherId: 123 })
+            configureContext({ supply1 }).use((ctx) => {
+                throws(() => {
+                    main.eval({
+                        $scriptContext: ctx,
+                        ...defaultTestArgs
+                    })
+                })
+            })
+        })
     })
 })
 
@@ -599,13 +643,17 @@ describe("charge the management fee by diluting the token supply", () => {
     const expectedDilution = Math.floor(
         100_000_000_000 * (0.0001 / (1 - 0.0001))
     )
+    const defaultManagementFeePeriod = 50
+    const managementFeeTime0 = 49
+    const managementFeeTime1 = managementFeeTime0 + defaultManagementFeePeriod
+
     const supply0 = makeSupply({
         nTokens: 100_000_000_000,
         nLovelace: 14_000_000_000_000,
         nVouchers: 0,
         lastVoucherId: 0,
         tick: 0,
-        managementFeeTimestamp: 49
+        managementFeeTimestamp: managementFeeTime0
     })
     const configureSupply1 = (props?: {
         tick?: IntLike
@@ -626,7 +674,8 @@ describe("charge the management fee by diluting the token supply", () => {
             nLovelace: props?.nLovelace ?? 14_000_000_000_000n,
             lastVoucherId: props?.lastVoucherId ?? 0,
             nVouchers: props?.nVouchers ?? 0,
-            managementFeeTimestamp: props?.managementFeeTimestamp ?? 99,
+            managementFeeTimestamp:
+                props?.managementFeeTimestamp ?? managementFeeTime1,
             successFee: {
                 start_time: props?.successFeeStartTime
             }
@@ -643,7 +692,7 @@ describe("charge the management fee by diluting the token supply", () => {
         const agent = PubKeyHash.dummy(12)
         const config = makeConfig({
             relManagementFee: 0.0001,
-            managementFeePeriod: 50,
+            managementFeePeriod: defaultManagementFeePeriod,
             agent
         })
         const timeOffset = props?.timeOffset ?? 0
@@ -657,31 +706,34 @@ describe("charge the management fee by diluting the token supply", () => {
                 redeemer: []
             })
             .mint({ assets: makeDvpTokens(expectedDilution) })
-            .setTimeRange({ start: 100 + timeOffset, end: 200 + timeOffset })
+            .setTimeRange({ start: 100 + timeOffset, end: 120 + timeOffset })
     }
 
     describe("supply_validator::validate_reward_management", () => {
-        it("returns true if precisely the allowed amount is minted", () => {
+        const defaultTestArgs = {
+            supply0,
+            supply1,
+            D: expectedDilution
+        }
+
+        it("supply_validator::validate_reward_management #01 (returns true if precisely the allowed amount is minted)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_management.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs
                     }),
                     true
                 )
             })
         })
 
-        it("returns false if more than the allowed amount is minted", () => {
+        it("supply_validator::validate_reward_management #02 (returns false if more than the allowed amount is minted)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_management.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
+                        ...defaultTestArgs,
                         D: expectedDilution + 1
                     }),
                     false
@@ -689,13 +741,12 @@ describe("charge the management fee by diluting the token supply", () => {
             })
         })
 
-        it("returns true if less than the allowed amount is minted", () => {
+        it("supply_validator::validate_reward_management #03 (returns true if less than the allowed amount is minted)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_management.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
+                        ...defaultTestArgs,
                         D: expectedDilution - 1
                     }),
                     true
@@ -703,13 +754,12 @@ describe("charge the management fee by diluting the token supply", () => {
             })
         })
 
-        it("returns false if the minted amount is negative", () => {
+        it("supply_validator::validate_reward_management #04 (returns false if the minted amount is negative)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_management.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
+                        ...defaultTestArgs,
                         D: -1
                     }),
                     false
@@ -717,136 +767,140 @@ describe("charge the management fee by diluting the token supply", () => {
             })
         })
 
-        it("returns false if the management fee period hasn't yet passed (i.e. it's still too soon)", () => {
-            configureContext({ timeOffset: -100 }).use((ctx) => {
+        it("supply_validator::validate_reward_management #05 (returns false if the previous management fee time isn't before the start of the tx validity time-range)", () => {
+            configureContext({ timeOffset: -51 }).use((ctx) => {
                 strictEqual(
                     validate_reward_management.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if the management fee timestamp in the supply output datum isn't after the end of the current tx validity time-range", () => {
-            const supply1 = configureSupply1({ managementFeeTimestamp: 199 })
+        it("supply_validator::validate_reward_management #06 (returns false if the next management fee time isn't before the end of the tx validity time-range)", () => {
+            configureContext({ timeOffset: -21 }).use((ctx) => {
+                strictEqual(
+                    validate_reward_management.eval({
+                        $scriptContext: ctx,
+                        ...defaultTestArgs
+                    }),
+                    false
+                )
+            })
+        })
+
+        it("supply_validator::validate_reward_management #07 (returns false if the management fee timestamp is more than the management fee period ahead of the previous value)", () => {
+            const supply1 = configureSupply1({
+                managementFeeTimestamp: managementFeeTime1 + 1
+            })
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_management.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if the management fee timestamp is too far into the future", () => {
-            const supply1 = configureSupply1({ managementFeeTimestamp: 251 })
+        it("supply_validator::validate_reward_management #08 (returns false if the management fee timestamp is less than the management fee period ahead of the previous value)", () => {
+            const supply1 = configureSupply1({
+                managementFeeTimestamp: managementFeeTime1 - 1
+            })
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_management.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if the voucher count in the supply datum  changed", () => {
+        it("supply_validator::validate_reward_management #09 (returns false if the voucher count in the supply datum changed)", () => {
             const supply1 = configureSupply1({ nVouchers: 1 })
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_management.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if the last voucher id in the supply datum changed", () => {
+        it("supply_validator::validate_reward_management #10 (returns false if the last voucher id in the supply datum changed)", () => {
             const supply1 = configureSupply1({ lastVoucherId: 1 })
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_management.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if the lovelace countin the supply datum changed", () => {
+        it("supply_validator::validate_reward_management #11 (returns false if the lovelace countin the supply datum changed)", () => {
             const supply1 = configureSupply1({ nLovelace: 0 })
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_management.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if the success fee settings in the supply datum changed", () => {
+        it("supply_validator::validate_reward_management #12 (returns false if the success fee settings in the supply datum changed)", () => {
             const supply1 = configureSupply1({ successFeeStartTime: 123 })
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_reward_management.eval({
                         $scriptContext: ctx,
-                        supply0,
-                        supply1,
-                        D: expectedDilution
+                        ...defaultTestArgs,
+                        supply1
                     }),
                     false
                 )
             })
         })
 
-        it("returns false if other tokens are minted", () => {
+        it("supply_validator::validate_reward_management #13 (returns false if other tokens are minted)", () => {
             configureContext()
                 .mint({ assets: makeVoucherPair(1) })
                 .use((ctx) => {
                     strictEqual(
                         validate_reward_management.eval({
                             $scriptContext: ctx,
-                            supply0,
-                            supply1,
-                            D: expectedDilution
+                            ...defaultTestArgs
                         }),
                         false
                     )
                 })
         })
 
-        it("returns false if something is spent from the vault", () => {
+        it("supply_validator::validate_reward_management #14 (returns false if something is spent from the vault)", () => {
             configureContext()
                 .takeFromVault()
                 .use((ctx) => {
                     strictEqual(
                         validate_reward_management.eval({
                             $scriptContext: ctx,
-                            supply0,
-                            supply1,
-                            D: expectedDilution
+                            ...defaultTestArgs
                         }),
                         false
                     )
@@ -857,20 +911,20 @@ describe("charge the management fee by diluting the token supply", () => {
     describe("supply_validator::main", () => {
         const defaultTestArgs = {
             _: supply0,
-            ptrs: {asset_group_output_ptrs: [], asset_input_ptrs: []}
+            ptrs: { asset_group_output_ptrs: [], asset_input_ptrs: [] }
         }
 
-        it("succeeds if the not precisely the allowed amount is minted", () => {
+        it("supply_validator::main #09 (succeeds if the not precisely the allowed amount is minted)", () => {
             configureContext().use((ctx) => {
                 main.eval({
                     $scriptContext: ctx,
-                    ...defaultTestArgs                
+                    ...defaultTestArgs
                 }),
                     true
             })
         })
 
-        it("throws an error if signed by the wrong agent", () => {
+        it("supply_validator::main #10 (throws an error if signed by the wrong agent)", () => {
             configureContext({ signingAgent: PubKeyHash.dummy(4) }).use(
                 (ctx) => {
                     throws(() => {
@@ -883,7 +937,7 @@ describe("charge the management fee by diluting the token supply", () => {
             )
         })
 
-        it("throws an error supply datum tick hasn't been incremented by 1", () => {
+        it("supply_validator::main #11 (throws an error supply datum tick hasn't been incremented by 1)", () => {
             const supply1 = configureSupply1({ tick: 0 })
             configureContext({ supply1 }).use((ctx) => {
                 throws(() => {
@@ -895,7 +949,7 @@ describe("charge the management fee by diluting the token supply", () => {
             })
         })
 
-        it("throws an error if the token count in the supply datum hasn't been updated correclty", () => {
+        it("supply_validator::main #12 (throws an error if the token count in the supply datum hasn't been updated correclty)", () => {
             const supply1 = configureSupply1({ nTokens: 0 })
             configureContext({ supply1 }).use((ctx) => {
                 throws(() => {
@@ -907,7 +961,7 @@ describe("charge the management fee by diluting the token supply", () => {
             })
         })
 
-        it("throws an error tx validity interval is larger than 1 day", () => {
+        it("supply_validator::main #13 (throws an error tx validity interval is larger than 1 day)", () => {
             configureContext({ supply1 })
                 .setTimeRange({ start: 100, end: 25 * 60 * 60 * 1000 })
                 .use((ctx) => {
@@ -920,18 +974,16 @@ describe("charge the management fee by diluting the token supply", () => {
                 })
         })
 
-
-        it("throws an error if the management fee timestamp didn't change", () => {
-            const supply1 = configureSupply1({managementFeeTimestamp: 49})
-            configureContext({supply1})
-                .use(ctx => {
-                    throws(() => {
-                        main.eval({
-                            $scriptContext: ctx,
-                            ...defaultTestArgs
-                        })     
+        it("supply_validator::main #14 (throws an error if the management fee timestamp didn't change)", () => {
+            const supply1 = configureSupply1({ managementFeeTimestamp: 49 })
+            configureContext({ supply1 }).use((ctx) => {
+                throws(() => {
+                    main.eval({
+                        $scriptContext: ctx,
+                        ...defaultTestArgs
                     })
                 })
+            })
         })
     })
 })
@@ -1010,10 +1062,13 @@ describe("supply_validator::validate_mint_user_tokens", () => {
             supply0,
             supply1,
             D: mintedTokens,
-            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: []} 
+            ptrs: {
+                asset_input_ptrs: [makeAssetPtr()],
+                asset_group_output_ptrs: []
+            }
         }
 
-        it("succeeds if an equivalent amount of lovelace is sent to the vault as has been minted", () => {
+        it("supply_validator::validate_mint_user_tokens #01 (returns true if an equivalent amount of lovelace is sent to the vault as has been minted)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_mint_user_tokens.eval({
@@ -1025,7 +1080,7 @@ describe("supply_validator::validate_mint_user_tokens", () => {
             })
         })
 
-        it("returns false if the price is too old", () => {
+        it("supply_validator::validate_mint_user_tokens #02 (returns false if the price is too old)", () => {
             configureContext({ priceTimestamp: 49 }).use((ctx) => {
                 strictEqual(
                     validate_mint_user_tokens.eval({
@@ -1037,7 +1092,7 @@ describe("supply_validator::validate_mint_user_tokens", () => {
             })
         })
 
-        it("returns false if too little value is sent to vault", () => {
+        it("supply_validator::validate_mint_user_tokens #03 (returns false if too little value is sent to vault)", () => {
             configureContext({ lovelaceToVault: 99_000_000 }).use((ctx) => {
                 strictEqual(
                     validate_mint_user_tokens.eval({
@@ -1049,7 +1104,7 @@ describe("supply_validator::validate_mint_user_tokens", () => {
             })
         })
 
-        it("returns false if the max token supply is exceeded", () => {
+        it("supply_validator::validate_mint_user_tokens #04 (returns false if the max token supply is exceeded)", () => {
             configureContext({ maxTokenSupply: 999_999 }).use((ctx) => {
                 strictEqual(
                     validate_mint_user_tokens.eval({
@@ -1061,7 +1116,7 @@ describe("supply_validator::validate_mint_user_tokens", () => {
             })
         })
 
-        it("returns false if the voucher count didn't change", () => {
+        it("supply_validator::validate_mint_user_tokens #05 (returns false if the voucher count didn't change)", () => {
             const supply1 = configureSupply1({ nVouchers: 0 })
             configureContext().use((ctx) => {
                 strictEqual(
@@ -1075,7 +1130,7 @@ describe("supply_validator::validate_mint_user_tokens", () => {
             })
         })
 
-        it("returns false if the last voucher id didn't change", () => {
+        it("supply_validator::validate_mint_user_tokens #06 (returns false if the last voucher id didn't change)", () => {
             const supply1 = configureSupply1({ lastVoucherId: 0 })
             configureContext().use((ctx) => {
                 strictEqual(
@@ -1089,7 +1144,7 @@ describe("supply_validator::validate_mint_user_tokens", () => {
             })
         })
 
-        it("returns false if the management fee timestamp changed", () => {
+        it("supply_validator::validate_mint_user_tokens #07 (returns false if the management fee timestamp changed)", () => {
             const supply1 = configureSupply1({ managementFeeTimestamp: 123 })
             configureContext().use((ctx) => {
                 strictEqual(
@@ -1103,7 +1158,7 @@ describe("supply_validator::validate_mint_user_tokens", () => {
             })
         })
 
-        it("returns false if the success fee settings changed", () => {
+        it("supply_validator::validate_mint_user_tokens #08 (returns false if the success fee settings changed)", () => {
             const supply1 = configureSupply1({ successFeeStartTime: 123 })
             configureContext().use((ctx) => {
                 strictEqual(
@@ -1117,7 +1172,7 @@ describe("supply_validator::validate_mint_user_tokens", () => {
             })
         })
 
-        it("returns true if the tx includes an asset group without any changes except the count tick", () => {
+        it("supply_validator::validate_mint_user_tokens #09 (returns true if the tx includes an asset group without any changes except the count tick)", () => {
             configureContext()
                 .addAssetGroupThread({
                     id: 0,
@@ -1129,14 +1184,17 @@ describe("supply_validator::validate_mint_user_tokens", () => {
                         validate_mint_user_tokens.eval({
                             $scriptContext: ctx,
                             ...defaultTestArgs,
-                            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: [2]} 
+                            ptrs: {
+                                asset_input_ptrs: [makeAssetPtr()],
+                                asset_group_output_ptrs: [2]
+                            }
                         }),
                         true
                     )
                 })
         })
 
-        it("returns false if the tx includes an asset group with a count change", () => {
+        it("supply_validator::validate_mint_user_tokens #10 (returns false if the tx includes an asset group with a count change)", () => {
             configureContext()
                 .addAssetGroupThread({
                     id: 0,
@@ -1148,7 +1206,10 @@ describe("supply_validator::validate_mint_user_tokens", () => {
                         validate_mint_user_tokens.eval({
                             $scriptContext: ctx,
                             ...defaultTestArgs,
-                            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: [2]}
+                            ptrs: {
+                                asset_input_ptrs: [makeAssetPtr()],
+                                asset_group_output_ptrs: [2]
+                            }
                         }),
                         false
                     )
@@ -1230,10 +1291,13 @@ describe("supply_validator::validate_burn_user_tokens", () => {
             supply0,
             supply1,
             D: -burnedTokens,
-            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: []} // dummy for lovelace
+            ptrs: {
+                asset_input_ptrs: [makeAssetPtr()],
+                asset_group_output_ptrs: []
+            } // dummy for lovelace
         }
 
-        it("returns true if the lovelace value taken taken out of the vault is equivalent to the tokens burned", () => {
+        it("supply_validator::validate_burn_user_tokens #01 (returns true if the lovelace value taken taken out of the vault is equivalent to the tokens burned)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_burn_user_tokens.eval({
@@ -1245,7 +1309,7 @@ describe("supply_validator::validate_burn_user_tokens", () => {
             })
         })
 
-        it("returns false if the price is expired", () => {
+        it("supply_validator::validate_burn_user_tokens #02 (returns false if the price is expired)", () => {
             configureContext({ priceTimestamp: 49 }).use((ctx) => {
                 strictEqual(
                     validate_burn_user_tokens.eval({
@@ -1257,7 +1321,7 @@ describe("supply_validator::validate_burn_user_tokens", () => {
             })
         })
 
-        it("returns false if more lovelace is taken from vault", () => {
+        it("supply_validator::validate_burn_user_tokens #03 (returns false if more lovelace is taken from vault)", () => {
             configureContext({ lovelaceFromVault: 100_000_001 }).use((ctx) => {
                 strictEqual(
                     validate_burn_user_tokens.eval({
@@ -1269,7 +1333,7 @@ describe("supply_validator::validate_burn_user_tokens", () => {
             })
         })
 
-        it("returns false if the voucher count in the supply datum didn't decrease by 1", () => {
+        it("supply_validator::validate_burn_user_tokens #04 (returns false if the voucher count in the supply datum didn't decrease by 1)", () => {
             const supply1 = configureSupply1({ nVouchers: 1 })
 
             configureContext().use((ctx) => {
@@ -1284,7 +1348,7 @@ describe("supply_validator::validate_burn_user_tokens", () => {
             })
         })
 
-        it("returns false if the last voucher id in the supply datum changed", () => {
+        it("supply_validator::validate_burn_user_tokens #05 (returns false if the last voucher id in the supply datum changed)", () => {
             const supply1 = configureSupply1({ lastVoucherId: 0 })
             configureContext().use((ctx) => {
                 strictEqual(
@@ -1298,7 +1362,7 @@ describe("supply_validator::validate_burn_user_tokens", () => {
             })
         })
 
-        it("returns false if the management fee timestamp changed", () => {
+        it("supply_validator::validate_burn_user_tokens #06 (returns false if the management fee timestamp changed)", () => {
             const supply1 = configureSupply1({ managementFeeTimestamp: 123 })
             configureContext().use((ctx) => {
                 strictEqual(
@@ -1312,7 +1376,7 @@ describe("supply_validator::validate_burn_user_tokens", () => {
             })
         })
 
-        it("returns false if the success fee settings changed", () => {
+        it("supply_validator::validate_burn_user_tokens #07 (returns false if the success fee settings changed)", () => {
             const supply1 = configureSupply1({ successFeeStartTime: 123 })
             configureContext().use((ctx) => {
                 strictEqual(
@@ -1326,7 +1390,7 @@ describe("supply_validator::validate_burn_user_tokens", () => {
             })
         })
 
-        it("returns true if the tx includes an asset group without any changes except the count tick", () => {
+        it("supply_validator::validate_burn_user_tokens #08 (returns true if the tx includes an asset group without any changes)", () => {
             configureContext()
                 .addAssetGroupThread({
                     id: 0,
@@ -1338,14 +1402,17 @@ describe("supply_validator::validate_burn_user_tokens", () => {
                         validate_burn_user_tokens.eval({
                             $scriptContext: ctx,
                             ...defaultTestArgs,
-                            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: [0]} 
+                            ptrs: {
+                                asset_input_ptrs: [makeAssetPtr()],
+                                asset_group_output_ptrs: [0]
+                            }
                         }),
                         true
                     )
                 })
         })
 
-        it("returns false if the tx includes an asset group with a count change", () => {
+        it("supply_validator::validate_burn_user_tokens #09 (returns false if the tx includes an asset group with a count change)", () => {
             configureContext()
                 .addAssetGroupThread({
                     id: 0,
@@ -1357,7 +1424,10 @@ describe("supply_validator::validate_burn_user_tokens", () => {
                         validate_burn_user_tokens.eval({
                             $scriptContext: ctx,
                             ...defaultTestArgs,
-                            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: [0]} 
+                            ptrs: {
+                                asset_input_ptrs: [makeAssetPtr()],
+                                asset_group_output_ptrs: [0]
+                            }
                         }),
                         false
                     )
@@ -1405,10 +1475,13 @@ describe("supply_validate::validate_swap", () => {
         const defaultTestArgs = {
             supply0,
             supply1,
-            ptrs: { asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: []} // dummy for lovelace
+            ptrs: {
+                asset_input_ptrs: [makeAssetPtr()],
+                asset_group_output_ptrs: []
+            } // dummy for lovelace
         }
 
-        it("returns true if nothing is minted and the supply datum is correctly updated", () => {
+        it("supply_validate::validate_swap #01 (returns true if nothing is minted and the supply datum is correctly updated)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_swap.eval({
@@ -1420,7 +1493,7 @@ describe("supply_validate::validate_swap", () => {
             })
         })
 
-        it("returns false if more is taken from vault", () => {
+        it("supply_validate::validate_swap #02 (returns false if more is taken from vault)", () => {
             configureContext()
                 .takeFromVault({ value: new Value(100_000_001) })
                 .use((ctx) => {
@@ -1434,7 +1507,7 @@ describe("supply_validate::validate_swap", () => {
                 })
         })
 
-        it("returns false if the voucher count in the supply datum changed", () => {
+        it("supply_validate::validate_swap #03 (returns false if the voucher count in the supply datum changed)", () => {
             const supply1 = configureSupply1({ nVouchers: 123 })
             configureContext().use((ctx) => {
                 strictEqual(
@@ -1448,7 +1521,7 @@ describe("supply_validate::validate_swap", () => {
             })
         })
 
-        it("returns false if the management fee timestamp in the supply datum changed", () => {
+        it("supply_validate::validate_swap #04 (returns false if the management fee timestamp in the supply datum changed)", () => {
             const supply1 = configureSupply1({ managementFeeTimestamp: 123 })
             configureContext().use((ctx) => {
                 strictEqual(
@@ -1462,7 +1535,7 @@ describe("supply_validate::validate_swap", () => {
             })
         })
 
-        it("returns false if the success fee settings in the supply datum changed", () => {
+        it("supply_validate::validate_swap #05 (returns false if the success fee settings in the supply datum changed)", () => {
             const supply1 = configureSupply1({ successFeeStartTime: 123 })
             configureContext().use((ctx) => {
                 strictEqual(
@@ -1476,7 +1549,7 @@ describe("supply_validate::validate_swap", () => {
             })
         })
 
-        it("returns false if a token is minted with the fund policy", () => {
+        it("supply_validate::validate_swap #06 (returns false if a token is minted with the fund policy)", () => {
             configureContext()
                 .mint({ assets: makeConfigToken(1) })
                 .use((ctx) => {
@@ -1491,7 +1564,7 @@ describe("supply_validate::validate_swap", () => {
                 })
         })
 
-        it("returns false if a token is burned with the fund policy", () => {
+        it("supply_validate::validate_swap #07 (returns false if a token is burned with the fund policy)", () => {
             configureContext()
                 .mint({ assets: makeConfigToken(-1) })
                 .use((ctx) => {
@@ -1506,7 +1579,7 @@ describe("supply_validate::validate_swap", () => {
                 })
         })
 
-        it("returns true if the tx includes an asset group without any changes except the count tick", () => {
+        it("supply_validate::validate_swap #08 (returns true if the tx includes an asset group without any changes except the count tick)", () => {
             configureContext()
                 .addAssetGroupThread({
                     id: 0,
@@ -1518,14 +1591,17 @@ describe("supply_validate::validate_swap", () => {
                         validate_swap.eval({
                             $scriptContext: ctx,
                             ...defaultTestArgs,
-                            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: [1]} 
+                            ptrs: {
+                                asset_input_ptrs: [makeAssetPtr()],
+                                asset_group_output_ptrs: [1]
+                            }
                         }),
                         true
                     )
                 })
         })
 
-        it("returns false if the tx includes an asset group with a count change", () => {
+        it("supply_validate::validate_swap #09 (returns false if the tx includes an asset group with a count change)", () => {
             configureContext()
                 .addAssetGroupThread({
                     id: 0,
@@ -1537,7 +1613,10 @@ describe("supply_validate::validate_swap", () => {
                         validate_swap.eval({
                             $scriptContext: ctx,
                             ...defaultTestArgs,
-                            ptrs: {asset_input_ptrs: [makeAssetPtr()], asset_group_output_ptrs: [1]} 
+                            ptrs: {
+                                asset_input_ptrs: [makeAssetPtr()],
+                                asset_group_output_ptrs: [1]
+                            }
                         }),
                         false
                     )

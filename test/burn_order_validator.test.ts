@@ -29,11 +29,6 @@ import { IntLike } from "@helios-lang/codec-utils"
 const { calc_provisional_success_fee, main } = contract.burn_order_validator
 
 describe("burn_order_validator::calc_provisional_success_fee", () => {
-    // reference Config
-    // spend Supply
-    // no need to redeem dummy token
-    // include some optional vouchers (token in order value, and voucher ref as regular input)
-
     describe("config UTxO is referenced and supply UTxO is spent, no vouchers are burned", () => {
         const configureContext = () => {
             const benchmarkPrice: RatioType = [1, 1]
@@ -53,7 +48,7 @@ describe("burn_order_validator::calc_provisional_success_fee", () => {
                 .observeBenchmark({ redeemer: benchmarkPrice })
         }
 
-        it("whitepaper example", () => {
+        it("burn_order_validator::calc_provisional_success_fee #01 (whitepaper example)", () => {
             const price = makePrice({ top: 140000, bottom: 1000 })
 
             configureContext().use((ctx) => {
@@ -70,7 +65,7 @@ describe("burn_order_validator::calc_provisional_success_fee", () => {
         })
     })
 
-    describe("confug UTxO is referenced and supply UTxO is spent, 1 voucher is burned", () => {
+    describe("config UTxO is referenced and supply UTxO is spent, 1 voucher is burned", () => {
         const voucherId = 0
 
         const configureContext = () => {
@@ -96,7 +91,7 @@ describe("burn_order_validator::calc_provisional_success_fee", () => {
                 .addVoucherInput({ id: voucherId, voucher: voucherDatum })
         }
 
-        it("whitepaper example", () => {
+        it("burn_order_validator::calc_provisional_success_fee #02 (whitepaper example)", () => {
             const price = makePrice({ top: 140, bottom: 1 })
 
             configureContext().use((ctx) => {
@@ -116,12 +111,28 @@ describe("burn_order_validator::calc_provisional_success_fee", () => {
                 )
             })
         })
+
+        it("burn_order_validator::calc_provisional_success_fee #03 (return value bound by 0 only the voucher and no DVP tokens are burned)", () => {
+            const price = makePrice({ top: 140, bottom: 1 })
+
+            configureContext().use((ctx) => {
+                strictEqual(
+                    calc_provisional_success_fee.eval({
+                        $scriptContext: ctx,
+                        price,
+                        diff: new Value(0, makeVoucherUserToken(voucherId)),
+                        n_burn: 0
+                    }),
+                    0n
+                )
+            })
+        })
     })
 })
 
 describe("burn_order_validator::main", () => {
     describe("garbage arguments", () => {
-        it("throws an error", () => {
+        it("burn_order_validator::main #01 (throws an error for garbage args)", () => {
             throws(() => {
                 main.evalUnsafe({
                     $scriptContext: new ConstrData(0, []),
@@ -161,7 +172,7 @@ describe("burn_order_validator::main", () => {
             return scb
         }
 
-        it("succeeds if the tx signed by the address pubkey", () => {
+        it("burn_order_validator::main #02 (succeeds if the tx signed by the address pubkey)", () => {
             configureContext().use((ctx) => {
                 main.eval({
                     $scriptContext: ctx,
@@ -171,7 +182,7 @@ describe("burn_order_validator::main", () => {
             })
         })
 
-        it("throws an error if the tx isn't signed by the address pubkey", () => {
+        it("burn_order_validator::main #03 (throws an error if the tx isn't signed by the address pubkey)", () => {
             configureContext({ pkh: PubKeyHash.dummy(1) }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -183,7 +194,7 @@ describe("burn_order_validator::main", () => {
             })
         })
 
-        it("succeeds if the tx isn't signed by the address pubkey but an input is spent from the same address", () => {
+        it("burn_order_validator::main #04 (succeeds if the tx isn't signed by the address pubkey but an input is spent from the same address)", () => {
             configureContext({
                 pkh: PubKeyHash.dummy(1),
                 dummyInputAddr: returnAddress
@@ -271,7 +282,9 @@ describe("burn_order_validator::main", () => {
                 .addBurnOrderReturn({
                     address: returnAddress,
                     datum: returnDatum,
-                    value: props?.returnValue ?? new Value(props?.returnLovelace ?? 644_262_500)
+                    value:
+                        props?.returnValue ??
+                        new Value(props?.returnLovelace ?? 644_262_500)
                 })
                 .addSigner(props?.agent ?? agent)
                 .setTimeRange({ end: 200 })
@@ -291,7 +304,7 @@ describe("burn_order_validator::main", () => {
             return scb
         }
 
-        it("succeeds if enough lovelace returned", () => {
+        it("burn_order_validator::main #05 (succeeds if enough lovelace returned)", () => {
             configureContext().use((ctx) => {
                 main.eval({
                     $scriptContext: ctx,
@@ -301,7 +314,7 @@ describe("burn_order_validator::main", () => {
             })
         })
 
-        it("throws an error if not signed by agent", () => {
+        it("burn_order_validator::main #06 (throws an error if not signed by agent)", () => {
             configureContext({ agent: PubKeyHash.dummy() }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -313,7 +326,7 @@ describe("burn_order_validator::main", () => {
             })
         })
 
-        it("throws an error if price timestamp is too old", () => {
+        it("burn_order_validator::main #07 (throws an error if price timestamp is too old)", () => {
             configureContext({ priceTimestamp: 99 }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -325,7 +338,7 @@ describe("burn_order_validator::main", () => {
             })
         })
 
-        it("throws an error if not enough lovelace returned according to contract", () => {
+        it("burn_order_validator::main #08 (throws an error if not enough lovelace returned according to contract)", () => {
             configureContext({ returnLovelace: 643_000_000 }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -337,7 +350,7 @@ describe("burn_order_validator::main", () => {
             })
         })
 
-        it("throws an error if not enough lovelace is returned according to order", () => {
+        it("burn_order_validator::main #09 (throws an error if not enough lovelace is returned according to order)", () => {
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
                 datum: returnDatum,
@@ -358,7 +371,7 @@ describe("burn_order_validator::main", () => {
             )
         })
 
-        it("throws an error if the price is too old for the order", () => {
+        it("burn_order_validator::main #10 (throws an error if the price is too old for the order)", () => {
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
                 datum: returnDatum,
@@ -379,8 +392,13 @@ describe("burn_order_validator::main", () => {
             )
         })
 
-        it("throws an error when attempting to return something that isn't listed in a referenced asset group", () => {
-            configureContext({returnValue: new Value(644_262_500, Assets.fromAssetClasses([[AssetClass.dummy(10), 100]]))}).use((ctx) => {
+        it("burn_order_validator::main #11 (throws an error when attempting to return something that isn't listed in a referenced asset group)", () => {
+            configureContext({
+                returnValue: new Value(
+                    644_262_500,
+                    Assets.fromAssetClasses([[AssetClass.dummy(10), 100]])
+                )
+            }).use((ctx) => {
                 throws(() => {
                     main.eval({
                         $scriptContext: ctx,
@@ -391,7 +409,7 @@ describe("burn_order_validator::main", () => {
             })
         })
 
-        it("throws an error if not all the requested assets are returned", () => {
+        it("burn_order_validator::main #12 (throws an error if not all the requested assets are returned)", () => {
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
                 datum: returnDatum,
@@ -412,7 +430,7 @@ describe("burn_order_validator::main", () => {
             })
         })
 
-        it("succeeds if the burn order use the value enum variant instead of the lovelace enum variant but requests only lovelace", () => {
+        it("burn_order_validator::main #13 (succeeds if the burn order use the value enum variant instead of the lovelace enum variant but requests only lovelace)", () => {
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
                 datum: returnDatum,
@@ -431,7 +449,7 @@ describe("burn_order_validator::main", () => {
             })
         })
 
-        it("throws an error if not all the requested assets are returned", () => {
+        it("burn_order_validator::main #14 (throws an error if not all the requested assets are returned)", () => {
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
                 datum: returnDatum,
@@ -452,10 +470,13 @@ describe("burn_order_validator::main", () => {
             })
         })
 
-        it("succeeds all the requested assets are returned", () => {
+        it("burn_order_validator::main #15 (succeeds all the requested assets are returned)", () => {
             const redeemer: BurnOrderRedeemerType = {
                 Fulfill: {
-                    ptrs: [makeAssetPtr(), makeAssetPtr({groupIndex: 2, assetClassIndex: 0})] // the first is the dummy AssetPtr for ADA
+                    ptrs: [
+                        makeAssetPtr(),
+                        makeAssetPtr({ groupIndex: 2, assetClassIndex: 0 })
+                    ] // the first is the dummy AssetPtr for ADA
                 }
             }
 
@@ -472,20 +493,31 @@ describe("burn_order_validator::main", () => {
             })
 
             configureContext({ burnOrder, returnValue: value })
-                .addAssetGroupInput({assets: [makeAsset({assetClass, price: [1, 1], priceTimestamp: 200})]})
-                .use((ctx) => {
-                main.eval({
-                    $scriptContext: ctx,
-                    order: burnOrder,
-                    redeemer
+                .addAssetGroupInput({
+                    assets: [
+                        makeAsset({
+                            assetClass,
+                            price: [1, 1],
+                            priceTimestamp: 200
+                        })
+                    ]
                 })
-            })
+                .use((ctx) => {
+                    main.eval({
+                        $scriptContext: ctx,
+                        order: burnOrder,
+                        redeemer
+                    })
+                })
         })
 
-        it("throws an error if an unknown asset class is returned", () => {
+        it("burn_order_validator::main #16 (throws an error if an unknown asset class is returned)", () => {
             const redeemer: BurnOrderRedeemerType = {
                 Fulfill: {
-                    ptrs: [makeAssetPtr(), makeAssetPtr({groupIndex: 2, assetClassIndex: 0})] // the first is the dummy AssetPtr for ADA
+                    ptrs: [
+                        makeAssetPtr(),
+                        makeAssetPtr({ groupIndex: 2, assetClassIndex: 0 })
+                    ] // the first is the dummy AssetPtr for ADA
                 }
             }
 
@@ -501,8 +533,24 @@ describe("burn_order_validator::main", () => {
                 value
             })
 
-            configureContext({ burnOrder, returnValue: value.add(new Value(0, Assets.fromAssetClasses([[AssetClass.dummy(1), 10]]))) })
-                .addAssetGroupInput({assets: [makeAsset({assetClass, price: [1, 1], priceTimestamp: 200})]})
+            configureContext({
+                burnOrder,
+                returnValue: value.add(
+                    new Value(
+                        0,
+                        Assets.fromAssetClasses([[AssetClass.dummy(1), 10]])
+                    )
+                )
+            })
+                .addAssetGroupInput({
+                    assets: [
+                        makeAsset({
+                            assetClass,
+                            price: [1, 1],
+                            priceTimestamp: 200
+                        })
+                    ]
+                })
                 .use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -511,10 +559,10 @@ describe("burn_order_validator::main", () => {
                             redeemer
                         })
                     })
-            })
+                })
         })
 
-        it("succeeds if a voucher is included for the full amount at the current price and enough lovelace is returned", () => {
+        it("burn_order_validator::main #17 (succeeds if a voucher is included for the full amount at the current price and enough lovelace is returned)", () => {
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
                 datum: returnDatum,
@@ -537,7 +585,7 @@ describe("burn_order_validator::main", () => {
             })
         })
 
-        it("throws an error if a voucher is included for the full amount at the current price but not enough lovelace is returned", () => {
+        it("burn_order_validator::main #18 (throws an error if a voucher is included for the full amount at the current price but not enough lovelace is returned)", () => {
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
                 datum: returnDatum,

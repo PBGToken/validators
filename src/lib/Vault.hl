@@ -99,8 +99,11 @@ func diff_counted(d_lovelace: Int, asset_group_output_ptrs: []Int) -> Value {
                     "invalid asset change"
                 );
 
-                // TODO: prepend is cheaper, it might also be better to ignore this if b.count == a.count
-                m.append(a.asset_class, b.count - a.count)
+                if (b.count == a.count) {
+                    m
+                } else {
+                    m.prepend(a.asset_class, b.count - a.count)
+                }
             }, m);
 
             (m_, asset_group_output_ptrs.tail)
@@ -109,9 +112,8 @@ func diff_counted(d_lovelace: Int, asset_group_output_ptrs: []Int) -> Value {
         }
     }, Map[AssetClass]Int{}, asset_group_output_ptrs);
 
-    // TODO: prepend is cheaper
     m = if (d_lovelace != 0) {
-        m.append(AssetClass::ADA, d_lovelace)
+        m.prepend(AssetClass::ADA, d_lovelace)
     } else {
         m
     };

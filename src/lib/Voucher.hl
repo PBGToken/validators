@@ -129,7 +129,6 @@ func validate_burned_vouchers(period_id: Int) -> Int {
 
                     voucher = Voucher::find_input(id);
 
-                    // TODO: can this check be removed if ids are not reset in new periods?
                     assert(voucher.period_id == period_id, "Voucher from other period");
 
                     n_vouchers + 1

@@ -25,8 +25,34 @@ describe("benchmark_delegate::main", () => {
         })
     })
 
+    it("throws an error if denominator is equal to 0", () => {
+        const redeemer: RatioType = [0, 0]
+
+        configureContext({ redeemer }).use((ctx) => {
+            throws(() => {
+                main.eval({
+                    $scriptContext: ctx,
+                    benchmark_price: redeemer
+                })
+            })
+        })
+    })
+
+    it("throws an error if denominator is negative", () => {
+        const redeemer: RatioType = [-1, -1]
+
+        configureContext({ redeemer }).use((ctx) => {
+            throws(() => {
+                main.eval({
+                    $scriptContext: ctx,
+                    benchmark_price: redeemer
+                })
+            })
+        })
+    })
+
     it("throws an error if the denominator isn't equal to the numerator", () => {
-        const redeemer: RatioType = [1, -1]
+        const redeemer: RatioType = [2, 1]
 
         configureContext({ redeemer }).use((ctx) => {
             throws(() => {

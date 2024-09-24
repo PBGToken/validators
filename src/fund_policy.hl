@@ -71,7 +71,7 @@ func validate_initial_config() -> Bool {
                 minimum:  20_000 // 0.02 tokens, equivalent to 2 ADA
             },
             management_fee: ManagementFeeConfig{
-                relative: 0.00011, // 0.011% daily, about 4% annually TODO: change this to 0.0001
+                relative: 0.0001, // 0.01% daily, 3.65% annually
                 period:   Duration::DAY
             },
             success_fee: SuccessFeeConfig{

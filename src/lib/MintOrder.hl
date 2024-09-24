@@ -13,11 +13,14 @@ struct MintOrder {
     max_price_age:  Duration
 
     func find_return(self) -> TxOutput {
-        // TODO: take invariants out of loop for performance
+        // invariants taken out of loop for slightly better performance
+        return_address = self.return_address;
+        return_datum = self.return_datum;
+        
         return = tx.outputs.find((output: TxOutput) -> {
-            output.address == self.return_address 
+            output.address == return_address 
             && output.datum.switch{ // using output.datum.inline fails if an unrelated output is sent to same address without an inline datum, so we must use a switch to be safe
-                Inline{d} => d == self.return_datum,
+                Inline{d} => d == return_datum,
                 else => false   
             }
         });

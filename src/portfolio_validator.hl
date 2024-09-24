@@ -217,7 +217,7 @@ func validate_move_assets(portfolio0: Portfolio) -> Bool {
      */
     (n_groups_in_outputs, n_assets_in_outputs) = tx.outputs.fold2((n_groups: Int, n_assets: Int, output: TxOutput) -> {
         if (output.address == Addresses::assets) {
-            assert(Tokens::contains_only_any_one_assets(output), "doesn't contain only 1 assets token"); // TODO: must be strict
+            assert(Tokens::contains_only_any_one_assets(output), "doesn't contain only 1 assets token");
             
             group = output.datum.inline.as_strictly[AssetGroup];
 
@@ -250,7 +250,9 @@ func validate_reset_reduction(portfolio0: Portfolio) -> Bool {
 }
 
 func main(_: Portfolio, action: Action) -> Bool {
-    (config0, config_is_spent) = Config::find();
+    // the config UTxO must be spent for the AddAssetClass and RemoveAssetClass actions, 
+    //  but it doesn't matter for the other actions
+    (config0, config_is_spent) = Config::find(); 
     (portfolio0, portfolio1) = Portfolio::find_thread();
     minted_tokens = Tokens::get_minted();
     
@@ -260,7 +262,6 @@ func main(_: Portfolio, action: Action) -> Bool {
         (token_name, qty) = minted_tokens.head;
         id = TokenNames::parse_assets(token_name).unwrap();
 
-        // TODO: check that config isn't spent?
         if (qty == 1) {
             validate_add_asset_group(portfolio0, portfolio1, id)
         } else if (qty == -1) {

@@ -1,19 +1,18 @@
+import { throws } from "node:assert"
 import { describe, it } from "node:test"
+import { IntLike } from "@helios-lang/codec-utils"
+import { AssetClass, PubKeyHash } from "@helios-lang/ledger"
+import { IntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { ScriptContextBuilder } from "./tx"
 import {
     PortfolioReductionModeType,
-    PortfolioReductionType,
     PriceType,
     makeConfig,
     makePortfolio,
     makePrice,
     makeSupply
 } from "./data"
-import { AssetClass, PubKeyHash } from "@helios-lang/ledger"
-import { IntData } from "@helios-lang/uplc"
-import { throws } from "node:assert"
-import { IntLike } from "@helios-lang/codec-utils"
 
 const { main } = contract.price_validator
 
@@ -23,6 +22,7 @@ describe("price_validator::main", () => {
     const configureContext = (props?: {
         nGroups?: IntLike
         price?: PriceType
+        supplyTick?: IntLike
         reductionMode?: PortfolioReductionModeType
         signingAgent?: PubKeyHash
     }) => {
@@ -43,6 +43,7 @@ describe("price_validator::main", () => {
         })
 
         const supply = makeSupply({
+            tick: props?.supplyTick,
             nTokens: 1000
         })
 
@@ -58,74 +59,84 @@ describe("price_validator::main", () => {
             .addPriceOutput({ price: props?.price ?? price })
     }
 
-    it("succeeds if the price matches the ratio of the vault lovelace value and the number of tokens in circulation", () => {
+    const defaultTestArgs = {
+        $datum: price,
+        _: new IntData(0)
+    }
+
+    it("price_validator::main #01 (succeeds if the price matches the ratio of the vault lovelace value and the number of tokens in circulation)", () => {
         configureContext().use((ctx) => {
-            main.eval({ $scriptContext: ctx, $datum: price, _: new IntData(0) })
+            main.eval({ $scriptContext: ctx, ...defaultTestArgs })
         })
     })
 
-    it("throws an error if not signed by the correct agent", () => {
+    it("price_validator::main #02 (throws an error if not signed by the correct agent)", () => {
         configureContext({ signingAgent: PubKeyHash.dummy(1) }).use((ctx) => {
             throws(() => {
                 main.eval({
                     $scriptContext: ctx,
-                    $datum: price,
-                    _: new IntData(0)
+                    ...defaultTestArgs
                 })
             })
         })
     })
 
-    it("throws an error if the new price ratio doesn't match the vault lovelace value over the number of tokens in circulation", () => {
+    it("price_validator::main #03 (throws an error if the new price ratio doesn't match the vault lovelace value over the number of tokens in circulation)", () => {
         const price = makePrice({ ratio: [1000, 100], timestamp: 0 })
 
         configureContext({ price }).use((ctx) => {
             throws(() => {
                 main.eval({
                     $scriptContext: ctx,
-                    $datum: price,
-                    _: new IntData(0)
+                    ...defaultTestArgs,
+                    $datum: price
                 })
             })
         })
     })
 
-    it("throws an error if the new price timestamp doesn't match oldest timestamp from the portfolio reduction result", () => {
+    it("price_validator::main #04 (throws an error if the new price timestamp doesn't match oldest timestamp from the portfolio reduction result)", () => {
         const price = makePrice({ ratio: [1, 1], timestamp: 1 })
 
         configureContext({ price }).use((ctx) => {
             throws(() => {
                 main.eval({
                     $scriptContext: ctx,
-                    $datum: price,
-                    _: new IntData(0)
+                    ...defaultTestArgs,
+                    $datum: price
                 })
             })
         })
     })
 
-    it("throws an error if the portfolio reduction state isn't TotalAssetValue", () => {
+    it("price_validator::main #05 (throws an error if the portfolio reduction state isn't TotalAssetValue)", () => {
         configureContext({
             reductionMode: { DoesNotExist: { asset_class: AssetClass.dummy() } }
         }).use((ctx) => {
             throws(() => {
                 main.eval({
                     $scriptContext: ctx,
-                    $datum: price,
-                    _: new IntData(0)
+                    ...defaultTestArgs
                 })
             })
         })
     })
 
-    it("throws an error if the portfolio reduction hasn't yet iterated over all groups", () => {
+    it("price_validator::main #06 (throws an error if the portfolio reduction hasn't yet iterated over all groups)", () => {
         configureContext({ nGroups: 2 }).use((ctx) => {
             throws(() => {
                 main.eval({
                     $scriptContext: ctx,
-                    $datum: price,
-                    _: new IntData(0)
+                    ...defaultTestArgs
                 })
+            })
+        })
+    })
+
+    it("price_validator::main #07 (throws an error if the supply tick is more recent than the tick in the portfolio reduction state)", () => {
+        configureContext({ supplyTick: 1 }).use((ctx) => {
+            throws(() => {
+                main.eval({ $scriptContext: ctx, ...defaultTestArgs })
             })
         })
     })

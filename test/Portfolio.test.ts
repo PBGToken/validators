@@ -1,6 +1,12 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { Address, AssetClass, Assets, Value } from "@helios-lang/ledger"
+import {
+    ByteArrayData,
+    ConstrData,
+    ListData,
+    UplcData
+} from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import {
     directPolicyScripts,
@@ -21,12 +27,6 @@ import {
 } from "./data"
 import { makeConfigToken, makePortfolioToken } from "./tokens"
 import { ScriptContextBuilder, withScripts } from "./tx"
-import {
-    ByteArrayData,
-    ConstrData,
-    ListData,
-    UplcData
-} from "@helios-lang/uplc"
 
 const {
     "PortfolioReduction::is_idle": is_idle,
@@ -40,7 +40,7 @@ const {
 } = contract.PortfolioModule
 
 describe("PortfolioModule::PortfolioReduction::is_idle", () => {
-    it("returns true if in Idle state", () => {
+    it("PortfolioModule::PortfolioReduction::is_idle #01 (returns true if in Idle state)", () => {
         const state: PortfolioReductionType = {
             Idle: {}
         }
@@ -48,7 +48,7 @@ describe("PortfolioModule::PortfolioReduction::is_idle", () => {
         strictEqual(is_idle.eval({ self: state }), true)
     })
 
-    it("returns false if in Reducing(TotalAssetValue) state", () => {
+    it("PortfolioModule::PortfolioReduction::is_idle #02 (returns false if in Reducing(TotalAssetValue) state)", () => {
         const state: PortfolioReductionType = {
             Reducing: {
                 group_iter: 0,
@@ -65,7 +65,7 @@ describe("PortfolioModule::PortfolioReduction::is_idle", () => {
         strictEqual(is_idle.eval({ self: state }), false)
     })
 
-    it("returns false if in Reducing(Exists) state", () => {
+    it("PortfolioModule::PortfolioReduction::is_idle #03 (returns false if in Reducing(Exists) state)", () => {
         const state: PortfolioReductionType = {
             Reducing: {
                 group_iter: 0,
@@ -82,7 +82,7 @@ describe("PortfolioModule::PortfolioReduction::is_idle", () => {
         strictEqual(is_idle.eval({ self: state }), false)
     })
 
-    it("returns false if in Reducing(DoesNotExist) state", () => {
+    it("PortfolioModule::PortfolioReduction::is_idle #04 (returns false if in Reducing(DoesNotExist) state)", () => {
         const state: PortfolioReductionType = {
             Reducing: {
                 group_iter: 0,
@@ -103,7 +103,7 @@ describe("PortfolioModule::Portfolio::find_input", () => {
     const portfolio = makePortfolio()
 
     describe("for all validators", () => {
-        it("returns the portfolio data if the portfolio UTxO is the current input", () => {
+        it("PortfolioModule::Portfolio::find_input #01 (returns the portfolio data if the portfolio UTxO is the current input)", () => {
             new ScriptContextBuilder()
                 .addPortfolioInput({
                     portfolio,
@@ -122,7 +122,7 @@ describe("PortfolioModule::Portfolio::find_input", () => {
                 })
         })
 
-        it("throws an error if the portfolio UTxO isn't at the portfolio_validator address", () => {
+        it("PortfolioModule::Portfolio::find_input #02 (throws an error if the portfolio UTxO isn't at the portfolio_validator address)", () => {
             new ScriptContextBuilder()
                 .addPortfolioInput({
                     address: Address.dummy(false),
@@ -141,7 +141,7 @@ describe("PortfolioModule::Portfolio::find_input", () => {
                 })
         })
 
-        it("throws an error if the portfolio UTxO doesn't contain the portfolio token", () => {
+        it("PortfolioModule::Portfolio::find_input #03 (throws an error if the portfolio UTxO doesn't contain the portfolio token)", () => {
             new ScriptContextBuilder()
                 .addPortfolioInput({
                     portfolio,
@@ -160,7 +160,7 @@ describe("PortfolioModule::Portfolio::find_input", () => {
                 })
         })
 
-        it("throws an error if the portfolio UTxO contains less than 1 portfolio token", () => {
+        it("PortfolioModule::Portfolio::find_input #04 (throws an error if the portfolio UTxO contains less than 1 portfolio token)", () => {
             new ScriptContextBuilder()
                 .addPortfolioInput({
                     portfolio,
@@ -179,7 +179,7 @@ describe("PortfolioModule::Portfolio::find_input", () => {
                 })
         })
 
-        it("returns the portfolio data if the portfolio UTxO contains more than 1 token and isn't the current input", () => {
+        it("PortfolioModule::Portfolio::find_input #05 (returns the portfolio data if the portfolio UTxO contains more than 1 token and isn't the current input)", () => {
             new ScriptContextBuilder()
                 .addPortfolioInput({
                     portfolio,
@@ -222,7 +222,7 @@ describe("PortfolioModule::Portfolio::find_output", () => {
     describe("@ all validators", () => {
         const configureContext = withScripts(configureParentContext, scripts)
 
-        it("returns the portfolio data if the portfolio UTxO is returned to portfolio_validator address with the portfolio token", () => {
+        it("PortfolioModule::Portfolio::find_output #01 (returns the portfolio data if the portfolio UTxO is returned to portfolio_validator address with the portfolio token)", () => {
             configureContext().use((currentScript, ctx) => {
                 deepEqual(
                     find_output.eval({
@@ -234,7 +234,7 @@ describe("PortfolioModule::Portfolio::find_output", () => {
             })
         })
 
-        it("throws an error if the portfolio UTxO isn't returned to the portfolio_validator address", () => {
+        it("PortfolioModule::Portfolio::find_output #02 (throws an error if the portfolio UTxO isn't returned to the portfolio_validator address)", () => {
             configureContext({ address: Address.dummy(false) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
@@ -247,7 +247,7 @@ describe("PortfolioModule::Portfolio::find_output", () => {
             )
         })
 
-        it("throws an error if the portfolio UTxO isn't returned with exactly 1 portfolio token", () => {
+        it("PortfolioModule::Portfolio::find_output #03 (throws an error if the portfolio UTxO isn't returned with exactly 1 portfolio token)", () => {
             configureContext({ token: makePortfolioToken(2) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
@@ -260,7 +260,7 @@ describe("PortfolioModule::Portfolio::find_output", () => {
             )
         })
 
-        it("throws an error when the first datum field entry isn't iData", () => {
+        it("PortfolioModule::Portfolio::find_output #04 (throws an error when the first datum field entry isn't iData)", () => {
             const datum = ListData.expect(castPortfolio.toUplcData(portfolio))
             datum.items[0] = new ByteArrayData([])
 
@@ -274,7 +274,7 @@ describe("PortfolioModule::Portfolio::find_output", () => {
             })
         })
 
-        it("throws an error if the datum listData contains an additional entry", () => {
+        it("PortfolioModule::Portfolio::find_output #05 (throws an error if the datum listData contains an additional entry)", () => {
             const datum = ListData.expect(castPortfolio.toUplcData(portfolio))
             datum.items.push(new ByteArrayData([]))
 
@@ -288,7 +288,7 @@ describe("PortfolioModule::Portfolio::find_output", () => {
             })
         })
 
-        it("throws an error if the datum reduction field has the wrong constr tag", () => {
+        it("PortfolioModule::Portfolio::find_output #06 (throws an error if the datum reduction field has the wrong constr tag)", () => {
             const datum = ListData.expect(castPortfolio.toUplcData(portfolio))
             datum.items[1] = new ConstrData(
                 2,
@@ -311,7 +311,7 @@ describe("PortfolioModule::Portfolio::find_ref", () => {
     const portfolio = makePortfolio()
 
     describe("for the config_validator", () => {
-        it("returns the portfolio data even if the referenced portfolio UTxO isn't at the portfolio_validator address", () => {
+        it("PortfolioModule::Portfolio::find_ref #01 (returns the portfolio data even if the referenced portfolio UTxO isn't at the portfolio_validator address)", () => {
             new ScriptContextBuilder()
                 .addPortfolioRef({ address: Address.dummy(false), portfolio })
                 .redeemDummyTokenWithDvpPolicy()
@@ -328,7 +328,7 @@ describe("PortfolioModule::Portfolio::find_ref", () => {
     })
 
     describe("for all validators that don't have direct access to the policy", () => {
-        it("throws an error if the portfolio UTxO is referenced, but the current input doesn't contain a policy token (so there is no indirect way to get policy)", () => {
+        it("PortfolioModule::Portfolio::find_ref #02 (throws an error if the portfolio UTxO is referenced, but the current input doesn't contain a policy token (so there is no indirect way to get policy))", () => {
             new ScriptContextBuilder()
                 .addPortfolioRef({ portfolio })
                 .use((ctx) => {
@@ -345,7 +345,7 @@ describe("PortfolioModule::Portfolio::find_ref", () => {
     })
 
     describe("for all validators that have direct access to the policy", () => {
-        it("returns the portfolio data if the portfolio UTxO referenced and the current input doesn't contain a policy token", () => {
+        it("PortfolioModule::Portfolio::find_ref #03 (returns the portfolio data if the portfolio UTxO referenced and the current input doesn't contain a policy token)", () => {
             new ScriptContextBuilder()
                 .addPortfolioRef({ portfolio })
                 .use((ctx) => {
@@ -367,7 +367,7 @@ describe("PortfolioModule::Portfolio::find_ref", () => {
             (s) => s != "config_validator"
         )
 
-        it("throws an error if the referenced portfolio UTxO isn't at the portfolio_validator address", () => {
+        it("PortfolioModule::Portfolio::find_ref #04 (throws an error if the referenced portfolio UTxO isn't at the portfolio_validator address)", () => {
             new ScriptContextBuilder()
                 .addPortfolioRef({ address: Address.dummy(false), portfolio })
                 .redeemDummyTokenWithDvpPolicy()
@@ -390,7 +390,7 @@ describe("PortfolioModule::Portfolio::find_thread", () => {
     const redeemer: PortfolioActionType = { AddAssetClass: {} }
 
     describe("for all validators", () => {
-        it("returns the portfolio data if the portfolio UTxO remains unchanged when spent and returned", () => {
+        it("PortfolioModule::Portfolio::find_thread #01 (returns the portfolio data if the portfolio UTxO remains unchanged when spent and returned)", () => {
             new ScriptContextBuilder()
                 .addPortfolioThread({ portfolio, redeemer })
                 .use((ctx) => {
@@ -412,7 +412,7 @@ describe("PortfolioModule::Portfolio::get_reduction_result", () => {
     describe("in Idle state", () => {
         const state: PortfolioReductionType = { Idle: {} }
 
-        it("throws an error", () => {
+        it("PortfolioModule::Portfolio::get_reduction_result #01 (throws an error in Idle state)", () => {
             throws(() => {
                 get_reduction_result.eval({
                     self: makePortfolio({ state })
@@ -429,7 +429,7 @@ describe("PortfolioModule::Portfolio::get_reduction_result", () => {
             }
         }
 
-        it("returns the reduction data if complete", () => {
+        it("PortfolioModule::Portfolio::get_reduction_result #02 (returns the reduction data if complete)", () => {
             const portfolio = makePortfolio({
                 nGroups: 1,
                 state: {
@@ -449,7 +449,48 @@ describe("PortfolioModule::Portfolio::get_reduction_result", () => {
             )
         })
 
-        it("throws an error if not complete", () => {
+        it("PortfolioModule::Portfolio::get_reduction_result #03 (returns the reduction data if complete and the expected tick is matched)", () => {
+            const portfolio = makePortfolio({
+                nGroups: 1,
+                state: {
+                    Reducing: {
+                        group_iter: 1,
+                        start_tick: 0,
+                        mode
+                    }
+                }
+            })
+
+            equalsPortfolioReductionMode(
+                get_reduction_result.eval({
+                    self: portfolio,
+                    expected_tick: 0
+                }),
+                mode
+            )
+        })
+
+        it("PortfolioModule::Portfolio::get_reduction_result #04 (throws an error if the expected tick isn't matched)", () => {
+            const portfolio = makePortfolio({
+                nGroups: 1,
+                state: {
+                    Reducing: {
+                        group_iter: 1,
+                        start_tick: 0,
+                        mode
+                    }
+                }
+            })
+
+            throws(() => {
+                get_reduction_result.eval({
+                    self: portfolio,
+                    expected_tick: 1
+                })
+            })
+        })
+
+        it("PortfolioModule::Portfolio::get_reduction_result #05 (throws an error if not complete)", () => {
             const portfolio = makePortfolio({
                 nGroups: 1,
                 state: {
@@ -477,7 +518,7 @@ describe("PortfolioModule::Portfolio::get_reduction_result", () => {
             }
         }
 
-        it("returns the reduction data if complete", () => {
+        it("PortfolioModule::Portfolio::get_reduction_result #06 (returns the reduction data if complete)", () => {
             const portfolio = makePortfolio({
                 nGroups: 1,
                 state: {
@@ -497,7 +538,48 @@ describe("PortfolioModule::Portfolio::get_reduction_result", () => {
             )
         })
 
-        it("throws an error if not complete", () => {
+        it("PortfolioModule::Portfolio::get_reduction_result #07 (returns the reduction data if complete and the expected tick matches)", () => {
+            const portfolio = makePortfolio({
+                nGroups: 1,
+                state: {
+                    Reducing: {
+                        group_iter: 1,
+                        start_tick: 0,
+                        mode
+                    }
+                }
+            })
+
+            equalsPortfolioReductionMode(
+                get_reduction_result.eval({
+                    self: portfolio,
+                    expected_tick: 0
+                }),
+                mode
+            )
+        })
+
+        it("PortfolioModule::Portfolio::get_reduction_result #08 (throws an error if the expected_tick doesn't match)", () => {
+            const portfolio = makePortfolio({
+                nGroups: 1,
+                state: {
+                    Reducing: {
+                        group_iter: 1,
+                        start_tick: 0,
+                        mode
+                    }
+                }
+            })
+
+            throws(() => {
+                get_reduction_result.eval({
+                    self: portfolio,
+                    expected_tick: 1
+                })
+            })
+        })
+
+        it("PortfolioModule::Portfolio::get_reduction_result #09 (throws an error if not complete)", () => {
             const portfolio = makePortfolio({
                 nGroups: 1,
                 state: {
@@ -524,7 +606,7 @@ describe("PortfolioModule::Portfolio::get_reduction_result", () => {
             }
         }
 
-        it("returns the reduction data if complete", () => {
+        it("PortfolioModule::Portfolio::get_reduction_result #10 (returns the reduction data if complete)", () => {
             const portfolio = makePortfolio({
                 nGroups: 1,
                 state: {
@@ -544,7 +626,48 @@ describe("PortfolioModule::Portfolio::get_reduction_result", () => {
             )
         })
 
-        it("throws an error if not complete", () => {
+        it("PortfolioModule::Portfolio::get_reduction_result #11 (returns the reduction data if complete and the expected tick is matched)", () => {
+            const portfolio = makePortfolio({
+                nGroups: 1,
+                state: {
+                    Reducing: {
+                        group_iter: 1,
+                        start_tick: 0,
+                        mode
+                    }
+                }
+            })
+
+            equalsPortfolioReductionMode(
+                get_reduction_result.eval({
+                    self: portfolio,
+                    expected_tick: 0
+                }),
+                mode
+            )
+        })
+
+        it("PortfolioModule::Portfolio::get_reduction_result #12 (throws an error if the expected tick isn't matched)", () => {
+            const portfolio = makePortfolio({
+                nGroups: 1,
+                state: {
+                    Reducing: {
+                        group_iter: 1,
+                        start_tick: 0,
+                        mode
+                    }
+                }
+            })
+
+            throws(() => {
+                get_reduction_result.eval({
+                    self: portfolio,
+                    expected_tick: 1
+                })
+            })
+        })
+
+        it("PortfolioModule::Portfolio::get_reduction_result #13 (throws an error if not complete)", () => {
             const portfolio = makePortfolio({
                 nGroups: 1,
                 state: {
@@ -571,7 +694,7 @@ describe("PortfolioModule::sum_lovelace", () => {
         const v = new Value(lovelace)
 
         describe("for all validators", () => {
-            it("returns the lovelace quantity given a dummy asset pointer", () => {
+            it("PortfolioModule::sum_lovelace #01 (returns the lovelace quantity given a dummy asset pointer)", () => {
                 const ptrs: AssetPtrType[] = [
                     makeAssetPtr({ groupIndex: 100, assetClassIndex: 100 })
                 ]
@@ -595,7 +718,7 @@ describe("PortfolioModule::sum_lovelace", () => {
                 })
             })
 
-            it("throws an error if no dummy asset pointer is given", () => {
+            it("PortfolioModule::sum_lovelace #02 (throws an error if no dummy asset pointer is given)", () => {
                 scripts.forEach((currentScript) => {
                     new ScriptContextBuilder()
                         .redeemDummyTokenWithDvpPolicy()
@@ -643,7 +766,7 @@ describe("PortfolioModule::sum_lovelace", () => {
         ]
 
         describe("for all validators", () => {
-            it("returns the expected lovelace quantity given a dummy asset pointer and two other non-dummy asset pointers pointing to a single asset group", () => {
+            it("PortfolioModule::sum_lovelace #03 (returns the expected lovelace quantity given a dummy asset pointer and two other non-dummy asset pointers pointing to a single asset group)", () => {
                 scripts.forEach((currentScript) => {
                     new ScriptContextBuilder()
                         .addAssetGroupRef({
@@ -678,7 +801,7 @@ describe("PortfolioModule::sum_lovelace", () => {
                 })
             })
 
-            it("returns the expected lovelace quantity even if too many asset pointers are given", () => {
+            it("PortfolioModule::sum_lovelace #04 (returns the expected lovelace quantity even if too many asset pointers are given)", () => {
                 scripts.forEach((currentScript) => {
                     new ScriptContextBuilder()
                         .addAssetGroupRef({
@@ -713,7 +836,7 @@ describe("PortfolioModule::sum_lovelace", () => {
                 })
             })
 
-            it("throws an error if one of the price timestamps is too old", () => {
+            it("PortfolioModule::sum_lovelace #05 (throws an error if one of the price timestamps is too old)", () => {
                 scripts.forEach((currentScript) => {
                     new ScriptContextBuilder()
                         .addAssetGroupRef({
@@ -747,7 +870,7 @@ describe("PortfolioModule::sum_lovelace", () => {
                 })
             })
 
-            it("throws an error if one of the asset prices has a zero denominator", () => {
+            it("PortfolioModule::sum_lovelace #06 (throws an error if one of the asset prices has a zero denominator)", () => {
                 scripts.forEach((currentScript) => {
                     new ScriptContextBuilder()
                         .addAssetGroupRef({
@@ -781,7 +904,7 @@ describe("PortfolioModule::sum_lovelace", () => {
                 })
             })
 
-            it("throws an error if too few asset pointers are specified", () => {
+            it("PortfolioModule::sum_lovelace #07 (throws an error if too few asset pointers are specified)", () => {
                 scripts.forEach((currentScript) => {
                     new ScriptContextBuilder()
                         .addAssetGroupRef({
@@ -820,7 +943,7 @@ describe("PortfolioModule::sum_lovelace", () => {
 
 describe("PortfolioModule::witnessed_by_portfolio", () => {
     describe("for the assets_validator", () => {
-        it("returns true if the portfolio UTxO is spent", () => {
+        it("PortfolioModule::witnessed_by_portfolio #01 (returns true if the portfolio UTxO is spent)", () => {
             new ScriptContextBuilder()
                 .addPortfolioInput()
                 .redeemDummyTokenWithDvpPolicy()
@@ -835,7 +958,7 @@ describe("PortfolioModule::witnessed_by_portfolio", () => {
                 })
         })
 
-        it("returns true if the portfolio UTxO is spent, but not from the portfolio_validator address", () => {
+        it("PortfolioModule::witnessed_by_portfolio #02 (returns true if the portfolio UTxO is spent, but not from the portfolio_validator address)", () => {
             new ScriptContextBuilder()
                 .addPortfolioInput({ address: Address.dummy(false) })
                 .redeemDummyTokenWithDvpPolicy()
@@ -850,7 +973,7 @@ describe("PortfolioModule::witnessed_by_portfolio", () => {
                 })
         })
 
-        it("returns false if the portfolio UTxO is spent but doesn't contain the portfolio token", () => {
+        it("PortfolioModule::witnessed_by_portfolio #03 (returns false if the portfolio UTxO is spent but doesn't contain the portfolio token)", () => {
             new ScriptContextBuilder()
                 .addPortfolioInput({ token: makeConfigToken() })
                 .redeemDummyTokenWithDvpPolicy()
@@ -869,7 +992,7 @@ describe("PortfolioModule::witnessed_by_portfolio", () => {
     describe("for the other validators", () => {
         const otherScripts = scripts.filter((s) => s != "assets_validator")
 
-        it("returns true if the portfolio UTxO is spent", () => {
+        it("PortfolioModule::witnessed_by_portfolio #04 (returns true if the portfolio UTxO is spent)", () => {
             new ScriptContextBuilder()
                 .addPortfolioInput()
                 .redeemDummyTokenWithDvpPolicy()
@@ -886,7 +1009,7 @@ describe("PortfolioModule::witnessed_by_portfolio", () => {
                 })
         })
 
-        it("returns false if the portfolio UTxO is spent, but not from the portfolio_validator address", () => {
+        it("PortfolioModule::witnessed_by_portfolio #05 (returns false if the portfolio UTxO is spent, but not from the portfolio_validator address)", () => {
             new ScriptContextBuilder()
                 .addPortfolioInput({ address: Address.dummy(false) })
                 .redeemDummyTokenWithDvpPolicy()
@@ -903,7 +1026,7 @@ describe("PortfolioModule::witnessed_by_portfolio", () => {
                 })
         })
 
-        it("throws an error if the spent portfolio UTxO doesn't contain the portfolio token", () => {
+        it("PortfolioModule::witnessed_by_portfolio #06 (throws an error if the spent portfolio UTxO doesn't contain the portfolio token)", () => {
             new ScriptContextBuilder()
                 .addPortfolioInput({ token: makeConfigToken() })
                 .redeemDummyTokenWithDvpPolicy()

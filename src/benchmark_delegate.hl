@@ -5,6 +5,6 @@ staking benchmark_delegate
  * If ADA is the benchmark, the top and the bottom of the benchmark price need to be equal
  */
 func main(benchmark_price: Ratio) -> Bool {
-    // TODO: fail if the bottom is 0
-    benchmark_price.top == benchmark_price.bottom
+    benchmark_price.bottom > 0
+    && benchmark_price.top == benchmark_price.bottom
 }

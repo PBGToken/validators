@@ -124,10 +124,11 @@ func main(_: Config, _) -> Bool {
                     && !group1.has_asset(asset_class)
                     && config1 == config0.copy(state: ConfigState::Idle)
                 },
-                UpdatingSuccessFee{_period, benchmark, fee} => {
+                UpdatingSuccessFee{_, benchmark, fee} => {
                     supply = Supply::find_input();
 
-                    // TODO: should UpdatingSuccessFee.period be used to check something?
+                    // reimbursement token minting assures the supply_validator witnesses the tx, 
+                    //  which, because the config UTxO is being spent, in turn assures the period is copied into the correct field in the supply datum
 
                     tx.minted.get_safe(Tokens::reimbursement(supply.period_id())) == 1
                     && config1 == config0.copy(
