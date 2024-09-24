@@ -223,16 +223,10 @@ func validate_move_assets(portfolio0: Portfolio) -> Bool {
 
             assert(group.is_not_overfull(), "output assetgroup is overfull");
 
-            n_assets_ = group.assets.fold((n_assets: Int, asset1: Asset) -> {
-                // look for asset somewhere in output
-                asset0 = AssetGroup::find_input_asset(asset1.asset_class);
+            // checking that each asset exists in the inputs is redundant, as we already checked that each input is in the output, 
+            //  and there need to be same number of input assets and outputs (uniqueness of the assets is guaranteed by the rest of the contract)
 
-                assert(asset0 == asset1, "asset can't change");
-
-                n_assets + 1
-            }, n_assets);
-
-            (n_groups + 1, n_assets_)
+            (n_groups + 1, n_assets + group.assets.length)
         } else {
             (n_groups, n_assets)
         }

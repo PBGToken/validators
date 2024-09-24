@@ -90,13 +90,9 @@ func validate_mint_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: A
     (n_vouchers_minted, n_tokens_in_vouchers, last_voucher_id) = validate_minted_vouchers(
         price_relative_to_benchmark, 
         supply0.period_id(),
-        supply0.last_voucher_id
+        supply0.last_voucher_id,
+        supply0.is_successful(price_relative_to_benchmark)
     );
-
-    // only allow minting vouchers if current price is larger than start price
-    if (n_vouchers_minted > 0) {
-        assert(price_relative_to_benchmark > supply0.success_fee.start_price, "can't mint vouchers when current price (relative to benchmark) is lower than start price")
-    };
 
     price.is_not_expired().trace_if_false("price expired")
     && (dV >= (price.value * D).floor()).trace_if_false("too little value sent to vault")

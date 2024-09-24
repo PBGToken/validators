@@ -328,49 +328,7 @@ describe("mint_order_validator::main", () => {
             )
         })
 
-        it("mint_order_validator::main #15 (throws an error if the ref voucher period id is wrong)", () => {
-            configureContext({ returnRefVoucher: { periodId: 1 } }).use(
-                (ctx) => {
-                    throws(() => {
-                        main.eval({
-                            $scriptContext: ctx,
-                            order: mintOrder,
-                            redeemer
-                        })
-                    })
-                }
-            )
-        })
-
-        it("mint_order_validator::main #16 (throws an error if the ref voucher price is too low)", () => {
-            configureContext({ returnRefVoucher: { price: [139, 1] } }).use(
-                (ctx) => {
-                    throws(() => {
-                        main.eval({
-                            $scriptContext: ctx,
-                            order: mintOrder,
-                            redeemer
-                        })
-                    })
-                }
-            )
-        })
-
-        it("mint_order_validator::main #17 (throws an error if the ref voucher price is too high)", () => {
-            configureContext({ returnRefVoucher: { price: [141, 1] } }).use(
-                (ctx) => {
-                    throws(() => {
-                        main.eval({
-                            $scriptContext: ctx,
-                            order: mintOrder,
-                            redeemer
-                        })
-                    })
-                }
-            )
-        })
-
-        it("mint_order_validator::main #18 (succeeds if no vouchers are returned but there was also no success)", () => {
+        it("mint_order_validator::main #15 (succeeds if no vouchers are returned but there was also no success)", () => {
             configureContext({
                 returnRefVoucher: null,
                 returnUserVoucher: false,

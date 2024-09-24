@@ -76,7 +76,8 @@ func validate_initial_config() -> Bool {
             },
             success_fee: SuccessFeeConfig{
                 fee:       INITIAL_SUCCESS_FEE,
-                benchmark: Scripts::benchmark_delegate
+                benchmark: Scripts::benchmark_delegate,
+                min_reimbursement: 20_000 // 0.02 tokens, equivalent to 2 ADA
             }
         },
         token: TokenConfig{

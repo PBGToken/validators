@@ -355,7 +355,8 @@ describe("ConfigModule::SuccessFeeConfig::get_benchmark_price", () => {
     const price: RatioType = [100n, 1n]
     const successFeeConfig = {
         fee: makeSuccessFee(),
-        benchmark
+        benchmark,
+        min_reimbursement: 20_000
     }
 
     const configureContext = (props?: { ratio?: RatioType }) => {

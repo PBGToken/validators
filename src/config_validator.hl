@@ -25,6 +25,7 @@ const SUCCESS_FEE_PERIOD_UPPER_LIMIT = 3660*Duration::DAY
 const MAX_PRICE_AGE_UPPER_LIMIT = 366*Duration::DAY // if no oracle is available, changing the max price age to something very large is the only way of getting mony out of the vault through burning
 const UPDATE_DELAY_UPPER_LIMIT = 366*Duration::DAY
 const MAX_SUPPLY_UPPER_LIMIT = (1_000_000_000_000_000_000_000/INITIAL_PRICE).ceil() // 1000 Trillion ADA
+const MIN_REIMBURSEMENT_UPPER_LIMIT = (100_000_000/INITIAL_PRICE).ceil() // equivalent value of 100 ADA (i.e. 1 token at initial price)
 
 func main(_: Config, _) -> Bool {
     (config0: Config, config1: Config) = Config::find_thread();
@@ -101,6 +102,10 @@ func main(_: Config, _) -> Bool {
                     tau_p > Duration::new(0)
                     && tau_p < MAX_PRICE_AGE_UPPER_LIMIT
                 },
+                ChangingMinReimbursement{min_reimbursement} => {
+                    min_reimbursement >= 0
+                    && min_reimbursement < MIN_REIMBURSEMENT_UPPER_LIMIT
+                },
                 ChangingMetadata{hash} => {
                     hash.length == 32
                 }
@@ -133,10 +138,10 @@ func main(_: Config, _) -> Bool {
                     tx.minted.get_safe(Tokens::reimbursement(supply.period_id())) == 1
                     && config1 == config0.copy(
                         fees: config0.fees.copy(
-                            success_fee: SuccessFeeConfig{
+                            success_fee: config0.fees.success_fee.copy(   
                                 fee: fee,
                                 benchmark: benchmark
-                            }
+                            )
                         ),
                         state: ConfigState::Idle
                     )
@@ -207,6 +212,16 @@ func main(_: Config, _) -> Bool {
                     config1 == config0.copy(
                         token: config0.token.copy(
                             max_price_age: tau_p
+                        ),
+                        state: ConfigState::Idle
+                    )
+                },
+                ChangingMinReimbursement{min_reimbursement} => {
+                    config1 == config0.copy(
+                        fees: config0.fees.copy(
+                            success_fee: config0.fees.success_fee.copy(
+                                min_reimbursement: min_reimbursement
+                            )
                         ),
                         state: ConfigState::Idle
                     )

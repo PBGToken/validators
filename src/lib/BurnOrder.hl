@@ -14,6 +14,17 @@ enum BurnOrderReturnValue {
     }
 }
 
+// don't count ADA
+func count_asset_classes(v: Value) -> Int {
+    v.to_map().fold((n: Int, mph: MintingPolicyHash, tokens: Map[ByteArray]Int) -> Int {
+        if (mph == MintingPolicyHash::new(#)) {
+            n
+        } else {
+            n + tokens.length
+        }
+    }, 0)
+}
+
 struct BurnOrder {
     return_address:   Address
     return_datum:     Data
@@ -86,22 +97,9 @@ struct BurnOrder {
                 actual_value = self.value();
 
                 // prevent token dust attack with other tokens by assuring that the returned value is either ADA, or exists in the requested value
-                //  we sadly can't do this while checking that sufficient value is being returned (for which need to iterate over the requested_value instead of over the actual_value)
+                //  the fastest way to do this is to compare the number of asset classes in the returned value and in the requested value
                 actual_value >= requested_value
-                && actual_value.to_map().all((actual_mph: MintingPolicyHash, actual_tokens: Map[ByteArray]Int) -> {
-                    if (actual_mph == MintingPolicyHash::new(#)) {
-                        // can always return ADA, even if it wasn't requested
-                        true
-                    } else {
-                        requested_tokens = requested_value.to_map().get(actual_mph);
-
-                        actual_tokens.all_keys((actual_token_name: ByteArray) -> {
-                            requested_tokens.any_key((requested_token_name: ByteArray) -> {
-                                requested_token_name == actual_token_name
-                            })
-                        })
-                    }
-                })
+                && count_asset_classes(actual_value) <= count_asset_classes(requested_value)
             }
         }
     }

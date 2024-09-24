@@ -1803,7 +1803,7 @@ describe("portfolio_validator::validate_move_assets", () => {
             })
         })
 
-        it("portfolio_validator::validate_move_assets #03 (throws an error if an additional asset was added to the an asset group)", () => {
+        it("portfolio_validator::validate_move_assets #03 (returns false if an additional asset was added to the an asset group)", () => {
             configureContext({
                 additionalFirstGroupOutputAssets: [
                     makeAsset({
@@ -1813,12 +1813,12 @@ describe("portfolio_validator::validate_move_assets", () => {
                     })
                 ]
             }).use((ctx) => {
-                throws(() => {
+                strictEqual(
                     validate_move_assets.eval({
                         $scriptContext: ctx,
                         portfolio0: portfolio
                     })
-                })
+                , false)
             })
         })
 

@@ -70,11 +70,12 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                 price: [115, 1],
                 address: voucherAddr2,
                 datum: voucherDatum2,
-                tokens: 500_000
+                tokens: 5_000_000
             })
-            const expectedReim2 = 19028
+            const expectedReim2 = 190285
 
             return new ScriptContextBuilder()
+                
                 .addReimbursementInput({
                     id: periodId,
                     reimbursement,
@@ -110,6 +111,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                     datum: props?.thirdReturnDatum ?? voucherDatum2,
                     value: new Value(0, makeDvpTokens(expectedReim2))
                 })
+                .addConfigRef()
         }
 
         it("reimbursement_validator::validate_burned_vouchers #01 (returns the number of vouchers burned and the total number of tokens reimbursed)", () => {
@@ -120,7 +122,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                         reim: reimbursement,
                         period_id: periodId
                     }),
-                    [3n, 50153n + 123946n + 19028n]
+                    [3n, 50153n + 123946n + 190285n]
                 )
             })
         })
@@ -143,7 +145,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                             reim: reimbursement,
                             period_id: periodId
                         }),
-                        [4n, 50153n + 123946n + 19028n]
+                        [4n, 50153n + 123946n + 190285n]
                     )
                 })
         })

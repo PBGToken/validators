@@ -44,6 +44,7 @@ struct ManagementFeeConfig {
 struct SuccessFeeConfig {
     fee:       SuccessFee
     benchmark: StakingValidatorHash
+    min_reimbursement: Int // below this DVP token quantity a voucher reimbursement can be ignored
 
     func get_benchmark_price(
         self, 
@@ -80,6 +81,7 @@ enum ConfigChangeProposal {
     RemovingAssetClass {
         asset_class: AssetClass
     }
+    // the min_reimbursement is updated using a separate Governance action
     UpdatingSuccessFee {
         period:    Duration
         benchmark: StakingValidatorHash
@@ -112,6 +114,9 @@ enum ConfigChangeProposal {
     }
     ChangingMaxPriceAge {
         max_price_age: Duration
+    }
+    ChangingMinReimbursement {
+        min_reimbursement: Int 
     }
     ChangingMetadata {
         metadata_hash: ByteArray

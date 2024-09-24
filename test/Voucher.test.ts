@@ -349,15 +349,20 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 scripts
             )
 
+            const defaultTestArgs = {
+                price: currentPrice.value,
+                period_id: periodId,
+                last_voucher_id: lastVoucherId,
+                is_successful: true
+            }
+
             it("VoucherModule::validate_minted_vouchers #01 (returns the fact that one voucher is minted and that its id is 0)", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         validate_minted_vouchers.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
-                            price: currentPrice.value,
-                            period_id: periodId,
-                            last_voucher_id: lastVoucherId
+                            ...defaultTestArgs
                         }),
                         [1n, 1000n, 0n]
                     )
@@ -371,9 +376,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                             validate_minted_vouchers.eval({
                                 $currentScript: currentScript,
                                 $scriptContext: ctx,
-                                price: currentPrice.value,
-                                period_id: periodId,
-                                last_voucher_id: lastVoucherId
+                                ...defaultTestArgs
                             }),
                             [1n, 500n, 0n]
                         )
@@ -389,9 +392,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                         validate_minted_vouchers.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
-                            price: currentPrice.value,
-                            period_id: periodId,
-                            last_voucher_id: lastVoucherId
+                            ...defaultTestArgs
                         })
                     })
                 })
@@ -407,9 +408,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                         validate_minted_vouchers.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
-                            price: currentPrice.value,
-                            period_id: periodId,
-                            last_voucher_id: lastVoucherId
+                            ...defaultTestArgs
                         })
                     })
                 })
@@ -422,9 +421,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                             validate_minted_vouchers.eval({
                                 $currentScript: currentScript,
                                 $scriptContext: ctx,
-                                price: currentPrice.value,
-                                period_id: periodId,
-                                last_voucher_id: lastVoucherId
+                                ...defaultTestArgs
                             })
                         })
                     }
@@ -438,9 +435,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                             validate_minted_vouchers.eval({
                                 $currentScript: currentScript,
                                 $scriptContext: ctx,
-                                price: currentPrice.value,
-                                period_id: periodId,
-                                last_voucher_id: lastVoucherId
+                                ...defaultTestArgs
                             })
                         })
                     }
@@ -455,9 +450,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                         validate_minted_vouchers.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
-                            price: currentPrice.value,
-                            period_id: periodId,
-                            last_voucher_id: lastVoucherId
+                            ...defaultTestArgs
                         })
                     })
                 })
@@ -473,11 +466,54 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                         validate_minted_vouchers.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
-                            price: currentPrice.value,
-                            period_id: periodId,
-                            last_voucher_id: lastVoucherId
+                            ...defaultTestArgs
                         })
                     })
+                })
+            })
+
+            it("VoucherModule::validate_minted_vouchers #09 (throws an error if there was and no vouchers were minted but some vouchers were returned (not possible on-chain))", () => {
+                configureContext({
+                    minted: makeDvpTokens(0)
+                })
+                .use((currentScript, ctx) => {
+                    throws(() => {
+                        validate_minted_vouchers.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx,
+                        ...defaultTestArgs,
+                        is_successful: true
+                    })})
+                })
+            })
+
+            it("VoucherModule::validate_minted_vouchers #10 (returns the fact that no vouchers were minted if there is success but no vouchers were minted nor returned to the voucher address)", () => {
+                configureContext({
+                    minted: makeDvpTokens(0),
+                    address: Address.dummy(false)
+                })
+                .use((currentScript, ctx) => {
+                    deepEqual(
+                        validate_minted_vouchers.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx,
+                        ...defaultTestArgs,
+                        is_successful: true
+                    }), [0n, 0n, lastVoucherId])
+                })
+            })
+
+            it("VoucherModule::validate_minted_vouchers #11 (returns the fact that no vouchers were minted if there was no success and no vouchers were actually minted)", () => {
+                configureContext({
+                    minted: makeDvpTokens(0)
+                })
+                .use((currentScript, ctx) => {
+                    deepEqual(validate_minted_vouchers.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx,
+                        ...defaultTestArgs,
+                        is_successful: false
+                    }), [0n, 0n, lastVoucherId])
                 })
             })
         })
@@ -537,31 +573,34 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 scripts
             )
 
-            it("VoucherModule::validate_minted_vouchers #09 (returns the fact that three vouchers is minted, that 1000 DVP tokens are mentioned in the vouchers, and that the id of the last voucher is 2)", () => {
+            const defaultTestArgs = {
+                price: currentPrice.value,
+                period_id: periodId,
+                last_voucher_id: lastVoucherId,
+                is_successful: true
+            }
+
+            it("VoucherModule::validate_minted_vouchers #12 (returns the fact that three vouchers is minted, that 1000 DVP tokens are mentioned in the vouchers, and that the id of the last voucher is 2)", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         validate_minted_vouchers.eval({
                             $scriptContext: ctx,
                             $currentScript: currentScript,
-                            price: currentPrice.value,
-                            period_id: periodId,
-                            last_voucher_id: lastVoucherId
+                            ...defaultTestArgs
                         }),
                         [3n, 1000n, 2n]
                     )
                 })
             })
 
-            it("VoucherModule::validate_minted_vouchers #10 (returns the fact that only 900 DVP tokens are mentioned in the vouchers even if 1000 DVP tokens are actually minted)", () => {
+            it("VoucherModule::validate_minted_vouchers #13 (returns the fact that only 900 DVP tokens are mentioned in the vouchers even if 1000 DVP tokens are actually minted)", () => {
                 configureContext({ tokensMentionedInVoucher2: 300n }).use(
                     (currentScript, ctx) => {
                         deepEqual(
                             validate_minted_vouchers.eval({
                                 $scriptContext: ctx,
                                 $currentScript: currentScript,
-                                price: currentPrice.value,
-                                period_id: periodId,
-                                last_voucher_id: lastVoucherId
+                                ...defaultTestArgs
                             }),
                             [3n, 900n, 2n]
                         )
@@ -569,7 +608,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 )
             })
 
-            it("VoucherModule::validate_minted_vouchers #11 (throws an error if one of the minted voucher has a non-unit quantity)", () => {
+            it("VoucherModule::validate_minted_vouchers #14 (throws an error if one of the minted voucher has a non-unit quantity)", () => {
                 configureContext({
                     extraMinted: makeVoucherPair(voucherId2, 1)
                 }).use((currentScript, ctx) => {
@@ -577,24 +616,35 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                         validate_minted_vouchers.eval({
                             $scriptContext: ctx,
                             $currentScript: currentScript,
-                            price: currentPrice.value,
-                            period_id: periodId,
-                            last_voucher_id: lastVoucherId
+                            ...defaultTestArgs
                         })
                     })
                 })
             })
 
-            it("VoucherModule::validate_minted_vouchers #12 (throws an error if the new voucher ids aren't consecutive)", () => {
+            it("VoucherModule::validate_minted_vouchers #15 (throws an error if the new voucher ids aren't consecutive)", () => {
                 configureContext({ voucherId2: 3 }).use(
                     (currentScript, ctx) => {
                         throws(() => {
                             validate_minted_vouchers.eval({
                                 $scriptContext: ctx,
                                 $currentScript: currentScript,
-                                price: currentPrice.value,
-                                period_id: periodId,
-                                last_voucher_id: lastVoucherId
+                                ...defaultTestArgs
+                            })
+                        })
+                    }
+                )
+            })
+
+            it("VoucherModule::validate_minted_vouchers #16 (throws an error if some vouchers were minted but there is no success)", () => {
+                configureContext().use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            validate_minted_vouchers.eval({
+                                $scriptContext: ctx,
+                                $currentScript: currentScript,
+                                ...defaultTestArgs,
+                                is_successful: false
                             })
                         })
                     }
