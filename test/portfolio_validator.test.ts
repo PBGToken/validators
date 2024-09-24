@@ -1817,8 +1817,9 @@ describe("portfolio_validator::validate_move_assets", () => {
                     validate_move_assets.eval({
                         $scriptContext: ctx,
                         portfolio0: portfolio
-                    })
-                , false)
+                    }),
+                    false
+                )
             })
         })
 

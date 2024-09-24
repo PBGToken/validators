@@ -74,7 +74,8 @@ export function makeConfig(props?: {
                     c0: props?.successFee?.c0 ?? 0,
                     steps: props?.successFee?.steps ?? []
                 },
-                benchmark: props?.benchmark ?? contract.benchmark_delegate.$hash,
+                benchmark:
+                    props?.benchmark ?? contract.benchmark_delegate.$hash,
                 min_reimbursement: BigInt(props?.minReimbursement ?? 20_000n)
             }
         },

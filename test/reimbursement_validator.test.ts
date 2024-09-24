@@ -75,7 +75,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
             const expectedReim2 = 190285
 
             return new ScriptContextBuilder()
-                
+
                 .addReimbursementInput({
                     id: periodId,
                     reimbursement,

@@ -475,15 +475,15 @@ describe("VoucherModule::validate_minted_vouchers", () => {
             it("VoucherModule::validate_minted_vouchers #09 (throws an error if there was and no vouchers were minted but some vouchers were returned (not possible on-chain))", () => {
                 configureContext({
                     minted: makeDvpTokens(0)
-                })
-                .use((currentScript, ctx) => {
+                }).use((currentScript, ctx) => {
                     throws(() => {
                         validate_minted_vouchers.eval({
-                        $currentScript: currentScript,
-                        $scriptContext: ctx,
-                        ...defaultTestArgs,
-                        is_successful: true
-                    })})
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            ...defaultTestArgs,
+                            is_successful: true
+                        })
+                    })
                 })
             })
 
@@ -491,29 +491,32 @@ describe("VoucherModule::validate_minted_vouchers", () => {
                 configureContext({
                     minted: makeDvpTokens(0),
                     address: Address.dummy(false)
-                })
-                .use((currentScript, ctx) => {
+                }).use((currentScript, ctx) => {
                     deepEqual(
                         validate_minted_vouchers.eval({
-                        $currentScript: currentScript,
-                        $scriptContext: ctx,
-                        ...defaultTestArgs,
-                        is_successful: true
-                    }), [0n, 0n, lastVoucherId])
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            ...defaultTestArgs,
+                            is_successful: true
+                        }),
+                        [0n, 0n, lastVoucherId]
+                    )
                 })
             })
 
             it("VoucherModule::validate_minted_vouchers #11 (returns the fact that no vouchers were minted if there was no success and no vouchers were actually minted)", () => {
                 configureContext({
                     minted: makeDvpTokens(0)
-                })
-                .use((currentScript, ctx) => {
-                    deepEqual(validate_minted_vouchers.eval({
-                        $currentScript: currentScript,
-                        $scriptContext: ctx,
-                        ...defaultTestArgs,
-                        is_successful: false
-                    }), [0n, 0n, lastVoucherId])
+                }).use((currentScript, ctx) => {
+                    deepEqual(
+                        validate_minted_vouchers.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            ...defaultTestArgs,
+                            is_successful: false
+                        }),
+                        [0n, 0n, lastVoucherId]
+                    )
                 })
             })
         })
@@ -637,18 +640,16 @@ describe("VoucherModule::validate_minted_vouchers", () => {
             })
 
             it("VoucherModule::validate_minted_vouchers #16 (throws an error if some vouchers were minted but there is no success)", () => {
-                configureContext().use(
-                    (currentScript, ctx) => {
-                        throws(() => {
-                            validate_minted_vouchers.eval({
-                                $scriptContext: ctx,
-                                $currentScript: currentScript,
-                                ...defaultTestArgs,
-                                is_successful: false
-                            })
+                configureContext().use((currentScript, ctx) => {
+                    throws(() => {
+                        validate_minted_vouchers.eval({
+                            $scriptContext: ctx,
+                            $currentScript: currentScript,
+                            ...defaultTestArgs,
+                            is_successful: false
                         })
-                    }
-                )
+                    })
+                })
             })
         })
     })
