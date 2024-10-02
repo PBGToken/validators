@@ -40,15 +40,15 @@
     },
     "homepage": "https://github.com/PBGToken/validators#readme",
     "dependencies": {
-        "@helios-lang/compiler": "^0.17.0-91",
-        "@helios-lang/contract-utils": "^0.2.62"
+        "@helios-lang/compiler": "^0.17.0-98",
+        "@helios-lang/contract-utils": "^0.2.70"
     },
     "devDependencies": {
-        "@helios-lang/codec-utils": "^0.1.34",
+        "@helios-lang/codec-utils": "^0.1.35",
         "@helios-lang/crypto": "^0.1.14",
-        "@helios-lang/ledger": "^0.4.12",
-        "@helios-lang/type-utils": "^0.1.21",
-        "@helios-lang/uplc": "^0.3.5",
+        "@helios-lang/ledger": "^0.5.5",
+        "@helios-lang/type-utils": "^0.1.23",
+        "@helios-lang/uplc": "^0.3.13",
         "@types/node": "^22.4.1",
         "prettier": "^3.3.3",
         "tsx": "^4.19.0"
