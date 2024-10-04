@@ -1,8 +1,10 @@
 import { ContractContextBuilder } from "@helios-lang/contract-utils"
-import { 
-    assets_validator, 
+import { PubKeyHash, TxOutputId } from "@helios-lang/ledger"
+import { ListData } from "@helios-lang/uplc"
+import {
+    assets_validator,
     benchmark_delegate,
-    burn_order_validator, 
+    burn_order_validator,
     config_validator,
     fund_policy,
     governance_delegate,
@@ -15,6 +17,15 @@ import {
     supply_validator,
     voucher_validator
 } from "pbg-token-validators"
+
+export const SEED_ID = TxOutputId.dummy(999999) // something very large in order not to conflict with auto-generated ids in ScriptContextBuilder
+export const INITIAL_AGENT = PubKeyHash.dummy()
+export const GOV_KEY_1 = PubKeyHash.dummy(456)
+export const GOV_KEY_2 = PubKeyHash.dummy(457)
+export const GOV_KEY_3 = PubKeyHash.dummy(458)
+export const ORACLE_KEY_1 = PubKeyHash.dummy(459)
+export const ORACLE_KEY_2 = PubKeyHash.dummy(460)
+export const ORACLE_KEY_3 = PubKeyHash.dummy(461)
 
 const context = ContractContextBuilder.new()
     .with(assets_validator)
@@ -32,7 +43,24 @@ const context = ContractContextBuilder.new()
     .with(supply_validator)
     .with(voucher_validator)
     .build({
-        isMainnet: false
+        isMainnet: false,
+        debug: true,
+        parameters: {
+            "fund_policy::SEED_ID": SEED_ID.toUplcData(),
+            "fund_policy::INITIAL_AGENT": INITIAL_AGENT.toUplcData(),
+            "governance_delegate::GOV_KEYS": new ListData([
+                GOV_KEY_1.toUplcData(),
+                GOV_KEY_2.toUplcData(),
+                GOV_KEY_3.toUplcData()
+            ]),
+            "oracle_delegate::ORACLE_KEYS": new ListData([
+                ORACLE_KEY_1.toUplcData(),
+                ORACLE_KEY_2.toUplcData(),
+                ORACLE_KEY_3.toUplcData()
+            ])
+        }
     })
 
 export default context
+
+export {}

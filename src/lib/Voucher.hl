@@ -39,7 +39,8 @@ struct Voucher {
             && Tokens::contains_only_voucher_ref(output, id)
         });
 
-        output.datum.inline.as[Voucher]
+        // TODO: also check the length of the serialized data, because Cip68 allows adding additional fields
+        output.datum.inline.as_strictly[Voucher]
     }
 
     func find_return(self) -> TxOutput {
@@ -53,9 +54,9 @@ struct Voucher {
 /**
  * Returns the total number of tokens mentioned in the vouchers
  * Asserts that token_name is either dvp token or voucher
- * Assets that each minted voucher has a unique id
+ * Asserts that each minted voucher has a unique id
  */
-func validate_minted_vouchers(price: Ratio, period_id: Int, last_voucher_id: Int) -> (Int, Int) {
+func validate_minted_vouchers(price: Ratio, period_id: Int, last_voucher_id: Int, is_successful: Bool) -> (Int, Int, Int) {
     tokens_minted = Tokens::get_minted();
 
     n_vouchers_minted = tokens_minted.fold((n_vouchers: Int, token_name: ByteArray, qty: Int) -> {
@@ -68,16 +69,6 @@ func validate_minted_vouchers(price: Ratio, period_id: Int, last_voucher_id: Int
                 Some{id} => {
                     // assure the user nft is minted
                     assert(tokens_minted.get(TokenNames::voucher_nft(id)) == 1, "not exactly one user nft minted");
-    
-                    voucher = Voucher::find_output(id);
-
-                    // return_address and return_datum are checked by the mint_order_validator
-                    assert(
-                        voucher.tokens > 0 
-                        && voucher.price == price
-                        && voucher.period_id == period_id, 
-                        "invalid Voucher datum"
-                    );
 
                     n_vouchers + 1
                 },
@@ -94,20 +85,38 @@ func validate_minted_vouchers(price: Ratio, period_id: Int, last_voucher_id: Int
         }
     }, 0);
 
-    // assert each voucher has a unique id
-    last_voucher_id = tx.outputs.fold((prev_id: Int, output: TxOutput) -> {
-        if (output.address == Addresses::voucher) {
-            id = prev_id + 1;
+    if (is_successful) {
+        // assert each voucher has a unique id, and check it's output datum
+        (new_last_voucher_id, n_tokens_in_vouchers) = tx.outputs.fold2((prev_id: Int, n_tokens_in_vouchers: Int, output: TxOutput) -> {
+            if (output.address == Addresses::voucher) {
+                id = prev_id + 1;
 
-            assert(Tokens::contains_only_voucher_ref(output, id), "voucher doesn't have expected id");
+                assert(Tokens::contains_only_voucher_ref(output, id), "voucher doesn't have expected id");
 
-            id
-        } else {
-            prev_id
-        }
-    }, last_voucher_id);
+                voucher = output.datum.inline.as_strictly[Voucher];
 
-    (n_vouchers_minted, last_voucher_id)
+                // return_address and return_datum are checked by the mint_order_validator
+                assert(
+                    voucher.tokens > 0 
+                    && voucher.price == price
+                    && voucher.period_id == period_id, 
+                    "invalid Voucher datum"
+                );
+
+                (id, n_tokens_in_vouchers + voucher.tokens)
+            } else {
+                (prev_id, n_tokens_in_vouchers)
+            }
+        }, last_voucher_id, 0);
+
+        assert(n_vouchers_minted == new_last_voucher_id - last_voucher_id, "number of voucher pairs minted doesn't correspond to number of outputs with vouchers");
+
+        (n_vouchers_minted, n_tokens_in_vouchers, new_last_voucher_id)
+    } else {
+        assert(n_vouchers_minted == 0, "can't mint vouchers when there isn't any success");
+
+        (0, 0, last_voucher_id)
+    }
 }
 
 /**
@@ -128,7 +137,6 @@ func validate_burned_vouchers(period_id: Int) -> Int {
 
                     voucher = Voucher::find_input(id);
 
-                    // TODO: can this check be removed if ids are not reset in new periods?
                     assert(voucher.period_id == period_id, "Voucher from other period");
 
                     n_vouchers + 1

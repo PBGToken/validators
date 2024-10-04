@@ -13,10 +13,30 @@ struct MintOrder {
     max_price_age:  Duration
 
     func find_return(self) -> TxOutput {
-        tx.outputs.find((output: TxOutput) -> {
-            output.address == self.return_address 
-            && output.datum.inline == self.return_datum
-        })
+        // invariants taken out of loop for slightly better performance
+        return_address = self.return_address;
+        return_datum = self.return_datum;
+        
+        return = tx.outputs.find((output: TxOutput) -> {
+            output.address == return_address 
+            && output.datum.switch{ // using output.datum.inline fails if an unrelated output is sent to same address without an inline datum, so we must use a switch to be safe
+                Inline{d} => d == return_datum,
+                else => false   
+            }
+        });
+
+        // prevent token dust attack by only allowing ADA and DVP tokens (including at most one voucher) to be returned
+        assert(return.value.to_map().all((mph: MintingPolicyHash, tokens: Map[ByteArray]Int) -> {
+            if (mph == MintingPolicyHash::new(#)) {
+                true
+            } else if (mph == Tokens::policy) {
+                tokens.length <= 2 // at most the DVP tokens and a voucher
+            } else {
+                false
+            }
+        }), "can only return ADA and DVP tokens");
+
+        return
     }
 
     func diff(self) -> Value {
@@ -57,7 +77,7 @@ struct MintOrder {
             TokenNames::has_voucher_nft_prefix(token_name)
         });
 
-        assert(qty >= 1, "expected at least one token");
+        assert(qty <= -1, "expected at least one token returned");
 
         TokenNames::parse_voucher_nft(voucher_nft_name).unwrap()
     }

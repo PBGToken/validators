@@ -14,7 +14,7 @@ struct Price {
             price_validator => get_current_input(),
             else => tx.ref_inputs.find((input: TxInput) -> {
                 input.address == Addresses::price
-            }) // TODO: use the token where the DAG doesn't allow fetching by address
+            })
         };
 
         assert(Tokens::contains_only_price(input), "doesn't contain only the price token");
@@ -42,7 +42,7 @@ struct Price {
 
         assert(Tokens::contains_only_price(output), "doesn't contain only the price token");
 
-        output.datum.inline.as[Price]
+        output.datum.inline.as_strictly[Price]
     }
 
     func find_ref() -> Price {

@@ -36,6 +36,10 @@ const price: ByteArray = "price".encode_utf8()
 
 const reimbursement_prefix: ByteArray = "reimbursement ".encode_utf8()
 
+func has_reimbursement_prefix(token_name: ByteArray) -> Bool {
+    token_name.starts_with(reimbursement_prefix)
+}
+
 func parse_reimbursement(token_name: ByteArray) -> Option[Int] {
     parse_series(reimbursement_prefix, token_name)
 }

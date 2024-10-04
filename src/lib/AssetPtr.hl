@@ -1,6 +1,7 @@
 module AssetPtrModule
 
 import { Asset } from AssetModule
+import { AssetGroup } from AssetGroupModule
 import { policy } from Tokens
 import TokenNames
 
@@ -18,9 +19,10 @@ struct AssetPtr {
             TokenNames::has_assets_prefix(token_name)
         }), "assets token not found");
 
-        assets = input.datum.inline.as[[]Asset];
+        // it is cleaner to cast to AssetGroup instead of the underlying []Asset
+        group = input.datum.inline.as[AssetGroup];
 
-        asset = assets.get(self.asset_class_index);
+        asset = group.assets.get(self.asset_class_index);
 
         assert(asset.asset_class == asset_class, "unexpected asset class");
 
@@ -31,15 +33,15 @@ struct AssetPtr {
     func resolve_output(self, outputs: []TxOutput, asset_class: AssetClass) -> Asset {
         output = outputs.get(self.group_index);
 
-        tokens = output.value.get_policy(policy);
+        group_asset_class = output.value.get_singleton_asset_class();
+        
+        assert(group_asset_class.mph == policy, "unexpected mph of assets token");
+        assert(TokenNames::has_assets_prefix(group_asset_class.token_name), "doesn't contain an assets token");
 
-        assert(tokens.any((token_name: ByteArray, _) -> {
-            TokenNames::has_assets_prefix(token_name)
-        }), "assets token not found");
+        // it is cleaner to cast to AssetGroup instead of the underlying []Asset
+        group = output.datum.inline.as_strictly[AssetGroup];
 
-        assets = output.datum.inline.as[[]Asset];
-
-        asset = assets.get(self.asset_class_index);
+        asset = group.assets.get(self.asset_class_index);
 
         assert(asset.asset_class == asset_class, "unexpected asset class");
 

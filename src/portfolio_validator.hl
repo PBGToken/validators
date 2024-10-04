@@ -28,7 +28,7 @@ func validate_add_asset_group(portfolio0: Portfolio, portfolio1: Portfolio, adde
     AssetGroup::nothing_spent()
     && portfolio0.reduction.is_idle()
     && portfolio1.reduction.is_idle()
-    && portfolio1.n_groups == added_id
+    && portfolio1.n_groups == added_id // this means AssetGroup ids are one-based
     && portfolio1.n_groups == portfolio0.n_groups + 1
     && added_group.is_empty()
 }
@@ -47,32 +47,40 @@ func validate_remove_asset_group(portfolio0: Portfolio, portfolio1: Portfolio, b
 
 func validate_start_reduction(
     ig1: Int, kp1: Int, mode1: PortfolioReductionMode,
-    group_ptrs: []Int
+    group_ptrs: []Int,
+    n_all_groups: Int // used to terminate Exists early
 ) -> Bool {
     supply = Supply::find_ref();
     n_groups = group_ptrs.length;
 
     AssetGroup::nothing_spent()
     && kp1 == supply.tick
+    
     && mode1.switch{
         TotalAssetValue{V1, tp1} => {
-            (tp_oldest, dV) = sum_total_asset_value(group_ptrs, 1, kp1);
+            V0 = supply.n_lovelace;
+            (tp_oldest, dV) = sum_total_asset_value(group_ptrs, 1);
 
-            V1 == dV
-            && tp1 == tp_oldest
+            V1 == V0 + dV
             && ig1 == n_groups
+            && tp1 == tp_oldest
         },
         Exists{asset_class, found1} => {
             found = search_for_asset_class(asset_class, group_ptrs, 1);
 
-            ig1 == n_groups
-            && found1 == found
+            if (found) {
+                found1 == true
+                && ig1 == n_all_groups
+            } else {
+                found1 == false
+                && ig1 == n_groups
+            }         
         },
         DoesNotExist{asset_class} => {
             found = search_for_asset_class(asset_class, group_ptrs, 1);
 
-            ig1 == n_groups
-            && !found
+            !found
+            && ig1 == n_groups
         }
     }
 }
@@ -80,8 +88,10 @@ func validate_start_reduction(
 func validate_continue_reduction(
     ig0: Int, kp0: Int, mode0: PortfolioReductionMode,
     ig1: Int, kp1: Int, mode1: PortfolioReductionMode,
-    group_ptrs: []Int
+    group_ptrs: []Int,
+    n_all_groups: Int // used to terminate Exists reduction early
 ) -> Bool {
+    
     n_groups = group_ptrs.length;
     next_id = ig0+1;
 
@@ -89,64 +99,61 @@ func validate_continue_reduction(
     && kp1 == kp0
     && (mode0, mode1).switch{
         (TotalAssetValue{V0, tp0}, TotalAssetValue{V1, tp1}) => {
-            (tp_oldest, dV) = sum_total_asset_value(group_ptrs, next_id, kp1);
+            supply = Supply::find_ref();
+
+            (tp_oldest, dV) = sum_total_asset_value(group_ptrs, next_id);
 
             V1 == V0 + dV
-            && tp1 == if (tp_oldest < tp0) {tp_oldest} else {tp0}
+            && kp1 == supply.tick
             && ig1 == ig0 + n_groups
-
+            && tp1 == if (tp_oldest < tp0) {tp_oldest} else {tp0}
         },
         (Exists{asset_class0, found0}, Exists{asset_class1, found1}) => {
             found = search_for_asset_class(asset_class0, group_ptrs, next_id);
 
             asset_class0 == asset_class1
-            && ig1 == ig0 + n_groups
-            && found1 == (found0 || found)
+            && !found0 // can't continue reduction if already found before
+            && if (found) {
+                found1 == true
+                && ig1 == n_all_groups
+            } else {
+                found1 == false
+                && ig1 == ig0 + n_groups
+            }
         },
         (DoesNotExist{asset_class0}, DoesNotExist{asset_class1}) => {
             found = search_for_asset_class(asset_class0, group_ptrs, next_id);
 
             asset_class0 == asset_class1
-            && ig1 == ig0 + n_groups
             && !found
+            && ig1 == ig0 + n_groups
         },
         else => false
     }
 }
 
-// TODO: should we use _portfolio1 for some of the validation?
-func validate_add_asset_class(config0: Config, config_is_spent: Bool, portfolio0: Portfolio, _portfolio1: Portfolio) -> Bool {
-    (id, group0) = AssetGroup::find_single_input();
-    group1 = AssetGroup::find_output(id);
+func validate_add_asset_class(config0: Config, config_is_spent: Bool) -> Bool {
+    (group0, group1) = AssetGroup::find_single_thread();
 
-    DoesNotExist{asset_class} = portfolio0.get_reduction_result();
-    AddingAssetClass{expected_asset_class} = config0.state.get_proposal();
+    AddingAssetClass{asset_class} = config0.state.get_proposal();
 
-    group1.assets == group0.assets.append(Asset::new(asset_class))
-    && group1.is_not_overfull()
-    && asset_class == expected_asset_class
-    && config_is_spent
-    && Tokens::nothing_minted()
+    (group1.assets == group0.assets.append(Asset::new(asset_class))).trace_if_false("unexpected group1 content")
+    && group1.is_not_overfull().trace_if_false("group1 is full")
+    && config_is_spent.trace_if_false("config isn't spent")
 }
 
-// TODO: should we use _portfolio1 for some of the validation?
-func validate_remove_asset_class(config0: Config, config_is_spent: Bool, portfolio0: Portfolio, _portfolio1: Portfolio) -> Bool {
-    (id, group0) = AssetGroup::find_single_input();
-    group1 = AssetGroup::find_output(id);
+func validate_remove_asset_class(config0: Config, config_is_spent: Bool) -> Bool {
+    (group0, group1) = AssetGroup::find_single_thread();
 
-    Exists{asset_class, found} = portfolio0.get_reduction_result();
-    RemovingAssetClass{expected_asset_class} = config0.state.get_proposal();
+    RemovingAssetClass{asset_class} = config0.state.get_proposal();
     
     asset = group0.assets.filter((asset: Asset) -> {
         asset.asset_class == asset_class
     }).get_singleton();
 
-    found
-    && asset.count == 0
+    asset.count == 0
     && group1.assets == group0.assets.filter((asset: Asset) -> {asset.asset_class != asset_class})
-    && asset_class == expected_asset_class
     && config_is_spent
-    && Tokens::nothing_minted()
 }
 
 func validate_update_prices(portfolio0: Portfolio) -> Bool {
@@ -159,11 +166,18 @@ func validate_update_prices(portfolio0: Portfolio) -> Bool {
             group0 = input.datum.inline.as[AssetGroup];
             group1 = AssetGroup::find_output(id);
 
-            // zip() fails of the first and second list don't have the same length
-            group0.assets.zip(group1.assets).all((asset0: Asset, asset1: Asset) -> {
+            assets0 = group0.assets;
+            assets1 = group1.assets;
+
+            // group0 and group1 must have same length, zip() doesn't assure this
+            assert(assets0.length == assets1.length, "number of assets in group changed");
+
+            // TODO: can the same-length-check be incorporated cheaply in zip() ?
+            assets0.zip(assets1).all((asset0: Asset, asset1: Asset) -> {
                 asset1.asset_class == asset0.asset_class
                 && asset1.count == asset0.count
-                && asset1.count_tick == asset0.count_tick
+
+                // priceTimestamp remains unbound here (responsability of the oracle)
             })
         } else {
             true
@@ -175,61 +189,64 @@ func validate_move_assets(portfolio0: Portfolio) -> Bool {
     /**
      * Each asset class in inputs must also be found in outputs
      */
-    n_assets_in_inputs = tx.inputs.fold((n_assets: Int, input: TxInput) -> {
+    (n_groups_in_inputs, n_assets_in_inputs) = tx.inputs.fold2((n_groups: Int, n_assets: Int, input: TxInput) -> {
         if (input.address == Addresses::assets) {
-            assert(Tokens::contains_only_any_assets(input), "doesn't contain only 1 assets token");
+            assert(Tokens::contains_any_one_assets(input), "doesn't contain only 1 assets token");
 
             group = input.datum.inline.as[AssetGroup];
 
-            group.assets.fold((n_assets: Int, asset0: Asset) -> {
+            n_assets_ = group.assets.fold((n_assets: Int, asset0: Asset) -> {
                 // look for asset somewhere in output
+                // TODO: use a ptr in the redeemer because this is very expensive
                 asset1 = AssetGroup::find_output_asset(asset0.asset_class);
 
                 // asset can only move, but content can't change
                 assert(asset1 == asset0, "asset can't change");
 
                 n_assets + 1
-            }, n_assets)
+            }, n_assets);
+
+            (n_groups + 1, n_assets_)
         } else {
-            n_assets
+            (n_groups, n_assets)
         }
-    }, 0);
+    }, 0, 0);
 
     /**
      * Each asset class in outputs must also be found in inputs
      */
-    n_assets_in_outputs = tx.outputs.fold((n_assets: Int, output: TxOutput) -> {
+    (n_groups_in_outputs, n_assets_in_outputs) = tx.outputs.fold2((n_groups: Int, n_assets: Int, output: TxOutput) -> {
         if (output.address == Addresses::assets) {
-            assert(Tokens::contains_only_any_assets(output), "doesn't contain only 1 assets token");
+            assert(Tokens::contains_only_any_one_assets(output), "doesn't contain only 1 assets token");
             
-            group = output.datum.inline.as[AssetGroup];
+            group = output.datum.inline.as_strictly[AssetGroup];
 
             assert(group.is_not_overfull(), "output assetgroup is overfull");
 
-            group.assets.fold((n_assets: Int, asset1: Asset) -> {
-                // look for asset somewhere in output
-                asset0 = AssetGroup::find_input_asset(asset1.asset_class);
+            // checking that each asset exists in the inputs is redundant, as we already checked that each input is in the output, 
+            //  and there need to be same number of input assets and outputs (uniqueness of the assets is guaranteed by the rest of the contract)
 
-                assert(asset0 == asset1, "asset can't change");
-
-                n_assets + 1
-            }, n_assets)
+            (n_groups + 1, n_assets + group.assets.length)
         } else {
-            n_assets
+            (n_groups, n_assets)
         }
-    }, 0);
+    }, 0, 0);
 
     portfolio0.reduction.is_idle()
+    && n_groups_in_inputs == n_groups_in_outputs
     && n_assets_in_inputs == n_assets_in_outputs
 }
 
 func validate_reset_reduction(portfolio0: Portfolio) -> Bool {
+    // portfolio1.reduction.is_idle()==true has already been checked by the caller
     !portfolio0.reduction.is_idle()
     && AssetGroup::nothing_spent()
 }
 
 func main(_: Portfolio, action: Action) -> Bool {
-    (config0, config_is_spent) = Config::find();
+    // the config UTxO must be spent for the AddAssetClass and RemoveAssetClass actions, 
+    //  but it doesn't matter for the other actions
+    (config0, config_is_spent) = Config::find(); 
     (portfolio0, portfolio1) = Portfolio::find_thread();
     minted_tokens = Tokens::get_minted();
     
@@ -251,16 +268,16 @@ func main(_: Portfolio, action: Action) -> Bool {
         && (portfolio0.reduction, portfolio1.reduction).switch{
             (Idle, Reducing{ig1, kp1, mode1}) => {
                 Reduce{ptrs} = action;
-                validate_start_reduction(ig1, kp1, mode1, ptrs)
+                validate_start_reduction(ig1, kp1, mode1, ptrs, portfolio1.n_groups)
             },
             (Reducing{ig0, kp0, mode0}, Reducing{ig1, kp1, mode1}) => {
                 Reduce{ptrs} = action;
-                validate_continue_reduction(ig0, kp0, mode0, ig1, kp1, mode1, ptrs)
+                validate_continue_reduction(ig0, kp0, mode0, ig1, kp1, mode1, ptrs, portfolio1.n_groups)
             },
             (_, Idle) => {
                 action.switch{
-                    AddAssetClass => validate_add_asset_class(config0, config_is_spent, portfolio0, portfolio1),
-                    RemoveAssetClass => validate_remove_asset_class(config0, config_is_spent, portfolio0, portfolio1),
+                    AddAssetClass => validate_add_asset_class(config0, config_is_spent),
+                    RemoveAssetClass => validate_remove_asset_class(config0, config_is_spent),
                     UpdatePrices => validate_update_prices(portfolio0),
                     MoveAssets => validate_move_assets(portfolio0),
                     Reset => validate_reset_reduction(portfolio0),

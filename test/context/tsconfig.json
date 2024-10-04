@@ -22,9 +22,6 @@
         "noUnusedParameters": true,
         "noFallthroughCasesInSwitch": true
     },
-    "include": [
-        "src",
-        "node_modules/pbg-token-validators"
-    ],
+    "include": ["src", "node_modules/pbg-token-validators"],
     "exclude": ["node_modules", "dist"]
 }

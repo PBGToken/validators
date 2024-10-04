@@ -1,43 +1,56 @@
 {
-  "name": "pbg-token-validators",
-  "version": "0.1.6",
-  "description": "PBG Token contracts validators for Cardano",
-  "main": "dist/index.js",
-  "type": "module",
-  "types": "dist/index.d.ts",
-  "workspaces": [
-    "test",
-    "test/context"
-  ],
-  "scripts": {
-    "build": "npx hl2ts --out-dir ./dist",
-    "co:login": "aws codeartifact login --tool npm --repository pbg --domain pbg --domain-owner 198334355085 --profile pbg --region us-east-1",
-    "test": "npm run test --prefix test"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/PBGToken/validators.git"
-  },
-  "keywords": [
-    "PBGToken",
-    "smart",
-    "contract",
-    "validators",
-    "Cardano",
-    "Helios"
-  ],
-  "author": "Christian Schmitz",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/PBGToken/validators/issues"
-  },
-  "homepage": "https://github.com/PBGToken/validators#readme",
-  "dependencies": {
-    "@helios-lang/compiler": "^0.17.0-58",
-    "@helios-lang/contract-utils": "^0.2.36"
-  },
-  "devDependencies": {
-    "@helios-lang/uplc": "^0.1.36",
-    "@types/node": "^22.4.1"
-  }
+    "name": "pbg-token-validators",
+    "version": "0.1.6",
+    "description": "PBG Token contracts validators for Cardano",
+    "main": "dist/index.js",
+    "type": "module",
+    "types": "dist/index.d.ts",
+    "workspaces": [
+        "test",
+        "test/context"
+    ],
+    "scripts": {
+        "build": "npx hl2ts --out-dir ./dist",
+        "co:login": "aws codeartifact login --tool npm --repository pbg --domain pbg --domain-owner 198334355085 --profile pbg --region us-east-1",
+        "prettify": "npx prettier . --write",
+        "test": "npm run test --prefix test"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/PBGToken/validators.git"
+    },
+    "prettier": {
+        "trailingComma": "none",
+        "tabWidth": 4,
+        "semi": false,
+        "singleQuote": false
+    },
+    "keywords": [
+        "PBGToken",
+        "smart",
+        "contract",
+        "validators",
+        "Cardano",
+        "Helios"
+    ],
+    "author": "Christian Schmitz",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/PBGToken/validators/issues"
+    },
+    "homepage": "https://github.com/PBGToken/validators#readme",
+    "dependencies": {
+        "@helios-lang/compiler": "^0.17.0-91",
+        "@helios-lang/contract-utils": "^0.2.62"
+    },
+    "devDependencies": {
+        "@helios-lang/codec-utils": "^0.1.34",
+        "@helios-lang/crypto": "^0.1.14",
+        "@helios-lang/ledger": "^0.4.12",
+        "@helios-lang/type-utils": "^0.1.21",
+        "@helios-lang/uplc": "^0.3.5",
+        "@types/node": "^22.4.1",
+        "prettier": "^3.3.3",
+        "tsx": "^4.19.0"
+    }
 }

@@ -10,9 +10,10 @@ func main(_: Price, _) -> Bool {
     supply = Supply::find_ref();
     price1 = Price::find_output(); // input doesn't matter
 
-    TotalAssetValue{V, tp} = portfolio.get_reduction_result();
+    TotalAssetValue{V, tp} = portfolio.get_reduction_result(Option[Int]::Some{supply.tick});
 
     signed_by_agent()
-    && price1.value == Ratio::new(V, supply.n_tokens)
+    && price1.value.top == V // must compare bottom and top separately, to avoid unboundedness
+    && price1.value.bottom == supply.n_tokens
     && price1.timestamp == tp
 }

@@ -46,14 +46,12 @@ func validate_minted_tokens() -> Bool {
 func validate_initial_metadata() -> Bool {
     metadata = Metadata::find_output();
 
-    metadata == Metadata{
-        name:        "PBG Token",
-        description: "The first DVP",
-        ticker:      "PBG",
-        url:         "https://pbg.io",
-        decimals:    6,
-        logo:        "https://token.pbg.io/logo.png"
-    }
+    (metadata.name == "PBG Token").trace_if_false("wrong metadata name")
+    && (metadata.description == "The first DVP").trace_if_false("wrong metadata description")
+    && (metadata.ticker == "PBG").trace_if_false("wrong metadata ticker")
+    && (metadata.url == "https://pbg.io").trace_if_false("wrong metadata url")
+    && (metadata.decimals == 6).trace_if_false("wrong metadata decimals")
+    && (metadata.logo == "https://token.pbg.io/logo.png").trace_if_false("wrong metadata logo uri")
 }
 
 func validate_initial_config() -> Bool {
@@ -73,12 +71,13 @@ func validate_initial_config() -> Bool {
                 minimum:  20_000 // 0.02 tokens, equivalent to 2 ADA
             },
             management_fee: ManagementFeeConfig{
-                relative: 0.00011, // 0.011% daily, about 4% annually
+                relative: 0.0001, // 0.01% daily, 3.65% annually
                 period:   Duration::DAY
             },
             success_fee: SuccessFeeConfig{
                 fee:       INITIAL_SUCCESS_FEE,
-                benchmark: Scripts::benchmark_delegate
+                benchmark: Scripts::benchmark_delegate,
+                min_reimbursement: 20_000 // 0.02 tokens, equivalent to 2 ADA
             }
         },
         token: TokenConfig{
@@ -125,7 +124,7 @@ func validate_initial_supply() -> Bool {
         success_fee: SuccessFeeState{
             period_id:   0,
             start_time:  Time::new(0),
-            period:      Duration::WEEK*2, // not yet 1 year, so we can test the success fee for a few periods
+            period:      Duration::WEEK*2, // TODO: not yet 1 year, so we can test the success fee for a few periods
             start_price: INITIAL_PRICE
         }
     }
@@ -158,12 +157,24 @@ func main(args: MixedArgs) -> Bool {
             validate_vault_spending()
         },
         Other => {
-            if (tx.inputs.any((input: TxInput) -> {input.output_id == SEED_ID})) {
-                validate_initialization()
-            } else if (Tokens::get_minted().any_key(TokenNames::has_assets_prefix)) {
-                validate_mint_or_burn_asset_groups()
-            } else {
+            tokens = Tokens::get_minted();
+
+            if (tokens.get_safe(TokenNames::dvp_token) != Option[Int]::None) {
+                // voucher and reimbursement token minting is usually accompanied by DVP token minting
+                //  only in case of no success it is possible that a reimbursement token is minted without DVP tokens, that (rare) case is treated below
                 validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement()
+            } else if (tokens.any_key(TokenNames::has_assets_prefix)) {
+                validate_mint_or_burn_asset_groups()
+            } else if (tokens.all((token_name: ByteArray, qty: Int) -> {
+                qty == -1 && (TokenNames::has_voucher_ref_prefix(token_name) || TokenNames::has_reimbursement_prefix(token_name))
+            })) {
+                // there is no risk of this happening before initialization because then burned tokens wouldn't yet exist
+                true
+            } else if (tokens.any_key(TokenNames::has_reimbursement_prefix)) {
+                validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement()
+            } else {
+                tx.inputs.any((input: TxInput) -> {input.output_id == SEED_ID})
+                && validate_initialization()
             }
         }
     }   

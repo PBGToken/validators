@@ -27,42 +27,52 @@ struct AssetGroup {
             && Tokens::contains_only(output, assets_token)
         });
     
-        output.datum.inline.as[AssetGroup]
+        output.datum.inline.as_strictly[AssetGroup]
     }
 
     func find_output_asset(asset_class: AssetClass) -> Asset {
-        result: Option[Asset] = tx.outputs.fold_lazy((output: TxOutput, next: () -> Option[Asset]) -> {
+        maybe_asset: Option[Asset] = tx.outputs.fold_lazy((output: TxOutput, next: () -> Option[Asset]) -> {
             if (output.address == Addresses::assets) {
-                assert(Tokens::contains_only_any_assets(output), "doesn't only contain assets token");
+                assert(Tokens::contains_only_any_one_assets(output), "doesn't only contain assets token");
 
-                group = output.datum.inline.as[AssetGroup];
+                group = output.datum.inline.as_strictly[AssetGroup];
 
-                group.find_asset(asset_class)
+                
+                maybe_asset = group.find_asset(asset_class);
+
+                // TODO: a higher performance way of doing this would be to pass next() as the terminating expression to an inner find_or() function
+                maybe_asset.switch{
+                    Some => maybe_asset,
+                    None => next()
+                }
             } else {
                 next()
             }
         }, Option[Asset]::None);
 
-        result.switch{
-            Some{asset} => asset,
-            None => error("asset not found")
-        }
+        maybe_asset.unwrap()
     }
 
     func find_input_asset(asset_class: AssetClass) -> Asset {
-        result: Option[Asset] = tx.inputs.fold_lazy((input: TxInput, next: () -> Option[Asset]) -> {
+        maybe_asset: Option[Asset] = tx.inputs.fold_lazy((input: TxInput, next: () -> Option[Asset]) -> {
             if (input.address == Addresses::assets) {
-                assert(Tokens::contains_only_any_assets(input), "doesn't only contain assets token");
+                assert(Tokens::contains_any_one_assets(input), "doesn't only contain assets token");
 
                 group = input.datum.inline.as[AssetGroup];
 
-                group.find_asset(asset_class)
+                maybe_asset = group.find_asset(asset_class);
+
+                // TODO: a higher performance way of doing this would be to pass next() as the terminating expression to an inner find_or() function
+                maybe_asset.switch{
+                    Some => maybe_asset,
+                    None => next()
+                }
             } else {
                 next()
             }
         }, Option[Asset]::None);
 
-        result.unwrap()
+        maybe_asset.unwrap()
     }
 
     /**
@@ -90,12 +100,10 @@ struct AssetGroup {
         (id, input.datum.inline.as[AssetGroup])
     }
 
-    func is_burned(id: Int) -> Bool {
-        tokens_burned = tx.minted.get_policy(Tokens::policy);
-
-        // only one can be burned at a time, nothing else can be minted
-        tokens_burned.get(TokenNames::assets(id)) == -1 // can fail
-        && tokens_burned.length == 1
+    func find_single_thread() -> (AssetGroup, AssetGroup) {
+        (id, group0) = AssetGroup::find_single_input();
+        group1 = AssetGroup::find_output(id);
+        (group0, group1)
     }
 
     func find_asset(self, asset_class: AssetClass) -> Option[Asset] {
@@ -142,13 +150,8 @@ func search_for_asset_class(asset_class: AssetClass, group_ptrs: []Int, first_id
             } else {
                 group = input.datum.inline.as[AssetGroup];
 
-                group.assets.fold_lazy((asset: Asset, next: () -> Bool) -> {
-                    if (asset_class == asset.asset_class) {
-                        true
-                    } else {
-                        next()
-                    }
-                }, false)
+                // reuse group.has_asset
+                group.has_asset(asset_class)
             }
         )
     }, first_id, false);
@@ -159,7 +162,7 @@ func search_for_asset_class(asset_class: AssetClass, group_ptrs: []Int, first_id
 /**
  * This function is used by the portfolio validator
  */
-func sum_total_asset_value(group_ptrs: []Int, first_id: Int, max_tick: Int) -> (Time, Int) {
+func sum_total_asset_value(group_ptrs: []Int, first_id: Int) -> (Time, Int) {
     ref_inputs = tx.ref_inputs;
 
     (_, tp: Option[Time], dV: Int) = group_ptrs.fold3((expected_id: Int, tp: Option[Time], dV: Int, ptr: Int) -> (Int, Option[Time], Int) {
@@ -172,8 +175,6 @@ func sum_total_asset_value(group_ptrs: []Int, first_id: Int, max_tick: Int) -> (
         group = input.datum.inline.as[AssetGroup];
 
         (tp: Option[Time], dV: Int) = group.assets.fold2((tp: Option[Time], dV: Int, asset: Asset) -> {
-            assert(asset.count_tick <= max_tick, "asset changed count after reduction start");
-
             (
                 tp.switch{
                     None => Option[Time]::Some{asset.price_timestamp},

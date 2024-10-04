@@ -1,9 +1,10 @@
 staking benchmark_delegate
 
 /**
- * The input a price is a number of lovelace per benchmark asset
+ * The input price is a number of lovelace per benchmark asset
  * If ADA is the benchmark, the top and the bottom of the benchmark price need to be equal
  */
 func main(benchmark_price: Ratio) -> Bool {
-    benchmark_price.top == benchmark_price.bottom
+    benchmark_price.bottom > 0
+    && benchmark_price.top == benchmark_price.bottom
 }

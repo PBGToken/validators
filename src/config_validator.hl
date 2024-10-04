@@ -19,12 +19,13 @@ import { tx } from ScriptContext
 import { Supply } from SupplyModule
 import Tokens
 
-const MIN_FEE_UPPER_LIMIT = (100_000_000/INITIAL_PRICE).ceil() // 100 ADA
+const MIN_FEE_UPPER_LIMIT = (100_000_000/INITIAL_PRICE).ceil() // equivalent value of 100 ADA (i.e. 1 token at initial price)
 const MANAGEMENT_FEE_PERIOD_UPPER_LIMIT = 366*Duration::DAY
 const SUCCESS_FEE_PERIOD_UPPER_LIMIT = 3660*Duration::DAY
 const MAX_PRICE_AGE_UPPER_LIMIT = 366*Duration::DAY // if no oracle is available, changing the max price age to something very large is the only way of getting mony out of the vault through burning
 const UPDATE_DELAY_UPPER_LIMIT = 366*Duration::DAY
 const MAX_SUPPLY_UPPER_LIMIT = (1_000_000_000_000_000_000_000/INITIAL_PRICE).ceil() // 1000 Trillion ADA
+const MIN_REIMBURSEMENT_UPPER_LIMIT = (100_000_000/INITIAL_PRICE).ceil() // equivalent value of 100 ADA (i.e. 1 token at initial price)
 
 func main(_: Config, _) -> Bool {
     (config0: Config, config1: Config) = Config::find_thread();
@@ -55,14 +56,14 @@ func main(_: Config, _) -> Bool {
                 UpdatingSuccessFee{period, benchmark, fee} => {
                     supply = Supply::find_ref();
         
-                    period > Duration::new(0)
-                    && period < SUCCESS_FEE_PERIOD_UPPER_LIMIT
+                    (period > Duration::new(0)).trace_if_false("new period not larger than 0")
+                    && (period < SUCCESS_FEE_PERIOD_UPPER_LIMIT).trace_if_false("new period not smaller than upper limit")
                     && tx.redeemers.any((key: ScriptPurpose, _) -> {
                         key == ScriptPurpose::new_rewarding(StakingCredential::new_hash(StakingHash::new_validator(benchmark)))
-                    })
-                    && fee.is_valid()
-                    && (supply.period_end() - tx.time_range.end) >= (config0.governance.update_delay + Duration::DAY)
-                    && (supply.period_end() - tx.time_range.start) < config0.governance.update_delay*2
+                    }).trace_if_false("not witnessed by new benchmark")
+                    && fee.is_valid().trace_if_false("new success fee isn't valid")
+                    && ((supply.period_end() - tx.time_range.end) >= (config0.governance.update_delay + Duration::DAY)).trace_if_false("too late (you've missed the window of opportunity to change the success fee config this period)")
+                    && ((supply.period_end() - tx.time_range.start) < config0.governance.update_delay*2).trace_if_false("too soon")
                 },
                 IncreasingMaxTokenSupply{Nmax} => {
                     Nmax > config0.token.max_supply
@@ -101,6 +102,10 @@ func main(_: Config, _) -> Bool {
                     tau_p > Duration::new(0)
                     && tau_p < MAX_PRICE_AGE_UPPER_LIMIT
                 },
+                ChangingMinReimbursement{min_reimbursement} => {
+                    min_reimbursement >= 0
+                    && min_reimbursement < MIN_REIMBURSEMENT_UPPER_LIMIT
+                },
                 ChangingMetadata{hash} => {
                     hash.length == 32
                 }
@@ -111,33 +116,32 @@ func main(_: Config, _) -> Bool {
             && signed_by_agent(config1.agent)
             && changing.proposal.switch{
                 AddingAssetClass{asset_class} => {
-                    (id, group0) = AssetGroup::find_single_input();
-                    group1 = AssetGroup::find_output(id);
+                    (group0, group1) = AssetGroup::find_single_thread();
 
                     !group0.has_asset(asset_class)
                     && group1.has_asset(asset_class)
                     && config1 == config0.copy(state: ConfigState::Idle)
                 },
                 RemovingAssetClass{asset_class} => {
-                    (id, group0) = AssetGroup::find_single_input();
-                    group1 = AssetGroup::find_output(id);
+                    (group0, group1) = AssetGroup::find_single_thread();
 
                     group0.has_asset(asset_class)
                     && !group1.has_asset(asset_class)
                     && config1 == config0.copy(state: ConfigState::Idle)
                 },
-                UpdatingSuccessFee{_period, benchmark, fee} => {
+                UpdatingSuccessFee{_, benchmark, fee} => {
                     supply = Supply::find_input();
 
-                    // TODO: should UpdatingSuccessFee.period be used to check something?
+                    // reimbursement token minting assures the supply_validator witnesses the tx, 
+                    //  which, because the config UTxO is being spent, in turn assures the period is copied into the correct field in the supply datum
 
                     tx.minted.get_safe(Tokens::reimbursement(supply.period_id())) == 1
                     && config1 == config0.copy(
                         fees: config0.fees.copy(
-                            success_fee: SuccessFeeConfig{
+                            success_fee: config0.fees.success_fee.copy(   
                                 fee: fee,
                                 benchmark: benchmark
-                            }
+                            )
                         ),
                         state: ConfigState::Idle
                     )
@@ -208,6 +212,16 @@ func main(_: Config, _) -> Bool {
                     config1 == config0.copy(
                         token: config0.token.copy(
                             max_price_age: tau_p
+                        ),
+                        state: ConfigState::Idle
+                    )
+                },
+                ChangingMinReimbursement{min_reimbursement} => {
+                    config1 == config0.copy(
+                        fees: config0.fees.copy(
+                            success_fee: config0.fees.success_fee.copy(
+                                min_reimbursement: min_reimbursement
+                            )
                         ),
                         state: ConfigState::Idle
                     )

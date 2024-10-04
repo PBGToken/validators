@@ -45,7 +45,7 @@ struct Reimbursement {
         assert(tokens.length <= 2, "output contains unexpected tokens");
         assert(output.value.delete_lovelace().to_map().length == 1, "output contains unexpected token policies");
 
-        (output.datum.inline.as[Reimbursement], n_dvp_tokens)
+        (output.datum.inline.as_strictly[Reimbursement], n_dvp_tokens)
     }
 
     func find_thread() -> (Int, Reimbursement, Int, Reimbursement, Int) {
@@ -55,12 +55,12 @@ struct Reimbursement {
         (id, r0, n0, r1, n1)
     }
 
-    func calc_alpha(self, end_price: Ratio = self.end_price) -> Real {
-        (end_price/self.start_price).to_real()
+    func calc_alpha(self, start_price: Ratio = self.start_price) -> Real {
+        (self.end_price/start_price).to_real()
     }
 
-    func calc_phi_alpha_ratio(self, end_price: Ratio = self.end_price) -> Real {
-        alpha = self.calc_alpha(end_price);
+    func calc_phi_alpha_ratio(self, start_price: Ratio = self.start_price) -> Real {
+        alpha = self.calc_alpha(start_price);
 
         phi_alpha = self.success_fee.apply(alpha);
 
