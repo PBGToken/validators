@@ -35,5 +35,20 @@ The test context bundle is placed in `./test/context/dist` and can be imported v
 
 The test context bundle contains serialized UPLC programs for each validator and each user-defined function, as well as utility functions for converting JS/TS values into `UplcData` instances.
 
+## Inspecting the UPLC
 
+First make sure the JS/TS definitions of the DVP smart contract are built:
+```sh
+$ npm install
+$ npm run build
+```
 
+Then build the test context, which will use dummy parameters to create final runable UPLC programs:
+```sh
+$ cd ./test/context
+$ npm run build
+```
+
+This could take a few minutes as UPLC programs for all smart contract functions are also generated.
+
+You will find the serialized (CBOR hex) results in `test/context/dist/index.mjs`, by searching for `"optimizedCborHex"` and `"unoptimizedCborHex"`.

@@ -12,7 +12,6 @@ describe("AssetModule::Asset::new", () => {
     const expected = makeAsset({
         assetClass: ac,
         count: 0,
-        countTick: 0,
         priceTimestamp: 0,
         price: [0, 1]
     })

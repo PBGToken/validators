@@ -54,13 +54,21 @@ describe("VoucherModule::Voucher::get_current", () => {
 
         it("VoucherModule::Voucher::get_current #01 (returns the voucher id and voucher data if the current input is a voucher UTxO)", () => {
             configureContext().use((currentScript, ctx) => {
-                deepEqual(
-                    get_current.eval({
-                        $currentScript: currentScript,
-                        $scriptContext: ctx
-                    }),
-                    [voucherId, voucher]
-                )
+                const [actualVoucherId, actualVoucher] = get_current.eval({
+                    $currentScript: currentScript,
+                    $scriptContext: ctx
+                })
+
+                strictEqual(actualVoucherId, voucherId)
+                strictEqual(actualVoucher.owner.toBech32(), voucher.owner.toBech32())
+                strictEqual(actualVoucher.datum.toSchemaJson(), voucher.datum.toSchemaJson())
+                strictEqual(actualVoucher.tokens, voucher.tokens)
+                deepEqual(actualVoucher.price, voucher.price)
+                strictEqual(actualVoucher.period, voucher.period)
+                strictEqual(actualVoucher.name, voucher.name)
+                strictEqual(actualVoucher.description, voucher.description)
+                strictEqual(actualVoucher.image, voucher.image)
+                strictEqual(actualVoucher.url, voucher.url)
             })
         })
 

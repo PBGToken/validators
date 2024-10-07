@@ -124,7 +124,7 @@ describe("Addresses::vault", () => {
                             $currentScript: currentScript,
                             $scriptContext: ctx
                         })
-                    })
+                    }, /doesn't contain a singleton asset class/)
                 })
             })
         })
