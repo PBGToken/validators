@@ -60,11 +60,11 @@ describe("VoucherModule::Voucher::get_current", () => {
                 })
 
                 strictEqual(actualVoucherId, voucherId)
-                strictEqual(actualVoucher.owner.toBech32(), voucher.owner.toBech32())
-                strictEqual(actualVoucher.datum.toSchemaJson(), voucher.datum.toSchemaJson())
+                strictEqual(actualVoucher.return_address.toBech32(), voucher.return_address.toBech32())
+                strictEqual(actualVoucher.return_datum.toSchemaJson(), voucher.return_datum.toSchemaJson())
                 strictEqual(actualVoucher.tokens, voucher.tokens)
                 deepEqual(actualVoucher.price, voucher.price)
-                strictEqual(actualVoucher.period, voucher.period)
+                strictEqual(actualVoucher.period_id, voucher.period_id)
                 strictEqual(actualVoucher.name, voucher.name)
                 strictEqual(actualVoucher.description, voucher.description)
                 strictEqual(actualVoucher.image, voucher.image)
@@ -205,9 +205,8 @@ describe("VoucherModule::Voucher::find_output", () => {
         })
 
         it("VoucherModule::Voucher::find_output #04 (throws an error if the return_address data isn't Address)", () => {
-            const datum = ConstrData.expect(castVoucher.toUplcData(voucher))
-            const cip68Fields = MapData.expect(datum.fields[0])
-            cip68Fields.items[0][1] = new IntData(0)
+            const datum = MapData.expect(castVoucher.toUplcData(voucher))
+            datum.items[0][1] = new IntData(0)
 
             configureContext({ datum }).use((currentScript, ctx) => {
                 throws(() => {
@@ -221,9 +220,8 @@ describe("VoucherModule::Voucher::find_output", () => {
         })
 
         it('VoucherModule::Voucher::find_output #05 (throws an error if the return_address key isn\'t "owner")', () => {
-            const datum = ConstrData.expect(castVoucher.toUplcData(voucher))
-            const cip68Fields = MapData.expect(datum.fields[0])
-            cip68Fields.items[0][0] = new ByteArrayData(encodeUtf8("@owner"))
+            const datum = MapData.expect(castVoucher.toUplcData(voucher))
+            datum.items[0][0] = new ByteArrayData(encodeUtf8("@owner"))
 
             configureContext({ datum }).use((currentScript, ctx) => {
                 throws(() => {

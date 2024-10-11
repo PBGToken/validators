@@ -17,13 +17,13 @@ export function makeVoucher(props?: {
     tokens?: IntLike
 }): VoucherStrictType {
     return {
-        owner: props?.address ?? Address.dummy(false),
-        datum: props?.datum ?? new IntData(0),
+        return_address: props?.address ?? Address.dummy(false),
+        return_datum: props?.datum ?? new IntData(0),
         tokens: BigInt(props?.tokens ?? 0),
         price: props?.price
             ? [BigInt(props.price[0]), BigInt(props.price[1])]
             : [100n, 1n],
-        period: BigInt(props?.periodId ?? 0),
+        period_id: BigInt(props?.periodId ?? 0),
         name: "DVP Voucher",
         description:
             "Part of the end-of-year success fee will be reimbursement",
