@@ -32,34 +32,34 @@ const INITIAL_SUCCESS_FEE: SuccessFee = SuccessFee{
     }
 }
 
-func validate_minted_tokens() -> Bool {
+func validate_minted_tokens() -> () {
     tokens = Tokens::get_minted();
     
-    tokens.length == 5
-    && tokens.get(TokenNames::metadata) == 1
-    && tokens.get(TokenNames::config) == 1
-    && tokens.get(TokenNames::portfolio) == 1
-    && tokens.get(TokenNames::price) == 1
-    && tokens.get(TokenNames::supply) == 1
+    assert(tokens.length == 5, "not precisely 5 tokens minted");
+    assert(tokens.get(TokenNames::metadata) == 1, "metadata token not minted");
+    assert(tokens.get(TokenNames::config) == 1, "config token not minted");
+    assert(tokens.get(TokenNames::portfolio) == 1, "portfolio token not minted");
+    assert(tokens.get(TokenNames::price) == 1, "price token not minted");
+    assert(tokens.get(TokenNames::supply) == 1, "supply token not minted")
 }
 
-func validate_initial_metadata() -> Bool {
+func validate_initial_metadata() -> () {
     metadata = Metadata::find_output();
 
-    (metadata.name == "PBG Token").trace_if_false("wrong metadata name")
-    && (metadata.description == "The first DVP").trace_if_false("wrong metadata description")
-    && (metadata.ticker == "PBG").trace_if_false("wrong metadata ticker")
-    && (metadata.url == "https://pbg.io").trace_if_false("wrong metadata url")
-    && (metadata.decimals == 6).trace_if_false("wrong metadata decimals")
-    && (metadata.logo == "https://token.pbg.io/logo.png").trace_if_false("wrong metadata logo uri")
+    assert(metadata.name == "PBG Token", "wrong metadata name");
+    assert(metadata.description == "The first DVP", "wrong metadata description");
+    assert(metadata.ticker == "PBG", "wrong metadata ticker");
+    assert(metadata.url == "https://pbg.io", "wrong metadata url");
+    assert(metadata.decimals == 6, "wrong metadata decimals");
+    assert(metadata.logo == "https://token.pbg.io/logo.png", "wrong metadata logo uri")
 }
 
-func validate_initial_config() -> Bool {
+func validate_initial_config() -> () {
     config = Config::find_output();
 
-    tx.is_signed_by(INITIAL_AGENT)
-    && INITIAL_SUCCESS_FEE.is_valid()
-    && config == Config{
+    assert(tx.is_signed_by(INITIAL_AGENT), "not signed by agent");
+    assert(INITIAL_SUCCESS_FEE.is_valid(), "initial success fee coefs aren't valid");
+    assert(config == Config{
         agent: INITIAL_AGENT,
         fees: FeesConfig{
             mint_fee: MintFeeConfig{
@@ -90,31 +90,31 @@ func validate_initial_config() -> Bool {
             delegate:     Scripts::governance_delegate
         },
         state: ConfigState::Idle
-    }
+    }, "unexpected initial config datum")
 }
 
-func validate_initial_portfolio() -> Bool {
+func validate_initial_portfolio() -> () {
     portfolio = Portfolio::find_output();
 
-    portfolio == Portfolio{
+    assert(portfolio == Portfolio{
         n_groups:  0,
         reduction: PortfolioReduction::Idle
-    }
+    }, "unexpected initial portfolio datum")
 }
 
-func validate_initial_price() -> Bool {
+func validate_initial_price() -> () {
     price = Price::find_output();
 
-    price == Price{
+    assert(price == Price{
         value:     INITIAL_PRICE,
         timestamp: Time::new(0)
-    }
+    }, "unexpected initial price datum")
 }
 
-func validate_initial_supply() -> Bool {
+func validate_initial_supply() -> () {
     supply = Supply::find_output();
 
-    supply == Supply{
+    assert(supply == Supply{
         tick:       INITIAL_TICK,
         n_tokens:   0,
         n_vouchers: 0,
@@ -127,28 +127,28 @@ func validate_initial_supply() -> Bool {
             period:      Duration::WEEK*2, // TODO: not yet 1 year, so we can test the success fee for a few periods
             start_price: INITIAL_PRICE
         }
-    }
+    }, "unexpected initial supply datum")
 }
 
-func validate_initialization() -> Bool {
-    validate_minted_tokens()
-    && validate_initial_metadata()
-    && validate_initial_config()
-    && validate_initial_portfolio()
-    && validate_initial_price()
-    && validate_initial_supply()
+func validate_initialization() -> () {
+    validate_minted_tokens();
+    validate_initial_metadata();
+    validate_initial_config();
+    validate_initial_portfolio();
+    validate_initial_price();
+    validate_initial_supply()
 }
 
-func validate_vault_spending() -> Bool {
-    witnessed_by_supply()
+func validate_vault_spending() -> () {
+    assert(witnessed_by_supply(), "vault spending not witnessed by supply spending")
 }
 
-func validate_mint_or_burn_asset_groups() -> Bool {
-    witnessed_by_portfolio()
+func validate_mint_or_burn_asset_groups() -> () {
+    assert(witnessed_by_portfolio(), "mint/burn of asset groups not witnessed by portfolio spending")
 }
 
-func validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement() -> Bool {
-    witnessed_by_supply()
+func validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement() -> () {
+    assert(witnessed_by_supply(), "mint/burn of other tokens not witnessed by supply spending")
 }
 
 func main(args: MixedArgs) -> Bool {
@@ -169,13 +169,14 @@ func main(args: MixedArgs) -> Bool {
                 qty == -1 && (TokenNames::has_voucher_ref_prefix(token_name) || TokenNames::has_reimbursement_prefix(token_name))
             })) {
                 // there is no risk of this happening before initialization because then burned tokens wouldn't yet exist
-                true
+                assert(true, "")
             } else if (tokens.any_key(TokenNames::has_reimbursement_prefix)) {
                 validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement()
             } else {
-                tx.inputs.any((input: TxInput) -> {input.output_id == SEED_ID})
-                && validate_initialization()
+                assert(tx.inputs.any((input: TxInput) -> {input.output_id == SEED_ID}), "UTxO with SEED_ID not spent");
+                validate_initialization()
             }
         }
-    }   
+    };
+    true  
 }

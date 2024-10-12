@@ -1253,8 +1253,7 @@ describe("portfolio_validator::validate_add_asset_class", () => {
 
     const defaultTestArgs = {
         config0: config,
-        config_is_spent: true,
-        portfolio0
+        config_is_spent: true
     }
 
     it("portfolio_validator::validate_add_asset_class #01 (returns true if the config is spent)", () => {
@@ -1400,8 +1399,7 @@ describe("portfolio_validator::validate_remove_asset_class", () => {
 
     const defaultTestArgs = {
         config0: config,
-        config_is_spent: true,
-        portfolio0
+        config_is_spent: true
     }
 
     it("portfolio_validator::validate_remove_asset_class #01 (returns true if the config is spent and the asset count is at 0)", () => {
