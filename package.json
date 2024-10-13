@@ -15,6 +15,9 @@
         "prettify": "npx prettier . --write",
         "test": "npm run test --prefix test"
     },
+    "publishConfig": {
+        "registry": "https://pbg-198334355085.d.codeartifact.us-east-1.amazonaws.com/npm/pbg/"
+    },
     "repository": {
         "type": "git",
         "url": "git+https://github.com/PBGToken/validators.git"
