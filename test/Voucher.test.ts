@@ -60,8 +60,14 @@ describe("VoucherModule::Voucher::get_current", () => {
                 })
 
                 strictEqual(actualVoucherId, voucherId)
-                strictEqual(actualVoucher.return_address.toBech32(), voucher.return_address.toBech32())
-                strictEqual(actualVoucher.return_datum.toSchemaJson(), voucher.return_datum.toSchemaJson())
+                strictEqual(
+                    actualVoucher.return_address.toBech32(),
+                    voucher.return_address.toBech32()
+                )
+                strictEqual(
+                    actualVoucher.return_datum.toSchemaJson(),
+                    voucher.return_datum.toSchemaJson()
+                )
                 strictEqual(actualVoucher.tokens, voucher.tokens)
                 deepEqual(actualVoucher.price, voucher.price)
                 strictEqual(actualVoucher.period_id, voucher.period_id)

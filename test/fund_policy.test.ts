@@ -102,9 +102,8 @@ describe("fund_policy::validate_minted_tokens", () => {
             .mint({ assets: makeConfigToken(-1) })
             .use((ctx) => {
                 throws(() => {
-                    validate_minted_tokens.eval({ $scriptContext: ctx })},
-                    /not precisely 5 tokens minted/
-                )
+                    validate_minted_tokens.eval({ $scriptContext: ctx })
+                }, /not precisely 5 tokens minted/)
             })
     })
 
@@ -124,9 +123,8 @@ describe("fund_policy::validate_minted_tokens", () => {
             .mint({ assets: makeDvpTokens(1) })
             .use((ctx) => {
                 throws(() => {
-                    validate_minted_tokens.eval({ $scriptContext: ctx })},
-                    /not precisely 5 tokens minted/
-                )
+                    validate_minted_tokens.eval({ $scriptContext: ctx })
+                }, /not precisely 5 tokens minted/)
             })
     })
 
@@ -135,9 +133,8 @@ describe("fund_policy::validate_minted_tokens", () => {
             .mint({ assets: makeSupplyToken(1) })
             .use((ctx) => {
                 throws(() => {
-                    validate_minted_tokens.eval({ $scriptContext: ctx })},
-                    /supply token not minted/
-                )
+                    validate_minted_tokens.eval({ $scriptContext: ctx })
+                }, /supply token not minted/)
             })
     })
 })
@@ -179,9 +176,8 @@ describe("fund_policy::validate_initial_metadata", () => {
     it("fund_policy::validate_initial_metadata #02 (throws an error if one of the metadata is wrong)", () => {
         configureContext({ logo: "asd" }).use((ctx) => {
             throws(() => {
-                validate_initial_metadata.eval({ $scriptContext: ctx })},
-                /wrong metadata logo uri/
-            )
+                validate_initial_metadata.eval({ $scriptContext: ctx })
+            }, /wrong metadata logo uri/)
         })
     })
 
@@ -254,9 +250,8 @@ describe("fund_policy::validate_initial_config", () => {
     it("fund_policy::validate_initial_config #02 (throws an error if the tx isn't signed by the agent)", () => {
         configureContext({ signingAgent: PubKeyHash.dummy(6) }).use((ctx) => {
             throws(() => {
-                validate_initial_config.eval({ $scriptContext: ctx })},
-                /not signed by agent/
-            )
+                validate_initial_config.eval({ $scriptContext: ctx })
+            }, /not signed by agent/)
         })
     })
 
@@ -264,9 +259,10 @@ describe("fund_policy::validate_initial_config", () => {
         configureContext({
             successFee: makeSuccessFee({ c0: -0.1, steps: [] })
         }).use((ctx) => {
-            throws(() => {
-                validate_initial_config.eval({ $scriptContext: ctx })
-            },
+            throws(
+                () => {
+                    validate_initial_config.eval({ $scriptContext: ctx })
+                },
                 // part of config equality check, the INITIAL_SUCCESS_FEE isn't actually checked here
                 /unexpected initial config datum/
             )
@@ -276,9 +272,8 @@ describe("fund_policy::validate_initial_config", () => {
     it("fund_policy::validate_initial_config #04 (throws an error if the config data is wrong)", () => {
         configureContext({ relMintFee: 0.004 }).use((ctx) => {
             throws(() => {
-                validate_initial_config.eval({ $scriptContext: ctx })},
-                /unexpected initial config datum/
-            )
+                validate_initial_config.eval({ $scriptContext: ctx })
+            }, /unexpected initial config datum/)
         })
     })
 
@@ -319,9 +314,8 @@ describe("fund_policy::validate_initial_portfolio", () => {
     it("fund_policy::validate_initial_portfolio #02 (throws an error if the portfolio output datum isn't correct)", () => {
         configureContext({ nGroups: 1 }).use((ctx) => {
             throws(() => {
-                validate_initial_portfolio.eval({ $scriptContext: ctx })},
-                /unexpected initial portfolio datum/
-            )
+                validate_initial_portfolio.eval({ $scriptContext: ctx })
+            }, /unexpected initial portfolio datum/)
         })
     })
 
@@ -375,18 +369,16 @@ describe("func_policy::validate_initial_price", () => {
     it("func_policy::validate_initial_price #03 (throws an error if the price timestamp is wrong)", () => {
         configureContext({ timestamp: 1 }).use((ctx) => {
             throws(() => {
-                validate_initial_price.eval({ $scriptContext: ctx })},
-                /unexpected initial price datum/
-            )
+                validate_initial_price.eval({ $scriptContext: ctx })
+            }, /unexpected initial price datum/)
         })
     })
 
     it("func_policy::validate_initial_price #04 (throws an error if the price ratio is wrong)", () => {
         configureContext({ ratio: [1000, 10] }).use((ctx) => {
             throws(() => {
-                validate_initial_price.eval({ $scriptContext: ctx })},
-                /unexpected initial price datum/
-            )
+                validate_initial_price.eval({ $scriptContext: ctx })
+            }, /unexpected initial price datum/)
         })
     })
 })
@@ -438,9 +430,8 @@ describe("fund_policy::validate_initial_supply", () => {
     it("fund_policy::validate_initial_supply #03 (throws an error if the initial tick isn't zero)", () => {
         configureContext({ initialTick: 1 }).use((ctx) => {
             throws(() => {
-                validate_initial_supply.eval({ $scriptContext: ctx })},
-                /unexpected initial supply datum/
-            )
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /unexpected initial supply datum/)
         })
     })
 })
@@ -488,46 +479,40 @@ describe("fund_policy::validate_initialization", () => {
     it("fund_policy::validate_initialization #02 (throws an error if the metadata contains a mistake)", () => {
         configureContext({ metadataLogo: "asd" }).use((ctx) => {
             throws(() => {
-                validate_initialization.eval({ $scriptContext: ctx })},
-                /wrong metadata logo uri/
-            )
+                validate_initialization.eval({ $scriptContext: ctx })
+            }, /wrong metadata logo uri/)
         })
     })
 
     it("fund_policy::validate_initialization #03 (throws an error if the config data contains a mistake)", () => {
         configureContext({ relMintFee: 0 }).use((ctx) => {
             throws(() => {
-                validate_initialization.eval({ $scriptContext: ctx })},
-                /unexpected initial config datum/
-            )
+                validate_initialization.eval({ $scriptContext: ctx })
+            }, /unexpected initial config datum/)
         })
     })
 
     it("fund_policy::validate_initialization #04 (throws an error if the portfolio data contains a mistake)", () => {
         configureContext({ nGroups: -1 }).use((ctx) => {
-            throws(
-                () => {
-                validate_initialization.eval({ $scriptContext: ctx })},
-                /unexpected initial portfolio datum/
-            )
+            throws(() => {
+                validate_initialization.eval({ $scriptContext: ctx })
+            }, /unexpected initial portfolio datum/)
         })
     })
 
     it("fund_policy::validate_initialization #05 (throws an error if the price data contains a mistake)", () => {
         configureContext({ priceTimestamp: -1 }).use((ctx) => {
             throws(() => {
-                validate_initialization.eval({ $scriptContext: ctx })},
-                /unexpected initial price datum/
-            )
+                validate_initialization.eval({ $scriptContext: ctx })
+            }, /unexpected initial price datum/)
         })
     })
 
     it("fund_policy::validate_initialization #06 (throws an error if the supply data contains a mistake)", () => {
         configureContext({ initialTick: -1 }).use((ctx) => {
             throws(() => {
-                validate_initialization.eval({ $scriptContext: ctx })},
-                /unexpected initial supply datum/
-            )
+                validate_initialization.eval({ $scriptContext: ctx })
+            }, /unexpected initial supply datum/)
         })
     })
 })
@@ -566,9 +551,8 @@ describe("fund_policy::validate_vault_spending", () => {
     it("fund_policy::validate_vault_spending #03 (throws an error if the supply UTxO isn't at the supply_validator address)", () => {
         configureContext({ address: Address.dummy(false) }).use((ctx) => {
             throws(() => {
-                validate_vault_spending.eval({ $scriptContext: ctx })},
-                /vault spending not witnessed by supply spending/
-            )
+                validate_vault_spending.eval({ $scriptContext: ctx })
+            }, /vault spending not witnessed by supply spending/)
         })
     })
 
@@ -660,9 +644,9 @@ describe("fund_policy::validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursemen
 
     it("fund_policy::validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement #01 (succeeds if the tx is witnessed by spending the supply UTxO)", () => {
         configureContext().use((ctx) => {
-            validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement.eval(
-                { $scriptContext: ctx }
-            )
+            validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement.eval({
+                $scriptContext: ctx
+            })
         })
     })
 

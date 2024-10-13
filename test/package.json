@@ -4,6 +4,6 @@
     "scripts": {
         "build:context": "npm run build --prefix ./context",
         "test": "npm run build:context && npm run test:suite",
-        "test:suite": "node --loader tsx --test *.test.ts"
+        "test:suite": "node --import tsx --test *.test.ts"
     }
 }

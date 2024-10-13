@@ -48,7 +48,7 @@
         "@helios-lang/crypto": "^0.1.17",
         "@helios-lang/ledger": "^0.5.8",
         "@helios-lang/type-utils": "^0.1.25",
-        "@helios-lang/uplc": "^0.6.1",
+        "@helios-lang/uplc": "^0.6.3",
         "@types/node": "^22.4.1",
         "prettier": "^3.3.3",
         "tsx": "^4.19.0"

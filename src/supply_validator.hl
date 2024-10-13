@@ -16,7 +16,7 @@ struct AssetPtrs {
     asset_group_output_ptrs: []Int
 }
 
-func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> Bool {
+func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> () {
     price = Price::find_ref();
 
     end_price = price.relative_to_benchmark();
@@ -25,62 +25,63 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> Bool {
     (config0, is_updated) = Config::find();
     tokens_minted = Tokens::get_minted();
 
-    (D == Dalpha).trace_if_false("incorrect number of tokens minted")
-    && price.is_not_expired().trace_if_false("price expired")
-    && (supply1.success_fee.start_time == supply0.success_fee.start_time + supply0.success_fee.period).trace_if_false("new success fee start time not set to correct value")
-    && (supply1.success_fee.period_id == supply0.success_fee.period_id + 1).trace_if_false("new success fee period id not set to correct value") // TODO: rename period to cycle_duration, and period_id to cycle_id
-    && (supply1.last_voucher_id == supply0.last_voucher_id).trace_if_false("last voucher id must be persisted")
-    && (supply1.n_vouchers == 0).trace_if_false("new n_vouchers count not set to correct value")
-    && (supply1.n_lovelace == supply0.n_lovelace).trace_if_false("n_lovelace count changed")
-    && (supply1.management_fee_timestamp == supply0.management_fee_timestamp).trace_if_false("management fee timestamp changed")
-    && (reimbursement.n_remaining_vouchers == supply0.n_vouchers).trace_if_false("n remaining vouchers in reimbursement not set to expected value")
-    && (reimbursement.start_price == supply0.success_fee.start_price).trace_if_false("reimbursement start price not set to expected value")
-    && (reimbursement.end_price == end_price).trace_if_false("unexpected reimbursement end price")
-    && (reimbursement.success_fee == config0.fees.success_fee.fee).trace_if_false("unexpected reimbursement success fee settings")
-    && if (is_updated) {
+    assert(D == Dalpha, "incorrect number of tokens minted");
+    assert(price.is_not_expired(), "price expired");
+    assert(supply1.success_fee.start_time == supply0.success_fee.start_time + supply0.success_fee.period, "new success fee start time not set to correct value");
+    assert(supply1.success_fee.period_id == supply0.success_fee.period_id + 1, "new success fee period id not set to correct value"); // TODO: rename period to cycle_duration, and period_id to cycle_id
+    assert(supply1.last_voucher_id == supply0.last_voucher_id, "last voucher id must be persisted");
+    assert(supply1.n_vouchers == 0, "new n_vouchers count not set to correct value");
+    assert(supply1.n_lovelace == supply0.n_lovelace, "n_lovelace count changed");
+    assert(supply1.management_fee_timestamp == supply0.management_fee_timestamp, "management fee timestamp changed");
+    assert(reimbursement.n_remaining_vouchers == supply0.n_vouchers, "n remaining vouchers in reimbursement not set to expected value");
+    assert(reimbursement.start_price == supply0.success_fee.start_price, "reimbursement start price not set to expected value");
+    assert(reimbursement.end_price == end_price, "unexpected reimbursement end price");
+    assert(reimbursement.success_fee == config0.fees.success_fee.fee, "unexpected reimbursement success fee settings");
+    if (is_updated) {
         UpdatingSuccessFee{period, _, _} = config0.state.get_proposal();
 
         config1 = Config::find_output();
-        new_price = config1.fees.success_fee.get_benchmark_price(price.value);
+        expected_new_price = config1.fees.success_fee.get_benchmark_price(price.value);
+        actual_new_price = supply1.success_fee.start_price;
 
-        (supply1.success_fee.start_price == new_price).trace_if_false("unexpected cycle start price " + supply1.success_fee.start_price.show() + ", expected " + new_price.show())
-        && supply1.success_fee.period == period
+        assert(actual_new_price == expected_new_price, "unexpected cycle start price " + actual_new_price.show() + ", expected " + expected_new_price.show());
+        assert(supply1.success_fee.period == period, "period not updated correctly")
     } else {
         config0.state.switch{
             Changing{_, proposal} => proposal.switch{
-                UpdatingSuccessFee => false, // config must be spent
-                else => true
+                UpdatingSuccessFee => error("config must be spent"), // config must be spent
+                else => print("ok")
             },
-            else => true
-        }
-        && (supply1.success_fee.start_price == end_price).trace_if_false("unexpected new supply start price")
-        && (supply1.success_fee.period == supply0.success_fee.period).trace_if_false("unexpected new supply period")
-    }
-    && tokens_minted.all((token_name: ByteArray, qty: Int) -> {
+            else => print("ok") // TODO: helios syntax highlighting should allow writing switch expressions with void return values without the else cases
+        };
+        assert(supply1.success_fee.start_price == end_price, "unexpected new supply start price");
+        assert(supply1.success_fee.period == supply0.success_fee.period, "unexpected new supply period")
+    };
+    assert(tokens_minted.all((token_name: ByteArray, qty: Int) -> {
         token_name == TokenNames::dvp_token
         || (token_name == TokenNames::reimbursement(supply0.success_fee.period_id) && qty == 1)
-    }).trace_if_false("illegal tokens minted")
-    && Vault::nothing_spent().trace_if_false("something spent from vault") // also assures that no asset groups are spent
+    }), "illegal tokens minted");
+    assert(Vault::nothing_spent(), "something spent from vault or assets validator")
 }
 
-func validate_reward_management(supply0: Supply, supply1: Supply, D: Int) -> Bool {
+func validate_reward_management(supply0: Supply, supply1: Supply, D: Int) -> () {
     config = Config::find_ref();
     Dmgmt = supply0.calc_management_fee_dilution();
 
-    D <= Dmgmt
-    && D >= 0
-    && supply1.management_fee_timestamp == supply0.management_fee_timestamp + config.fees.management_fee.period
-    && supply0.management_fee_timestamp < tx.time_range.start
-    && supply1.management_fee_timestamp < tx.time_range.end
-    && supply1.n_vouchers == supply0.n_vouchers
-    && supply1.last_voucher_id == supply0.last_voucher_id
-    && supply1.n_lovelace == supply0.n_lovelace
-    && supply1.success_fee == supply0.success_fee
-    && Tokens::minted_only_dvp_tokens()
-    && Vault::nothing_spent() // also assures that no asset groups are spent
+    assert(D <= Dmgmt, "minted too many tokens");
+    assert(D >= 0, "can't burn tokens");
+    assert(supply1.management_fee_timestamp == supply0.management_fee_timestamp + config.fees.management_fee.period, "management fee timestamp not updated correctly");
+    assert(supply0.management_fee_timestamp < tx.time_range.start, "previous management fee timestamp not in past");
+    assert(supply1.management_fee_timestamp < tx.time_range.end, "next management fee timestamp not before validity time range end");
+    assert(supply1.n_vouchers == supply0.n_vouchers, "n vouchers can't change");
+    assert(supply1.last_voucher_id == supply0.last_voucher_id, "last voucher id can't change");
+    assert(supply1.n_lovelace == supply0.n_lovelace, "vault lovelace count can't change");
+    assert(supply1.success_fee == supply0.success_fee, "success fee can't change");
+    assert(Tokens::minted_only_dvp_tokens(), "minted other tokens");
+    assert(Vault::nothing_spent(), "something spent from vault or assets validator")
 }
 
-func validate_mint_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: AssetPtrs) -> Bool {
+func validate_mint_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: AssetPtrs) -> () {
     price = Price::find_ref();
     config = Config::find_ref();
     dV = Vault::diff_lovelace(ptrs.asset_input_ptrs);
@@ -94,21 +95,21 @@ func validate_mint_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: A
         supply0.is_successful(price_relative_to_benchmark)
     );
 
-    price.is_not_expired().trace_if_false("price expired")
-    && (dV >= (price.value * D).floor()).trace_if_false("too little value sent to vault")
-    && (supply1.n_tokens <= config.token.max_supply).trace_if_false("exceeding max supply")
-    && (supply1.n_vouchers == supply0.n_vouchers + n_vouchers_minted).trace_if_false("unexpected new voucher count")
-    && (supply1.last_voucher_id == last_voucher_id).trace_if_false("unexpected last voucher id")
-    && (supply1.management_fee_timestamp == supply0.management_fee_timestamp).trace_if_false("management fee timestamp changed")
-    && (supply1.success_fee == supply0.success_fee).trace_if_false("success fee changed")
-    && (n_tokens_in_vouchers <= D).trace_if_false("too many tokens mentioned in all vouchers combined")
-    && Vault::counters_are_consistent(
+    assert(price.is_not_expired(), "price expired");
+    assert(dV >= (price.value * D).floor(), "too little value sent to vault");
+    assert(supply1.n_tokens <= config.token.max_supply, "exceeding max supply");
+    assert(supply1.n_vouchers == supply0.n_vouchers + n_vouchers_minted, "unexpected new voucher count");
+    assert(supply1.last_voucher_id == last_voucher_id, "unexpected last voucher id");
+    assert(supply1.management_fee_timestamp == supply0.management_fee_timestamp, "management fee timestamp changed");
+    assert(supply1.success_fee == supply0.success_fee, "success fee changed");
+    assert(n_tokens_in_vouchers <= D, "too many tokens mentioned in all vouchers combined");
+    assert(Vault::counters_are_consistent(
         supply1.n_lovelace - supply0.n_lovelace,
         ptrs.asset_group_output_ptrs
-    ).trace_if_false("counters aren't consistent")
+    ), "counters aren't consistent")
 }
 
-func validate_burn_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: AssetPtrs) -> Bool {
+func validate_burn_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: AssetPtrs) -> () {
     price = Price::find_ref();
     dV = Vault::diff_lovelace(ptrs.asset_input_ptrs);
 
@@ -116,31 +117,31 @@ func validate_burn_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: A
         supply0.period_id()
     );
 
-    price.is_not_expired()
-    && dV >= (price.value * D).floor() // this is all negative
-    && supply1.n_vouchers == supply0.n_vouchers - n_vouchers_burned
-    && supply1.last_voucher_id == supply0.last_voucher_id
-    && supply1.management_fee_timestamp == supply0.management_fee_timestamp
-    && supply1.success_fee == supply0.success_fee
-    && Vault::counters_are_consistent(
+    assert(price.is_not_expired(), "price expired");
+    assert(dV >= (price.value * D).floor(), "too much value taken from vault"); // this is all negative
+    assert(supply1.n_vouchers == supply0.n_vouchers - n_vouchers_burned, "voucher count not updated correctly");
+    assert(supply1.last_voucher_id == supply0.last_voucher_id, "last voucher id changed");
+    assert(supply1.management_fee_timestamp == supply0.management_fee_timestamp, "management fee timestamp changed");
+    assert(supply1.success_fee == supply0.success_fee, "success fee changed");
+    assert(Vault::counters_are_consistent(
         supply1.n_lovelace - supply0.n_lovelace,
         ptrs.asset_group_output_ptrs
-    )
+    ), "counters aren't consistent")
 }
 
-func validate_swap(supply0: Supply, supply1: Supply, ptrs: AssetPtrs) -> Bool {
+func validate_swap(supply0: Supply, supply1: Supply, ptrs: AssetPtrs) -> () {
     dV = Vault::diff_lovelace(ptrs.asset_input_ptrs);
 
-    dV >= 0
-    && supply1.n_vouchers == supply0.n_vouchers
-    && supply1.last_voucher_id == supply0.last_voucher_id
-    && supply1.management_fee_timestamp == supply0.management_fee_timestamp
-    && supply1.success_fee == supply0.success_fee
-    && Tokens::nothing_minted()
-    && Vault::counters_are_consistent(
+    assert(dV >= 0, "value lost from vault");
+    assert(supply1.n_vouchers == supply0.n_vouchers, "voucher count changed");
+    assert(supply1.last_voucher_id == supply0.last_voucher_id, "last voucher id changed");
+    assert(supply1.management_fee_timestamp == supply0.management_fee_timestamp, "management fee timestamp changed");
+    assert(supply1.success_fee == supply0.success_fee, "success fee changed");
+    assert(Tokens::nothing_minted(), "some tokens minted/burned");
+    assert(Vault::counters_are_consistent(
         supply1.n_lovelace - supply0.n_lovelace,
         ptrs.asset_group_output_ptrs
-    )
+    ), "counters aren't consistent")
 }
 
 func main(_: Supply, ptrs: AssetPtrs) -> Bool {
@@ -153,11 +154,11 @@ func main(_: Supply, ptrs: AssetPtrs) -> Bool {
         else => 0
     };
 
-    signed_by_agent()
-    && supply1.tick == supply0.tick + 1
-    && supply1.n_tokens == supply0.n_tokens + D
-    && tx.time_range.end - tx.time_range.start < Duration::DAY
-    && if (tx.time_range.end > supply0.period_end()) {
+    assert(signed_by_agent(), "not signed by agent");
+    assert(supply1.tick == supply0.tick + 1, "tick not increment by 1");
+    assert(supply1.n_tokens == supply0.n_tokens + D, "token count not incremented by minted amount");
+    assert(tx.time_range.end - tx.time_range.start < Duration::DAY, "validity time range too large");
+    if (tx.time_range.end > supply0.period_end()) {
         validate_reward_success(supply0, supply1, D)
     } else if (supply0.management_fee_timestamp + Config::find_ref().fees.management_fee.period < tx.time_range.end) {
         validate_reward_management(supply0, supply1, D)
@@ -167,5 +168,6 @@ func main(_: Supply, ptrs: AssetPtrs) -> Bool {
         validate_burn_user_tokens(supply0, supply1, D, ptrs)
     } else {
         validate_swap(supply0, supply1, ptrs)
-    }
+    };
+    true
 }
