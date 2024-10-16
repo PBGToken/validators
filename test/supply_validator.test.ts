@@ -1365,7 +1365,7 @@ describe("supply_validator::validate_burn_user_tokens", () => {
     })
 })
 
-describe("supply_validate::validate_swap", () => {
+describe("supply_validator::validate_swap", () => {
     describe("lovelace sent to vault", () => {
         const supply0 = makeSupply({
             nLovelace: 100_000_000,
@@ -1410,7 +1410,7 @@ describe("supply_validate::validate_swap", () => {
             } // dummy for lovelace
         }
 
-        it("supply_validate::validate_swap #01 (succeeds if nothing is minted and the supply datum is correctly updated)", () => {
+        it("supply_validator::validate_swap #01 (succeeds if nothing is minted and the supply datum is correctly updated)", () => {
             configureContext().use((ctx) => {
                 validate_swap.eval({
                     $scriptContext: ctx,
@@ -1419,7 +1419,7 @@ describe("supply_validate::validate_swap", () => {
             })
         })
 
-        it("supply_validate::validate_swap #02 (throws an error if more is taken from vault)", () => {
+        it("supply_validator::validate_swap #02 (throws an error if more is taken from vault)", () => {
             configureContext()
                 .takeFromVault({ value: new Value(100_000_001) })
                 .use((ctx) => {
@@ -1432,7 +1432,7 @@ describe("supply_validate::validate_swap", () => {
                 })
         })
 
-        it("supply_validate::validate_swap #03 (throws an error if the voucher count in the supply datum changed)", () => {
+        it("supply_validator::validate_swap #03 (throws an error if the voucher count in the supply datum changed)", () => {
             const supply1 = configureSupply1({ nVouchers: 123 })
             configureContext().use((ctx) => {
                 throws(() => {
@@ -1445,7 +1445,7 @@ describe("supply_validate::validate_swap", () => {
             })
         })
 
-        it("supply_validate::validate_swap #04 (throws an error if the management fee timestamp in the supply datum changed)", () => {
+        it("supply_validator::validate_swap #04 (throws an error if the management fee timestamp in the supply datum changed)", () => {
             const supply1 = configureSupply1({ managementFeeTimestamp: 123 })
             configureContext().use((ctx) => {
                 throws(() => {
@@ -1458,7 +1458,7 @@ describe("supply_validate::validate_swap", () => {
             })
         })
 
-        it("supply_validate::validate_swap #05 (throws an error if the success fee settings in the supply datum changed)", () => {
+        it("supply_validator::validate_swap #05 (throws an error if the success fee settings in the supply datum changed)", () => {
             const supply1 = configureSupply1({ successFeeStartTime: 123 })
             configureContext().use((ctx) => {
                 throws(() => {
@@ -1471,7 +1471,7 @@ describe("supply_validate::validate_swap", () => {
             })
         })
 
-        it("supply_validate::validate_swap #06 (throws an error if a token is minted with the fund policy)", () => {
+        it("supply_validator::validate_swap #06 (throws an error if a token is minted with the fund policy)", () => {
             configureContext()
                 .mint({ assets: makeConfigToken(1) })
                 .use((ctx) => {
@@ -1485,7 +1485,7 @@ describe("supply_validate::validate_swap", () => {
                 })
         })
 
-        it("supply_validate::validate_swap #07 (throws an error if a token is burned with the fund policy)", () => {
+        it("supply_validator::validate_swap #07 (throws an error if a token is burned with the fund policy)", () => {
             configureContext()
                 .mint({ assets: makeConfigToken(-1) })
                 .use((ctx) => {
@@ -1499,7 +1499,7 @@ describe("supply_validate::validate_swap", () => {
                 })
         })
 
-        it("supply_validate::validate_swap #08 (succeeds if the tx includes an asset group without any changes except the count tick)", () => {
+        it("supply_validator::validate_swap #08 (succeeds if the tx includes an asset group without any changes except the count tick)", () => {
             configureContext()
                 .addAssetGroupThread({
                     id: 0,
@@ -1518,7 +1518,7 @@ describe("supply_validate::validate_swap", () => {
                 })
         })
 
-        it("supply_validate::validate_swap #09 (throws an error if the tx includes an asset group with a count change)", () => {
+        it("supply_validator::validate_swap #09 (throws an error if the tx includes an asset group with a count change)", () => {
             configureContext()
                 .addAssetGroupThread({
                     id: 0,
@@ -1560,12 +1560,12 @@ describe("supply_validator metrics", () => {
         })
 
         // TODO: this can be fixed by making __helios__ratio__show() safe
-        /*it("ir doesn't contain appendString", () => {
+        it("ir doesn't contain appendString", () => {
             if (!!/__core__appendString/.exec(ir)) {
                 console.log(ir)
                 
                 throw new Error("optimized ir shouldn't contain appendString")
             }
-        })*/
+        })
     }  
 })

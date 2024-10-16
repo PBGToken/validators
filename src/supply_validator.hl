@@ -44,7 +44,7 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> () {
         expected_new_price = config1.fees.success_fee.get_benchmark_price(price.value);
         actual_new_price = supply1.success_fee.start_price;
 
-        assert(actual_new_price == expected_new_price, "unexpected cycle start price " + actual_new_price.show() + ", expected " + expected_new_price.show());
+        assert(actual_new_price == expected_new_price, "unexpected cycle start price");
         assert(supply1.success_fee.period == period, "period not updated correctly")
     } else {
         config0.state.switch{

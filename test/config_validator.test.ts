@@ -87,7 +87,7 @@ describe("config_validator::main", () => {
             })
         }
 
-        it("throws an error", () => {
+        it("config_validator::main #01 (throws an error for Idle to Idle state change)", () => {
             configureContext().use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -95,7 +95,7 @@ describe("config_validator::main", () => {
                         $datum: config,
                         _: redeemer
                     })
-                })
+                }, /illegal state change/)
             })
         })
     })
@@ -122,7 +122,7 @@ describe("config_validator::main", () => {
             })
         }
 
-        it("throws an error", () => {
+        it("config_validator::main #02 (throws an error for Changing to Changing state change)", () => {
             configureContext().use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -130,7 +130,7 @@ describe("config_validator::main", () => {
                         $datum: config,
                         _: redeemer
                     })
-                })
+                }, /illegal state change/)
             })
         })
     })
@@ -222,17 +222,18 @@ describe("config_validator::main", () => {
                 return scb
             }
 
-            it("succeeds if the portfolio datum is in Reducing::DoesNotExist state for the corresponding asset class", () => {
+            it("config_validator::main #03 (succeeds if the portfolio datum is in Reducing::DoesNotExist state for the asset class being added)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the portfolio Reducing::DoesNotExist asset class doesn't correspond", () => {
+            it("config_validator::main #04 (throws an error if the portfolio Reducing::DoesNotExist asset class doesn't correspond to the asset class being added)", () => {
                 configureContext({ assetClass: AssetClass.dummy(1) }).use(
                     (ctx) => {
                         throws(() => {
@@ -241,7 +242,7 @@ describe("config_validator::main", () => {
                                 $datum: config0,
                                 _: redeemer
                             })
-                        })
+                        }, /asset class doesn't correspond with asset class in portfolio reduction/)
                     }
                 )
             })
@@ -281,17 +282,18 @@ describe("config_validator::main", () => {
                 return scb
             }
 
-            it("succeeds if the portfolio datum is in Reducing::Exists state for the corresponding asset class", () => {
+            it("config_validator::main #05 (succeeds if the portfolio datum is in Reducing::Exists state for the asset class being removed)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the portfolio Reducing::Exists asset class doesn't correspond", () => {
+            it("config_validator::main #06 (throws an error if the portfolio Reducing::Exists asset class doesn't correspond)", () => {
                 configureContext({ assetClass: AssetClass.dummy(1) }).use(
                     (ctx) => {
                         throws(() => {
@@ -300,12 +302,12 @@ describe("config_validator::main", () => {
                                 $datum: config0,
                                 _: redeemer
                             })
-                        })
+                        }, /asset class doesn't correspond with asset class in portfolio reduction/)
                     }
                 )
             })
 
-            it("throws an error if the portfolio Reducing::Exists found flag is false", () => {
+            it("config_validator::main #07 (throws an error if the portfolio Reducing::Exists found flag is false)", () => {
                 configureContext({ found: false }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -313,7 +315,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /the asset class to be removed doesn't exist/)
                 })
             })
         })
@@ -352,17 +354,18 @@ describe("config_validator::main", () => {
                 return scb
             }
 
-            it("succeeds if the new period is in the correct range, the tx is observed by the new benchmark staking validator, the fee is valid, and the year ended", () => {
+            it("config_validator::main #08 (succeeds if the new period is in the correct range, the tx is observed by the new benchmark staking validator, the fee is valid, and the year ended)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if not witnessed by correct benchmark staking validator", () => {
+            it("config_validator::main #09 (throws an error if not witnessed by correct benchmark staking validator)", () => {
                 configureContext({
                     benchmark: StakingValidatorHash.dummy(2)
                 }).use((ctx) => {
@@ -372,11 +375,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /not witnessed by new benchmark/)
                 })
             })
 
-            it("throws an error if the new period is zero", () => {
+            it("config_validator::main #10 (throws an error if the new period is zero)", () => {
                 configureContext({ newPeriod: 0 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -384,11 +387,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new period not larger than 0/)
                 })
             })
 
-            it("throws an error if the new period is too large (11 years)", () => {
+            it("config_validator::main #12 (throws an error if the new success fee cycle period is too large)", () => {
                 configureContext({
                     newPeriod: 11 * 366 * 24 * 60 * 60 * 1000
                 }).use((ctx) => {
@@ -398,25 +401,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new period not smaller than upper limit/)
                 })
             })
 
-            it("throws an error if the new success fee structure is invalid", () => {
-                configureContext({
-                    newPeriod: 11 * 366 * 24 * 60 * 60 * 1000
-                }).use((ctx) => {
-                    throws(() => {
-                        main.eval({
-                            $scriptContext: ctx,
-                            $datum: config0,
-                            _: redeemer
-                        })
-                    })
-                })
-            })
-
-            it("throws an error if the new success fee structure is invalid", () => {
+            it("config_validator::main #13 (throws an error if the new success fee structure is invalid)", () => {
                 configureContext({
                     successFee: makeSuccessFee({ c0: -0.1, steps: [] })
                 }).use((ctx) => {
@@ -426,11 +415,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new success fee isn't valid/)
                 })
             })
 
-            it("throws an error if the success fee period ends too soon (so the change is too late)", () => {
+            it("config_validator::main #14 (throws an error if the success fee period ends too soon (so the change is too late))", () => {
                 configureContext({
                     currentPeriod: 4 * 24 * 60 * 60 * 1000
                 }).use((ctx) => {
@@ -440,11 +429,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /too late/)
                 })
             })
 
-            it("throws an error if the success fee period ends too far in the future (so the change is too soon)", () => {
+            it("config_validator::main #15 (throws an error if the success fee period ends too far in the future (so the change is too soon))", () => {
                 configureContext({
                     currentPeriod: 9 * 24 * 60 * 60 * 1000
                 }).use((ctx) => {
@@ -454,7 +443,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /too soon/)
                 })
             })
         })
@@ -472,17 +461,18 @@ describe("config_validator::main", () => {
                 return scb
             }
 
-            it("succeeds if new max supply is larger than old max supply", () => {
+            it("config_validator::main #16 (succeeds if new max supply is larger than old max supply)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the new max supply is equal to the old max supply", () => {
+            it("config_validator::main #17 (throws an error if the new max supply is equal to the old max supply)", () => {
                 configureContext({ maxSupply: 100_000_000_000 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -490,7 +480,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new max token supply is larger than previous max token supply/)
                 })
             })
         })
@@ -522,17 +512,18 @@ describe("config_validator::main", () => {
                 return scb
             }
 
-            it("succeeds if tx is signed by agent", () => {
+            it("config_validator::main #18 (succeeds if tx is signed by agent)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if not signed by correct agent", () => {
+            it("config_validator::main #19 (throws an error if not signed by correct agent)", () => {
                 configureContext({ signingAgent: PubKeyHash.dummy(3) }).use(
                     (ctx) => {
                         throws(() => {
@@ -541,12 +532,12 @@ describe("config_validator::main", () => {
                                 $datum: config0,
                                 _: redeemer
                             })
-                        })
+                        }, /not signed by new agent/)
                     }
                 )
             })
 
-            it("throws an error if not signed by anyone", () => {
+            it("config_validator::main #20 (throws an error if not signed by anyone)", () => {
                 configureContext({ signingAgent: null }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -554,7 +545,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /not signed by new agent/)
                 })
             })
         })
@@ -575,17 +566,18 @@ describe("config_validator::main", () => {
                 return scb
             }
 
-            it("succeeds if witnessed by corresponding oracle staking validator", () => {
+            it("config_validator::main #21 (succeeds if witnessed by corresponding oracle staking validator)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if not witnessed by the corresponding oracle staking validator", () => {
+            it("config_validator::main #22 (throws an error if not witnessed by the corresponding oracle staking validator)", () => {
                 configureContext({ oracle: StakingValidatorHash.dummy(6) }).use(
                     (ctx) => {
                         throws(() => {
@@ -594,7 +586,7 @@ describe("config_validator::main", () => {
                                 $datum: config0,
                                 _: redeemer
                             })
-                        })
+                        }, /not witnessed by new oracle delegate/)
                     }
                 )
             })
@@ -618,17 +610,18 @@ describe("config_validator::main", () => {
                 return scb
             }
 
-            it("succeeds if witnessed by corresponding governance staking validator", () => {
+            it("config_validator::main #23 (succeeds if witnessed by corresponding governance staking validator)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if not witnessed by the corresponding governance staking validator", () => {
+            it("config_validator::main #24 (throws an error if not witnessed by the corresponding governance staking validator)", () => {
                 configureContext({
                     governance: StakingValidatorHash.dummy(6)
                 }).use((ctx) => {
@@ -638,11 +631,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /not witnessed by new gov delegate/)
                 })
             })
 
-            it("throws an error if the new update delay is 0", () => {
+            it("config_validator::main #25 (throws an error if the new update delay is 0)", () => {
                 configureContext({ updateDelay: 0 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -650,7 +643,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new gov delay isn't larger than 0/)
                 })
             })
         })
@@ -672,37 +665,40 @@ describe("config_validator::main", () => {
                 return scb
             }
 
-            it("succeeds if new mint fee parameters lie within the valid ranges", () => {
+            it("config_validator::main #26 (succeeds if new mint fee parameters lie within the valid ranges)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("succeeds if the new relative mint fee is zero", () => {
+            it("config_validator::main #27 (succeeds if the new relative mint fee is zero)", () => {
                 configureContext({ relative: 0 }).use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("succeeds if both the new relative mint fee and minimum mint fee are zero", () => {
+            it("config_validator::main #28 (succeeds if both the new relative mint fee and minimum mint fee are zero)", () => {
                 configureContext({ relative: 0, minimum: 0 }).use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the relative mint fee is negative", () => {
+            it("config_validator::main #29 (throws an error if the relative mint fee is negative)", () => {
                 configureContext({ relative: -0.005 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -710,11 +706,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new relative mint fee is negative/)
                 })
             })
 
-            it("throws an error if the relative mint fee is too large", () => {
+            it("config_validator::main #30 (throws an error if the relative mint fee is too large)", () => {
                 configureContext({ relative: 0.1 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -722,11 +718,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new relative mint fee is too large/)
                 })
             })
 
-            it("throws an error if the minimum mint fee is negative", () => {
+            it("config_validator::main #31 (throws an error if the minimum mint fee is negative)", () => {
                 configureContext({ minimum: -1 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -734,11 +730,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new min mint fee is negative/)
                 })
             })
 
-            it("throws an error if the minimum mint fee is too large", () => {
+            it("config_validator::main #32 (throws an error if the minimum mint fee is too large)", () => {
                 configureContext({ minimum: 1_000_001 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -746,7 +742,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new min mint fee is out of bounds/)
                 })
             })
         })
@@ -768,37 +764,40 @@ describe("config_validator::main", () => {
                 return scb
             }
 
-            it("succeeds if new burn fee parameters lie within the valid ranges", () => {
+            it("config_validator::main #33 (succeeds if new burn fee parameters lie within the valid ranges)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("succeeds if the new relative burn fee is zero", () => {
+            it("config_validator::main #34 (succeeds if the new relative burn fee is zero)", () => {
                 configureContext({ relative: 0 }).use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("succeeds if both the new relative burn fee and minimum burn fee are zero", () => {
+            it("config_validator::main #35 (succeeds if both the new relative burn fee and minimum burn fee are zero)", () => {
                 configureContext({ relative: 0, minimum: 0 }).use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the relative burn fee is negative", () => {
+            it("config_validator::main #36 (throws an error if the relative burn fee is negative)", () => {
                 configureContext({ relative: -0.005 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -806,11 +805,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new relative burn fee is negative/)
                 })
             })
 
-            it("throws an error if the relative burn fee is too large", () => {
+            it("config_validator::main #37 (throws an error if the relative burn fee is too large)", () => {
                 configureContext({ relative: 0.1 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -818,11 +817,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new relative burn is too large/)
                 })
             })
 
-            it("throws an error if the minimum burn fee is negative", () => {
+            it("config_validator::main #38 (throws an error if the minimum burn fee is negative)", () => {
                 configureContext({ minimum: -1 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -830,11 +829,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new min burn fee is negative/)
                 })
             })
 
-            it("throws an error if the minimum burn fee is too large", () => {
+            it("config_validator::main #39 (throws an error if the minimum burn fee is too large)", () => {
                 configureContext({ minimum: 1_000_001 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -842,7 +841,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new min burn fee is out of bounds/)
                 })
             })
         })
@@ -864,27 +863,29 @@ describe("config_validator::main", () => {
                 return scb
             }
 
-            it("succeeds if new management fee parameters lie within the valid ranges", () => {
+            it("config_validator::main #40 (succeeds if new management fee parameters lie within the valid ranges)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("succeeds if the new relative management fee is zero", () => {
+            it("config_validator::main #41 (succeeds if the new relative management fee is zero)", () => {
                 configureContext({ relative: 0 }).use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the relative management fee is negative", () => {
+            it("config_validator::main #42 (throws an error if the relative management fee is negative)", () => {
                 configureContext({ relative: -0.005 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -892,11 +893,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new relative management is negative/)
                 })
             })
 
-            it("throws an error if the relative management fee is too large", () => {
+            it("config_validator::main #43 (throws an error if the relative management fee is too large)", () => {
                 configureContext({ relative: 0.1 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -904,11 +905,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new relative management is too large/)
                 })
             })
 
-            it("throws an error if the new management fee period is negative", () => {
+            it("config_validator::main #44 (throws an error if the new management fee period is negative)", () => {
                 configureContext({ period: -1 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -916,11 +917,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new management fee period isn't larger than 0/)
                 })
             })
 
-            it("throws an error if the new management fee period is too large", () => {
+            it("config_validator::main #45 (throws an error if the new management fee period is too large)", () => {
                 configureContext({ period: 367 * 24 * 60 * 60 * 1000 }).use(
                     (ctx) => {
                         throws(() => {
@@ -929,7 +930,7 @@ describe("config_validator::main", () => {
                                 $datum: config0,
                                 _: redeemer
                             })
-                        })
+                        }, /new management fee period is out of bounds/)
                     }
                 )
             })
@@ -949,17 +950,18 @@ describe("config_validator::main", () => {
                 return scb
             }
 
-            it("succeeds if the new max price age lies in the valid range", () => {
+            it("config_validator::main #46 (succeeds if the new max price age lies in the valid range)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the new max price age is negative", () => {
+            it("config_validator::main #47 (throws an error if the new max price age is negative)", () => {
                 configureContext({ maxPriceAge: -1 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -967,11 +969,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new tau_p not larger than 0/)
                 })
             })
 
-            it("throws an error if the new max price age is too large", () => {
+            it("config_validator::main #48 (throws an error if the new max price age is too large)", () => {
                 configureContext({
                     maxPriceAge: 367 * 24 * 60 * 60 * 1000
                 }).use((ctx) => {
@@ -981,7 +983,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new tau_p out of bounds/)
                 })
             })
         })
@@ -999,17 +1001,18 @@ describe("config_validator::main", () => {
                 return scb
             }
 
-            it("succeeds if the new hash has the correct length", () => {
+            it("config_validator::main #49 (succeeds if the new hash has the correct length)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the new hash doesn't have the correct length", () => {
+            it("config_validator::main #50 (throws an error if the new hash doesn't have the correct length)", () => {
                 configureContext({ hash: new Array(31).fill(0) }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -1017,13 +1020,13 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /new metadata hash not 32 bytes long/)
                 })
             })
         })
 
         describe("all Changing proposals", () => {
-            it("throws an error if not witnessed by correct governance hash", () => {
+            it("config_validator::main #51 (throws an error if not witnessed by correct governance hash)", () => {
                 configureContext({
                     governance: StakingValidatorHash.dummy()
                 }).use((ctx) => {
@@ -1033,11 +1036,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /not witnessed by governance/)
                 })
             })
 
-            it("throws an error if not witnessed by any governance hash", () => {
+            it("config_validator::main #52 (throws an error if not witnessed by any governance hash)", () => {
                 configureContext({ governance: null }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -1045,11 +1048,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /not witnessed by governance/)
                 })
             })
 
-            it("throws an error if the something else in the config datum changed", () => {
+            it("config_validator::main #53 (throws an error if the something else in the config datum changed)", () => {
                 configureContext({ prevAgent: PubKeyHash.dummy(123) }).use(
                     (ctx) => {
                         throws(() => {
@@ -1058,12 +1061,12 @@ describe("config_validator::main", () => {
                                 $datum: config0,
                                 _: redeemer
                             })
-                        })
+                        }, /bad new config data/)
                     }
                 )
             })
 
-            it("throws an error if the proposal timestamp is in the past", () => {
+            it("config_validator::main #54 (throws an error if the proposal timestamp is in the past)", () => {
                 configureContext({ proposalTimestamp: -1 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -1071,11 +1074,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /proposal time not set to after tx validity time range/)
                 })
             })
 
-            it("throws an error if the proposal timestamp is too far in the future", () => {
+            it("config_validator::main #55 (throws an error if the proposal timestamp is too far in the future)", () => {
                 configureContext({
                     proposalTimestamp: 25 * 60 * 60 * 1000
                 }).use((ctx) => {
@@ -1085,7 +1088,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /proposal time set too far in the future/)
                 })
             })
         })
@@ -1233,17 +1236,18 @@ describe("config_validator::main", () => {
                 })
             }
 
-            it("succeeds if the tx has only one asset group thread and the added asset class is included in the group output but not in the group input", () => {
+            it("config_validator::main #56 (succeeds if the tx has only one asset group thread and the added asset class is included in the group output but not in the group input)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the tx contains another asset group input", () => {
+            it("config_validator::main #57 (throws an error if the tx contains another asset group input)", () => {
                 configureContext()
                     .addAssetGroupInput({ id: 1 })
                     .use((ctx) => {
@@ -1253,11 +1257,11 @@ describe("config_validator::main", () => {
                                 $datum: config0,
                                 _: redeemer
                             })
-                        })
+                        }, /not a singleton list/)
                     })
             })
 
-            it("throws an error if the input asset group also contains the asset class", () => {
+            it("config_validator::main #58 (throws an error if the input asset group also contains the asset class)", () => {
                 configureContext({
                     inputAssets: [makeAsset({ assetClass })]
                 }).use((ctx) => {
@@ -1267,11 +1271,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /asset class exists in group input/)
                 })
             })
 
-            it("throws an error of the output asset group doesn't contain the asset class", () => {
+            it("config_validator::main #59 (throws an error of the output asset group doesn't contain the asset class)", () => {
                 configureContext({
                     outputAssets: [
                         makeAsset({ assetClass: AssetClass.dummy(12) })
@@ -1283,26 +1287,27 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /asset class doesn't exist in group output/)
                 })
             })
 
-            it("succeeds if the output asset group contains the asset class twice (portfolio_validator is responsible for this)", () => {
+            it("config_validator::main #60 (succeeds if the output asset group contains the asset class twice (portfolio_validator is responsible for this))", () => {
                 configureContext({
                     outputAssets: [
                         makeAsset({ assetClass }),
                         makeAsset({ assetClass })
                     ]
                 }).use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the output config data contains an invalid change", () => {
+            it("config_validator::main #61 (throws an error if the output config data contains an invalid change)", () => {
                 configureContext({
                     governance: StakingValidatorHash.dummy(1)
                 }).use((ctx) => {
@@ -1312,7 +1317,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /invalid datum change/)
                 })
             })
         })
@@ -1349,17 +1354,18 @@ describe("config_validator::main", () => {
                 })
             }
 
-            it("succeeds if the tx has only one asset group thread and the added asset class is included in the group input but not in the group output", () => {
+            it("config_validator::main #62 (succeeds if the tx has only one asset group thread and the added asset class is included in the group input but not in the group output)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the tx contains another asset group input", () => {
+            it("config_validator::main #63 (throws an error if the tx contains another asset group input)", () => {
                 configureContext()
                     .addAssetGroupInput({ id: 1 })
                     .use((ctx) => {
@@ -1369,11 +1375,11 @@ describe("config_validator::main", () => {
                                 $datum: config0,
                                 _: redeemer
                             })
-                        })
+                        }, /not a singleton list/)
                     })
             })
 
-            it("throws an error if the output asset group also contains the asset class", () => {
+            it("config_validator::main #64 (throws an error if the output asset group also contains the asset class)", () => {
                 configureContext({
                     outputAssets: [makeAsset({ assetClass })]
                 }).use((ctx) => {
@@ -1383,11 +1389,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /asset class exists in group output/)
                 })
             })
 
-            it("throws an error of the input asset group doesn't contain the asset class", () => {
+            it("config_validator::main #65 (throws an error of the input asset group doesn't contain the asset class)", () => {
                 configureContext({
                     inputAssets: [
                         makeAsset({ assetClass: AssetClass.dummy(12) })
@@ -1399,11 +1405,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /asset class doesn't exist in group input/)
                 })
             })
 
-            it("throws an error if the output config data contains an invalid change", () => {
+            it("config_validator::main #66 (throws an error if the output config data contains an invalid change)", () => {
                 configureContext({
                     governance: StakingValidatorHash.dummy(1)
                 }).use((ctx) => {
@@ -1413,7 +1419,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /invalid datum change/)
                 })
             })
         })
@@ -1459,17 +1465,18 @@ describe("config_validator::main", () => {
                     })
             }
 
-            it("succeeds if the reimbursement token is minted and the supply UTxO is spent", () => {
+            it("config_validator::main #67 (succeeds if the reimbursement token is minted and the supply UTxO is spent)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the wrong reimbursement token is minted", () => {
+            it("config_validator::main #68 (throws an error if the wrong reimbursement token is minted)", () => {
                 configureContext({ reimbursementTokenId: 1 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -1477,11 +1484,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /not exactly one reimbursement token minted/)
                 })
             })
 
-            it("throws an error if the supply UTxO isn't spent", () => {
+            it("config_validator::main #69 (throws an error if the supply UTxO isn't spent)", () => {
                 configureContext({ supplyToken: makeDvpTokens(1) }).use(
                     (ctx) => {
                         throws(() => {
@@ -1490,7 +1497,7 @@ describe("config_validator::main", () => {
                                 $datum: config0,
                                 _: redeemer
                             })
-                        })
+                        }, /not found/)
                     }
                 )
             })
@@ -1515,17 +1522,18 @@ describe("config_validator::main", () => {
                 })
             }
 
-            it("succeeds if output config data contains correct max_supply", () => {
+            it("config_validator::main #70 (succeeds if output config data contains correct max_supply)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the output data doesn't contain the correct max_supply", () => {
+            it("config_validator::main #71 (throws an error if the output data doesn't contain the correct max_supply)", () => {
                 configureContext({ maxSupplyInConfig: 200_000_000_001n }).use(
                     (ctx) => {
                         throws(() => {
@@ -1534,7 +1542,7 @@ describe("config_validator::main", () => {
                                 $datum: config0,
                                 _: redeemer
                             })
-                        })
+                        }, /invalid datum change/)
                     }
                 )
             })
@@ -1560,17 +1568,18 @@ describe("config_validator::main", () => {
                 }).addSigner(agentInConfig)
             }
 
-            it("succeeds if the output config data contains the correct agent", () => {
+            it("config_validator::main #72 (succeeds if the output config data contains the correct agent)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the output data doesn't contain the correct agent", () => {
+            it("config_validator::main #73 (throws an error if the output data doesn't contain the correct agent)", () => {
                 configureContext({ agentInConfig: PubKeyHash.dummy(124) }).use(
                     (ctx) => {
                         throws(() => {
@@ -1579,7 +1588,7 @@ describe("config_validator::main", () => {
                                 $datum: config0,
                                 _: redeemer
                             })
-                        })
+                        }, /invalid datum change/)
                     }
                 )
             })
@@ -1605,17 +1614,18 @@ describe("config_validator::main", () => {
                 })
             }
 
-            it("succeeds if the output config data contains the correct oracle staking validator hash", () => {
+            it("config_validator::main #74 (succeeds if the output config data contains the correct oracle staking validator hash)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the output data doesn't contain the correct oracle staking validator hash", () => {
+            it("config_validator::main #75 (throws an error if the output data doesn't contain the correct oracle staking validator hash)", () => {
                 configureContext({
                     oracleInConfig: StakingValidatorHash.dummy(124)
                 }).use((ctx) => {
@@ -1625,7 +1635,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /invalid datum change/)
                 })
             })
         })
@@ -1657,17 +1667,18 @@ describe("config_validator::main", () => {
                 })
             }
 
-            it("succeeds if the output config data contains the correct governance staking validator hash", () => {
+            it("config_validator::main #76 (succeeds if the output config data contains the correct governance staking validator hash)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the output data doesn't contain the correct governance staking validator hash", () => {
+            it("config_validator::main #77 (throws an error if the output data doesn't contain the correct governance staking validator hash)", () => {
                 configureContext({
                     governanceInConfig: StakingValidatorHash.dummy(124)
                 }).use((ctx) => {
@@ -1677,11 +1688,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /invalid datum change/)
                 })
             })
 
-            it("throws an error if the output data doesn't contain the correct update delay", () => {
+            it("config_validator::main #78 (throws an error if the output data doesn't contain the correct update delay)", () => {
                 configureContext({
                     updateDelayInConfig: 8 * 24 * 60 * 60 * 1000
                 }).use((ctx) => {
@@ -1691,7 +1702,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /invalid datum change/)
                 })
             })
         })
@@ -1723,17 +1734,18 @@ describe("config_validator::main", () => {
                 })
             }
 
-            it("succeeds if the output config data contains the correct mint fee parameters", () => {
+            it("config_validator::main #79 (succeeds if the output config data contains the correct mint fee parameters)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the output data doesn't contain the correct relative mint fee", () => {
+            it("config_validator::main #80 (throws an error if the output data doesn't contain the correct relative mint fee)", () => {
                 configureContext({ relFeeInConfig: 0.005 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -1741,11 +1753,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /invalid datum change/)
                 })
             })
 
-            it("throws an error if the output data doesn't contain the correct minimum mint fee", () => {
+            it("config_validator::main #81 (throws an error if the output data doesn't contain the correct minimum mint fee)", () => {
                 configureContext({ minFeeInConfig: 25_000n }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -1753,7 +1765,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /invalid datum change/)
                 })
             })
         })
@@ -1785,17 +1797,18 @@ describe("config_validator::main", () => {
                 })
             }
 
-            it("succeeds if the output config data contains the correct burn fee parameters", () => {
+            it("config_validator::main #82 (succeeds if the output config data contains the correct burn fee parameters)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the output data doesn't contain the correct relative burn fee", () => {
+            it("config_validator::main #83 (throws an error if the output data doesn't contain the correct relative burn fee)", () => {
                 configureContext({ relFeeInConfig: 0.005 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -1803,11 +1816,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /invalid datum change/)
                 })
             })
 
-            it("throws an error if the output data doesn't contain the correct minimum burn fee", () => {
+            it("config_validator::main #84 (throws an error if the output data doesn't contain the correct minimum burn fee)", () => {
                 configureContext({ minFeeInConfig: 25_000n }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -1815,7 +1828,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /invalid datum change/)
                 })
             })
         })
@@ -1847,17 +1860,18 @@ describe("config_validator::main", () => {
                 })
             }
 
-            it("succeeds if the output config data contains the correct management fee parameters", () => {
+            it("config_validator::main #85 (succeeds if the output config data contains the correct management fee parameters)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the output data doesn't contain the correct relative management fee", () => {
+            it("config_validator::main #86 (throws an error if the output data doesn't contain the correct relative management fee)", () => {
                 configureContext({ relFeeInConfig: 0.0001 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -1865,11 +1879,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /invalid datum change/)
                 })
             })
 
-            it("throws an error if the output data doesn't contain the correct management fee period", () => {
+            it("config_validator::main #87 (throws an error if the output data doesn't contain the correct management fee period)", () => {
                 configureContext({ periodInConfig: 25 * 60 * 60 * 1000 }).use(
                     (ctx) => {
                         throws(() => {
@@ -1878,7 +1892,7 @@ describe("config_validator::main", () => {
                                 $datum: config0,
                                 _: redeemer
                             })
-                        })
+                        }, /invalid datum change/)
                     }
                 )
             })
@@ -1906,17 +1920,18 @@ describe("config_validator::main", () => {
                 })
             }
 
-            it("succeeds if the output config data contains the correct max price age", () => {
+            it("config_validator::main #88 (succeeds if the output config data contains the correct max price age)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the output data doesn't contain the correct max price age", () => {
+            it("config_validator::main #89 (throws an error if the output data doesn't contain the correct max price age)", () => {
                 configureContext({
                     maxPriceAgeInConfig: 12 * 60 * 60 * 1000
                 }).use((ctx) => {
@@ -1926,7 +1941,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /invalid datum change/)
                 })
             })
         })
@@ -1950,17 +1965,18 @@ describe("config_validator::main", () => {
                 }).addMetadataInput({ token: props?.metadataToken })
             }
 
-            it("succeeds if metadata UTxO is spent and config remains unchanged", () => {
+            it("config_validator::main #90 (succeeds if metadata UTxO is spent and config remains unchanged)", () => {
                 configureContext().use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         $datum: config0,
                         _: redeemer
-                    })
+                    }), undefined)
                 })
             })
 
-            it("throws an error if the output config data contains an invalid change", () => {
+            it("config_validator::main #91 (throws an error if the output config data contains an invalid change)", () => {
                 configureContext({
                     governance: StakingValidatorHash.dummy(200)
                 }).use((ctx) => {
@@ -1970,11 +1986,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /invalid datum change/)
                 })
             })
 
-            it("throws an error if the returned metadata UTxO doesn't contain the metadata token", () => {
+            it("config_validator::main #92 (throws an error if the returned metadata UTxO doesn't contain the metadata token)", () => {
                 configureContext({ metadataToken: makeDvpTokens(1) }).use(
                     (ctx) => {
                         throws(() => {
@@ -1983,14 +1999,14 @@ describe("config_validator::main", () => {
                                 $datum: config0,
                                 _: redeemer
                             })
-                        })
+                        }, /metadata utxo not spent/)
                     }
                 )
             })
         })
 
         describe("all Changing proposals", () => {
-            it("throws an error if the tx validity time-range isn't far enough after the proposal timestamp", () => {
+            it("config_validator::main #93 (throws an error if the tx validity time-range isn't far enough after the proposal timestamp)", () => {
                 const config0 = makeConfig0()
 
                 configureContext({
@@ -2004,11 +2020,11 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /update delay hasn't passed/)
                 })
             })
 
-            it("throws an error if the tx isn't signed by the agent", () => {
+            it("config_validator::main #94 (throws an error if the tx isn't signed by the agent)", () => {
                 const config0 = makeConfig0()
 
                 configureContext({ config0, agent: PubKeyHash.dummy(1) }).use(
@@ -2019,17 +2035,28 @@ describe("config_validator::main", () => {
                                 $datum: config0,
                                 _: redeemer
                             })
-                        })
+                        }, /not signed by new agent/)
                     }
                 )
             })
 
-            it("throws an error if the output config data contains an invalid change", () => {
+            it("config_validator::main #95 (throws an error if the output config data contains an invalid change)", () => {
+                const assetClass = AssetClass.dummy()
                 const config0 = makeConfig0()
+                const groupId = 0
+                const assets0: AssetType[] = []
+
+                const assets1 = [
+                    makeAsset({ assetClass })
+                ]
 
                 configureContext({
                     config0,
                     governance: StakingValidatorHash.dummy(13)
+                }).addAssetGroupThread({
+                    id: groupId,
+                    inputAssets: assets0,
+                    outputAssets: assets1
                 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -2037,7 +2064,7 @@ describe("config_validator::main", () => {
                             $datum: config0,
                             _: redeemer
                         })
-                    })
+                    }, /invalid datum change/)
                 })
             })
         })

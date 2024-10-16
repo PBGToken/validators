@@ -35,99 +35,99 @@ func main(_: Config, _) -> Bool {
 
     (old_state, new_state).switch{
         (Idle, changing: Changing) => {
-            witnessed_by_governance()
-            && config1 == config0.copy(state: new_state)
-            && changing.proposal_timestamp >= tx.time_range.end
-            && changing.proposal_timestamp < tx.time_range.end + Duration::DAY // upper bound
-            && changing.proposal.switch{
+            assert(witnessed_by_governance(), "not witnessed by governance");
+            assert(config1 == config0.copy(state: new_state), "bad new config data");
+            assert(changing.proposal_timestamp >= tx.time_range.end, "proposal time not set to after tx validity time range");
+            assert(changing.proposal_timestamp < tx.time_range.end + Duration::DAY, "proposal time set too far in the future"); // upper bound
+            changing.proposal.switch{
                 AddingAssetClass{asset_class} => {
                     portfolio = Portfolio::find_ref();
                     DoesNotExist{expected_asset_class} = portfolio.get_reduction_result();
 
-                    asset_class == expected_asset_class
+                    assert(asset_class == expected_asset_class, "asset class doesn't correspond with asset class in portfolio reduction")
                 },
                 RemovingAssetClass{asset_class} => {
                     portfolio = Portfolio::find_ref();
                     Exists{expected_asset_class, actually_exists} = portfolio.get_reduction_result();
                     
-                    actually_exists
-                    && asset_class == expected_asset_class
+                    assert(actually_exists, "the asset class to be removed doesn't exist");
+                    assert(asset_class == expected_asset_class, "asset class doesn't correspond with asset class in portfolio reduction")
                 },
                 UpdatingSuccessFee{period, benchmark, fee} => {
                     supply = Supply::find_ref();
         
-                    (period > Duration::new(0)).trace_if_false("new period not larger than 0")
-                    && (period < SUCCESS_FEE_PERIOD_UPPER_LIMIT).trace_if_false("new period not smaller than upper limit")
-                    && tx.redeemers.any((key: ScriptPurpose, _) -> {
+                    assert(period > Duration::new(0), "new period not larger than 0");
+                    assert(period < SUCCESS_FEE_PERIOD_UPPER_LIMIT, "new period not smaller than upper limit");
+                    assert(tx.redeemers.any((key: ScriptPurpose, _) -> {
                         key == ScriptPurpose::new_rewarding(StakingCredential::new_hash(StakingHash::new_validator(benchmark)))
-                    }).trace_if_false("not witnessed by new benchmark")
-                    && fee.is_valid().trace_if_false("new success fee isn't valid")
-                    && ((supply.period_end() - tx.time_range.end) >= (config0.governance.update_delay + Duration::DAY)).trace_if_false("too late (you've missed the window of opportunity to change the success fee config this period)")
-                    && ((supply.period_end() - tx.time_range.start) < config0.governance.update_delay*2).trace_if_false("too soon")
+                    }), "not witnessed by new benchmark");
+                    assert(fee.is_valid(), "new success fee isn't valid");
+                    assert((supply.period_end() - tx.time_range.end) >= (config0.governance.update_delay + Duration::DAY), "too late (you've missed the window of opportunity to change the success fee config this period)");
+                    assert((supply.period_end() - tx.time_range.start) < config0.governance.update_delay*2, "too soon")
                 },
                 IncreasingMaxTokenSupply{Nmax} => {
-                    Nmax > config0.token.max_supply
-                    && Nmax < MAX_SUPPLY_UPPER_LIMIT
+                    assert(Nmax > config0.token.max_supply, "new max token supply is larger than previous max token supply");
+                    assert(Nmax < MAX_SUPPLY_UPPER_LIMIT, "new max token supply out of bounds")
                 },
                 ChangingAgent{new_agent} => {
-                    signed_by_agent(new_agent)
+                    assert(signed_by_agent(new_agent), "not signed by new agent")
                 },
                 ChangingOracle{new_oracle} => {
-                    witnessed_by_oracle(new_oracle)
+                    assert(witnessed_by_oracle(new_oracle), "not witnessed by new oracle delegate")
                 },
                 ChangingGovernance{new_governance, tau_gov} => {
-                    witnessed_by_governance(new_governance)
-                    && tau_gov > Duration::new(0)
-                    && tau_gov < UPDATE_DELAY_UPPER_LIMIT
+                    assert(witnessed_by_governance(new_governance), "not witnessed by new gov delegate");
+                    assert(tau_gov > Duration::new(0), "new gov delay isn't larger than 0");
+                    assert(tau_gov < UPDATE_DELAY_UPPER_LIMIT, "new gov delay is out of bounds")
                 },
                 ChangingMintFee{relative, d_min} => {
-                    relative >= 0.0
-                    && relative < 0.1 // 10%
-                    && d_min >= 0
-                    && d_min < MIN_FEE_UPPER_LIMIT
+                    assert(relative >= 0.0, "new relative mint fee is negative");
+                    assert(relative < 0.1, "new relative mint fee is too large"); // 10%
+                    assert(d_min >= 0, "new min mint fee is negative");
+                    assert(d_min < MIN_FEE_UPPER_LIMIT, "new min mint fee is out of bounds")
                 },
                 ChangingBurnFee{relative, d_min} => {
-                    relative >= 0.0
-                    && relative < 0.1 // 10%
-                    && d_min >= 0
-                    && d_min < MIN_FEE_UPPER_LIMIT
+                    assert(relative >= 0.0, "new relative burn fee is negative");
+                    assert(relative < 0.1, "new relative burn is too large"); // 10%
+                    assert(d_min >= 0, "new min burn fee is negative");
+                    assert(d_min < MIN_FEE_UPPER_LIMIT, "new min burn fee is out of bounds")
                 },
                 ChangingManagementFee{relative, tau_mgmt} => {
-                    relative >= 0.0
-                    && relative < 0.1 // 10%
-                    && tau_mgmt > Duration::new(0)
-                    && tau_mgmt < MANAGEMENT_FEE_PERIOD_UPPER_LIMIT
+                    assert(relative >= 0.0, "new relative management is negative");
+                    assert(relative < 0.1, "new relative management is too large"); // 10%
+                    assert(tau_mgmt > Duration::new(0), "new management fee period isn't larger than 0");
+                    assert(tau_mgmt < MANAGEMENT_FEE_PERIOD_UPPER_LIMIT, "new management fee period is out of bounds")
                 },
                 ChangingMaxPriceAge{tau_p} => {
-                    tau_p > Duration::new(0)
-                    && tau_p < MAX_PRICE_AGE_UPPER_LIMIT
+                    assert(tau_p > Duration::new(0), "new tau_p not larger than 0");
+                    assert(tau_p < MAX_PRICE_AGE_UPPER_LIMIT, "new tau_p out of bounds")
                 },
                 ChangingMinReimbursement{min_reimbursement} => {
-                    min_reimbursement >= 0
-                    && min_reimbursement < MIN_REIMBURSEMENT_UPPER_LIMIT
+                    assert(min_reimbursement >= 0, "new min_reimbursement is negative");
+                    assert(min_reimbursement < MIN_REIMBURSEMENT_UPPER_LIMIT, "new min_reimbursement out of bounds")
                 },
                 ChangingMetadata{hash} => {
-                    hash.length == 32
+                    assert(hash.length == 32, "new metadata hash not 32 bytes long")
                 }
             }   
         },
         (changing: Changing, Idle) => {
-            tx.time_range.start >= changing.proposal_timestamp + config0.governance.update_delay
-            && signed_by_agent(config1.agent)
-            && changing.proposal.switch{
+            assert(tx.time_range.start >= changing.proposal_timestamp + config0.governance.update_delay, "update delay hasn't passed");
+            assert(signed_by_agent(config1.agent), "not signed by new agent");
+            changing.proposal.switch{
                 AddingAssetClass{asset_class} => {
                     (group0, group1) = AssetGroup::find_single_thread();
 
-                    !group0.has_asset(asset_class)
-                    && group1.has_asset(asset_class)
-                    && config1 == config0.copy(state: ConfigState::Idle)
+                    assert(!group0.has_asset(asset_class), "asset class exists in group input"); // TODO: is this line redundant?
+                    assert(group1.has_asset(asset_class), "asset class doesn't exist in group output");
+                    assert(config1 == config0.copy(state: ConfigState::Idle), "invalid datum change")
                 },
                 RemovingAssetClass{asset_class} => {
                     (group0, group1) = AssetGroup::find_single_thread();
 
-                    group0.has_asset(asset_class)
-                    && !group1.has_asset(asset_class)
-                    && config1 == config0.copy(state: ConfigState::Idle)
+                    assert(group0.has_asset(asset_class), "asset class doesn't exist in group input");
+                    assert(!group1.has_asset(asset_class), "asset class exists in group output");
+                    assert(config1 == config0.copy(state: ConfigState::Idle), "invalid datum change")
                 },
                 UpdatingSuccessFee{_, benchmark, fee} => {
                     supply = Supply::find_input();
@@ -135,8 +135,8 @@ func main(_: Config, _) -> Bool {
                     // reimbursement token minting assures the supply_validator witnesses the tx, 
                     //  which, because the config UTxO is being spent, in turn assures the period is copied into the correct field in the supply datum
 
-                    tx.minted.get_safe(Tokens::reimbursement(supply.period_id())) == 1
-                    && config1 == config0.copy(
+                    assert(tx.minted.get_safe(Tokens::reimbursement(supply.period_id())) == 1, "not exactly one reimbursement token minted");
+                    assert(config1 == config0.copy(
                         fees: config0.fees.copy(
                             success_fee: config0.fees.success_fee.copy(   
                                 fee: fee,
@@ -144,39 +144,39 @@ func main(_: Config, _) -> Bool {
                             )
                         ),
                         state: ConfigState::Idle
-                    )
+                    ), "invalid datum change")
                 },
                 IncreasingMaxTokenSupply{Nmax} => {
-                    config1 == config0.copy(
+                    assert(config1 == config0.copy(
                         token: config0.token.copy(
                             max_supply: Nmax
                         ),
                         state: ConfigState::Idle
-                    )
+                    ), "invalid datum change")
                 },
                 ChangingAgent{new_agent} => {
-                    config1 == config0.copy(
+                    assert(config1 == config0.copy(
                         agent: new_agent,
                         state: ConfigState::Idle
-                    )
+                    ), "invalid datum change")
                 },
                 ChangingOracle{new_oracle} => {
-                    config1 == config0.copy(
+                    assert(config1 == config0.copy(
                         oracle: new_oracle,
                         state: ConfigState::Idle
-                    )
+                    ), "invalid datum change")
                 },
                 ChangingGovernance{gov, tau_gov} => {
-                    config1 == config0.copy(
+                    assert(config1 == config0.copy(
                         governance: GovernanceConfig{
                             delegate: gov,
                             update_delay: tau_gov
                         },
                         state: ConfigState::Idle
-                    )
+                    ), "invalid datum change")
                 },
                 ChangingMintFee{phi, d_min} => {
-                    config1 == config0.copy(
+                    assert(config1 == config0.copy(
                         fees: config0.fees.copy(
                             mint_fee: MintFeeConfig{
                                 relative: phi,
@@ -184,10 +184,10 @@ func main(_: Config, _) -> Bool {
                             }
                         ),
                         state: ConfigState::Idle
-                    )
+                    ), "invalid datum change")
                 },
                 ChangingBurnFee{phi, d_min} => {
-                    config1 == config0.copy(
+                    assert(config1 == config0.copy(
                         fees: config0.fees.copy(
                             burn_fee: BurnFeeConfig{
                                 relative: phi,
@@ -195,10 +195,10 @@ func main(_: Config, _) -> Bool {
                             }
                         ),
                         state: ConfigState::Idle
-                    )
+                    ), "invalid datum change")
                 },
                 ChangingManagementFee{phi, tau_mgmt} => {
-                    config1 == config0.copy(
+                    assert(config1 == config0.copy(
                         fees: config0.fees.copy(
                             management_fee: ManagementFeeConfig{
                                 relative: phi,
@@ -206,36 +206,37 @@ func main(_: Config, _) -> Bool {
                             }
                         ),
                         state: ConfigState::Idle
-                    )
+                    ), "invalid datum change")
                 },
                 ChangingMaxPriceAge{tau_p} => {
-                    config1 == config0.copy(
+                    assert(config1 == config0.copy(
                         token: config0.token.copy(
                             max_price_age: tau_p
                         ),
                         state: ConfigState::Idle
-                    )
+                    ), "invalid datum change")
                 },
                 ChangingMinReimbursement{min_reimbursement} => {
-                    config1 == config0.copy(
+                    assert(config1 == config0.copy(
                         fees: config0.fees.copy(
                             success_fee: config0.fees.success_fee.copy(
                                 min_reimbursement: min_reimbursement
                             )
                         ),
                         state: ConfigState::Idle
-                    )
+                    ), "invalid datum change")
                 },
                 ChangingMetadata => {
-                    tx.inputs.any((input: TxInput) -> {
+                    assert(tx.inputs.any((input: TxInput) -> {
                         input.value.get_safe(Tokens::metadata) == 1
-                    })
-                    && config1 == config0.copy(
+                    }), "metadata utxo not spent");
+                    assert(config1 == config0.copy(
                         state: ConfigState::Idle
-                    )
+                    ), "invalid datum change")
                 }
             }
         },
         else => error("illegal state change")
-    }
+    };
+    true
 }
