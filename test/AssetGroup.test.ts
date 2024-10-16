@@ -535,30 +535,10 @@ describe("AssetGroupModule::AssetGroup::find_single_input", () => {
                 })
         }
 
-        describe("@ config_validator", () => {
-            const configureContext = withScripts(configureParentContext, [
-                "config_validator"
-            ])
-
-            it("returns the first asset group id and data if the second asset group doesn't contain an asset group token", () => {
-                configureContext({ secondGroupToken: makeConfigToken() }).use(
-                    (currentScript, ctx) => {
-                        deepEqual(
-                            find_single_input.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            }),
-                            [0n, { assets: assets0 }]
-                        )
-                    }
-                )
-            })
-        })
-
-        describe("@ all validators except the config_validator", () => {
+        describe("@ all validators", () => {
             const configureContext = withScripts(
                 configureParentContext,
-                scripts.filter((s) => s != "config_validator")
+                scripts
             )
 
             it("throws an error even if the second asset group doesn't contain an asset group token (only address matters for the singleton check)", () => {

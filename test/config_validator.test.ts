@@ -218,6 +218,7 @@ describe("config_validator::main", () => {
                         }
                     }
                 }).addPortfolioRef({ portfolio })
+                .addDummyInput()
 
                 return scb
             }
@@ -278,6 +279,7 @@ describe("config_validator::main", () => {
                         }
                     }
                 }).addPortfolioRef({ portfolio })
+                .addDummyInput()
 
                 return scb
             }
@@ -1234,6 +1236,7 @@ describe("config_validator::main", () => {
                     inputAssets: assets0,
                     outputAssets: assets1
                 })
+                .addDummyInput()
             }
 
             it("config_validator::main #56 (succeeds if the tx has only one asset group thread and the added asset class is included in the group output but not in the group input)", () => {
@@ -1352,6 +1355,7 @@ describe("config_validator::main", () => {
                     inputAssets: assets0,
                     outputAssets: assets1
                 })
+                .addDummyInput()
             }
 
             it("config_validator::main #62 (succeeds if the tx has only one asset group thread and the added asset class is included in the group input but not in the group output)", () => {

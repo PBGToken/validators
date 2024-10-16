@@ -80,20 +80,9 @@ struct AssetGroup {
      * Throws an error if the assets input contains any other tokens
      */
     func find_single_input() -> (Int, AssetGroup) {
-        input = current_script.switch{
-            config_validator => {
-                tx.inputs.filter((input: TxInput) -> {
-                    policy_tokens = input.value.get_policy(Tokens::policy);
-
-                    policy_tokens.any_key((token_name: ByteArray) -> {
-                        TokenNames::has_assets_prefix(token_name)
-                    })
-                }).get_singleton()
-            },
-            else => tx.inputs.filter((input: TxInput) -> {
-                input.address == Addresses::assets
-            }).get_singleton()
-        };
+        input = tx.inputs.filter((input: TxInput) -> {
+            input.address == Addresses::assets
+        }).get_singleton();
 
         id = Tokens::parse_assets(input);
 
