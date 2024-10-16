@@ -1,4 +1,4 @@
-import { throws } from "node:assert"
+import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { PubKeyHash } from "@helios-lang/ledger"
 import { IntData } from "@helios-lang/uplc"
@@ -7,6 +7,7 @@ import contract, {
     ORACLE_KEY_2,
     ORACLE_KEY_3
 } from "pbg-token-validators-test-context"
+import { MAX_SCRIPT_SIZE } from "./constants"
 import { ScriptContextBuilder } from "./tx"
 
 const { main } = contract.oracle_delegate
@@ -53,4 +54,24 @@ describe("oracle_delegate::main", () => {
             })
         })
     })
+})
+
+describe("oracle_delegate metrics", () => {
+    const program = contract.oracle_delegate.$hash.context.program
+    
+    const n = program.toCbor().length
+
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {    
+        if (n > MAX_SCRIPT_SIZE) {
+            throw new Error("program too large")
+        }
+    })
+
+    const ir = program.ir
+
+    if (ir) {
+        it("ir doesn't contain trace", () => {
+            strictEqual(!!/__core__trace/.exec(ir), false)
+        })
+    }  
 })

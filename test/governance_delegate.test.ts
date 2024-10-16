@@ -1,13 +1,14 @@
+import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
+import { PubKeyHash } from "@helios-lang/ledger"
 import contract, {
     GOV_KEY_1,
     GOV_KEY_2,
     GOV_KEY_3
 } from "pbg-token-validators-test-context"
-import { ScriptContextBuilder } from "./tx"
-import { PubKeyHash } from "@helios-lang/ledger"
 import { IntData } from "@helios-lang/uplc"
-import { throws } from "node:assert"
+import { MAX_SCRIPT_SIZE } from "./constants"
+import { ScriptContextBuilder } from "./tx"
 
 const { main } = contract.governance_delegate
 
@@ -53,4 +54,24 @@ describe("governance_delegate::main", () => {
             })
         })
     })
+})
+
+describe("governance_delegate metrics", () => {
+    const program = contract.governance_delegate.$hash.context.program
+    
+    const n = program.toCbor().length
+
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {    
+        if (n > MAX_SCRIPT_SIZE) {
+            throw new Error("program too large")
+        }
+    })
+
+    const ir = program.ir
+
+    if (ir) {
+        it("ir doesn't contain trace", () => {
+            strictEqual(!!/__core__trace/.exec(ir), false)
+        })
+    }  
 })

@@ -1,9 +1,10 @@
-import { deepEqual, throws } from "node:assert"
+import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { IntLike } from "@helios-lang/codec-utils"
 import { Address, Assets, PubKeyHash, Value } from "@helios-lang/ledger"
 import { ByteArrayData, IntData, UplcData } from "@helios-lang/uplc"
-import context from "pbg-token-validators-test-context"
+import contract from "pbg-token-validators-test-context"
+import { MAX_SCRIPT_SIZE } from "./constants"
 import {
     makeConfig,
     makeReimbursement,
@@ -17,7 +18,7 @@ import {
 } from "./tokens"
 import { ScriptContextBuilder } from "./tx"
 
-const { validate_burned_vouchers, main } = context.reimbursement_validator
+const { validate_burned_vouchers, main } = contract.reimbursement_validator
 
 describe("reimbursement_validator::validate_burned_vouchers", () => {
     describe("three vouchers burned", () => {
@@ -456,4 +457,24 @@ describe("reimbursement_validator::main", () => {
             })
         })
     })
+})
+
+describe("reimbursement_validator metrics", () => {
+    const program = contract.reimbursement_validator.$hash.context.program
+    
+    const n = program.toCbor().length
+
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {    
+        if (n > MAX_SCRIPT_SIZE) {
+            throw new Error("program too large")
+        }
+    })
+
+    const ir = program.ir
+
+    if (ir) {
+        it("ir doesn't contain trace", () => {
+            strictEqual(!!/__core__trace/.exec(ir), false)
+        })
+    }  
 })

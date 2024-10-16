@@ -205,7 +205,7 @@ export class ScriptContextBuilder {
     }
 
     addBurnOrderInput(props?: {
-        address?: Address
+        address?: Address<any, any>
         datum?: BurnOrderType
         redeemer?: BurnOrderRedeemerType
         value?: Value
@@ -240,7 +240,7 @@ export class ScriptContextBuilder {
     }
 
     addBurnOrderReturn(props?: {
-        address?: Address
+        address?: Address<any, any>
         datum?: UplcData
         value?: Value
     }): ScriptContextBuilder {
@@ -518,7 +518,7 @@ export class ScriptContextBuilder {
     }
 
     addMintOrderReturn(props?: {
-        address?: Address
+        address?: Address<any, any>
         datum?: UplcData
         value?: Value
         tokens?: IntLike

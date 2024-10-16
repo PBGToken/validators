@@ -1,4 +1,4 @@
-import { throws } from "node:assert"
+import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { IntLike } from "@helios-lang/codec-utils"
 import {
@@ -7,7 +7,8 @@ import {
     StakingValidatorHash,
     Value
 } from "@helios-lang/ledger"
-import context from "pbg-token-validators-test-context"
+import contract from "pbg-token-validators-test-context"
+import { MAX_SCRIPT_SIZE } from "./constants"
 import {
     ConfigStateType,
     RatioType,
@@ -37,7 +38,7 @@ const {
     validate_burn_user_tokens,
     validate_swap,
     main
-} = context.supply_validator
+} = contract.supply_validator
 
 describe("charge the success fee by diluting the token supply", () => {
     const startPrice: RatioType = [100, 1]
@@ -1538,4 +1539,33 @@ describe("supply_validate::validate_swap", () => {
                 })
         })
     })
+})
+
+describe("supply_validator metrics", () => {
+    const program = contract.supply_validator.$hash.context.program
+
+    const n = program.toCbor().length
+
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {
+        if (n > MAX_SCRIPT_SIZE) {
+            throw new Error("program too large")
+        }
+    })
+
+    const ir = program.ir
+
+    if (ir) {
+        it("ir doesn't contain trace", () => {
+            strictEqual(!!/__core__trace/.exec(ir), false)
+        })
+
+        // TODO: this can be fixed by making __helios__ratio__show() safe
+        /*it("ir doesn't contain appendString", () => {
+            if (!!/__core__appendString/.exec(ir)) {
+                console.log(ir)
+                
+                throw new Error("optimized ir shouldn't contain appendString")
+            }
+        })*/
+    }  
 })

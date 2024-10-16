@@ -15,7 +15,7 @@ export const castBurnOrderRedeemer = contract.burn_order_validator.Redeemer
 export type BurnOrderRedeemerType = PermissiveType<typeof castBurnOrderRedeemer>
 
 export function makeBurnOrder(props?: {
-    address?: Address
+    address?: Address<any, any>
     lovelace?: IntLike
     datum?: UplcData
     value?: Value

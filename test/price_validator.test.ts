@@ -1,10 +1,10 @@
-import { throws } from "node:assert"
+import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { IntLike } from "@helios-lang/codec-utils"
 import { AssetClass, PubKeyHash } from "@helios-lang/ledger"
 import { IntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
-import { ScriptContextBuilder } from "./tx"
+import { MAX_SCRIPT_SIZE } from "./constants"
 import {
     PortfolioReductionModeType,
     PriceType,
@@ -13,6 +13,7 @@ import {
     makePrice,
     makeSupply
 } from "./data"
+import { ScriptContextBuilder } from "./tx"
 
 const { main } = contract.price_validator
 
@@ -140,4 +141,24 @@ describe("price_validator::main", () => {
             })
         })
     })
+})
+
+describe("price_validator metrics", () => {
+    const program = contract.price_validator.$hash.context.program
+    
+    const n = program.toCbor().length
+
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {    
+        if (n > MAX_SCRIPT_SIZE) {
+            throw new Error("program too large")
+        }
+    })
+
+    const ir = program.ir
+
+    if (ir) {
+        it("ir doesn't contain trace", () => {
+            strictEqual(!!/__core__trace/.exec(ir), false)
+        })
+    }  
 })

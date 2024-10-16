@@ -1,15 +1,15 @@
+import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import context from "pbg-token-validators-test-context"
-import { ScriptContextBuilder } from "./tx"
-import { makeConfig, makeVoucher } from "./data"
+import { IntLike } from "@helios-lang/codec-utils"
 import { Address, PubKeyHash } from "@helios-lang/ledger"
 import { IntData } from "@helios-lang/uplc"
-import { IntLike } from "@helios-lang/codec-utils"
+import contract from "pbg-token-validators-test-context"
+import { MAX_SCRIPT_SIZE } from "./constants"
+import { makeConfig, makeVoucher } from "./data"
 import { makeVoucherPair, makeVoucherUserToken } from "./tokens"
-import { throws } from "node:assert"
-import { reimbursement } from "./tokens/asset-classes"
+import { ScriptContextBuilder } from "./tx"
 
-const { main } = context.voucher_validator
+const { main } = contract.voucher_validator
 
 describe("voucher_validator::main", () => {
     const periodId = 1
@@ -132,4 +132,24 @@ describe("voucher_validator::main", () => {
             })
         })
     })
+})
+
+describe("voucher_validator metrics", () => {
+    const program = contract.voucher_validator.$hash.context.program
+    
+    const n = program.toCbor().length
+
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {
+        if (n > MAX_SCRIPT_SIZE) {
+            throw new Error("program too large")
+        }
+    })
+
+    const ir = program.ir
+
+    if (ir) {
+        it("ir doesn't contain trace", () => {
+            strictEqual(!!/__core__trace/.exec(ir), false)
+        })
+    }  
 })

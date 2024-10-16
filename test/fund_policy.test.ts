@@ -13,6 +13,7 @@ import contract, {
     SEED_ID as SEED_ID_PARAM,
     INITIAL_AGENT as INITIAL_AGENT_PARAM
 } from "pbg-token-validators-test-context"
+import { MAX_SCRIPT_SIZE } from "./constants"
 import {
     RatioType,
     SuccessFeeType,
@@ -1012,4 +1013,24 @@ describe("fund_policy::main", () => {
             )
         })
     })
+})
+
+describe("fund_policy metrics", () => {
+    const program = contract.fund_policy.$hash.context.program
+    
+    const n = program.toCbor().length
+
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {    
+        if (n > MAX_SCRIPT_SIZE) {
+            throw new Error("program too large")
+        }
+    })
+
+    const ir = program.ir
+
+    if (ir) {
+        it("ir doesn't contain trace", () => {
+            strictEqual(!!/__core__trace/.exec(ir), false)
+        })
+    }  
 })

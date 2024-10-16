@@ -10,7 +10,7 @@ export type VoucherType = PermissiveType<typeof castVoucher>
 type VoucherStrictType = StrictType<typeof castVoucher>
 
 export function makeVoucher(props?: {
-    address?: Address
+    address?: Address<any, any>
     datum?: UplcData
     periodId?: IntLike
     price?: RatioType

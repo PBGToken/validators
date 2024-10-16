@@ -9,6 +9,7 @@ import {
 } from "@helios-lang/ledger"
 import { ConstrData, IntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
+import { MAX_SCRIPT_SIZE } from "./constants"
 import {
     BurnOrderRedeemerType,
     BurnOrderType,
@@ -155,7 +156,7 @@ describe("burn_order_validator::main", () => {
 
         const configureContext = (props?: {
             pkh?: PubKeyHash
-            dummyInputAddr?: Address
+            dummyInputAddr?: Address<any, any>
         }) => {
             const scb = new ScriptContextBuilder()
                 .addBurnOrderInput({
@@ -610,4 +611,24 @@ describe("burn_order_validator::main", () => {
             })
         })
     })
+})
+
+describe("burn_order_validator metrics", () => {
+    const program = contract.burn_order_validator.$hash.context.program
+    
+    const n = program.toCbor().length
+
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {    
+        if (n > MAX_SCRIPT_SIZE) {
+            throw new Error("program too large")
+        }
+    })
+
+    const ir = program.ir
+
+    if (ir) {
+        it("ir doesn't contain trace", () => {
+            strictEqual(!!/__core__trace/.exec(ir), false)
+        })
+    }
 })

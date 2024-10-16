@@ -64,7 +64,7 @@ func calc_provisional_success_fee(
 
 func main(order: BurnOrder, redeemer: Redeemer) -> Bool {
     redeemer.switch{
-        Cancel => tx.is_approved_by(order.return_address.credential),
+        Cancel => assert(tx.is_approved_by(order.return_address.credential), "cancelation not approved by owner"),
         Fulfill{ptrs} => {
             price = Price::find_ref();
 
@@ -79,10 +79,11 @@ func main(order: BurnOrder, redeemer: Redeemer) -> Bool {
             n_expected = deduct_burn_fee(n_burn - delta_alpha);
             n_actual = (order.value_lovelace(ptrs)/price.value).floor();
 
-            signed_by_agent().trace_if_false("not signed by agent")
-            && price.is_not_expired(order.price_expiry()).trace_if_false("price expired")
-            && (n_actual >= n_expected).trace_if_false("not enough value returned (as required by contract), expected the equivalent of at least " + n_expected.show() + " tokens, got the equivalent of " + n_actual.show() + " tokens")
-            && order.returned_enough(ptrs).trace_if_false("not enough value returned (as requested by user)")
+            assert(signed_by_agent(), "not signed by agent");
+            assert(price.is_not_expired(order.price_expiry()), "price expired");
+            assert(n_actual >= n_expected, "not enough value returned (as required by contract), expected the equivalent of at least " + n_expected.show() + " tokens, got the equivalent of " + n_actual.show() + " tokens");
+            assert(order.returned_enough(ptrs), "not enough value returned (as requested by user)")
         }
-    }
+    };
+    true
 }

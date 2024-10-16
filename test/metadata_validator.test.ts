@@ -1,6 +1,11 @@
+import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
+import { dummyBytes } from "@helios-lang/codec-utils"
+import { blake2b } from "@helios-lang/crypto"
+import { PubKeyHash } from "@helios-lang/ledger"
+import { IntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
-import { ScriptContextBuilder } from "./tx"
+import { MAX_SCRIPT_SIZE } from "./constants"
 import {
     ConfigChangeProposal,
     ConfigType,
@@ -8,11 +13,7 @@ import {
     makeConfig,
     makeMetadata
 } from "./data"
-import { IntData } from "@helios-lang/uplc"
-import { blake2b } from "@helios-lang/crypto"
-import { throws } from "node:assert"
-import { dummyBytes } from "@helios-lang/codec-utils"
-import { PubKeyHash } from "@helios-lang/ledger"
+import { ScriptContextBuilder } from "./tx"
 
 const { main } = contract.metadata_validator
 
@@ -95,4 +96,24 @@ describe("metadata_validator::main", () => {
             })
         })
     })
+})
+
+describe("metadata_validator metrics", () => {
+    const program = contract.metadata_validator.$hash.context.program
+    
+    const n = program.toCbor().length
+
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {    
+        if (n > MAX_SCRIPT_SIZE) {
+            throw new Error("program too large")
+        }
+    })
+
+    const ir = program.ir
+
+    if (ir) {
+        it("ir doesn't contain trace", () => {
+            strictEqual(!!/__core__trace/.exec(ir), false)
+        })
+    }  
 })

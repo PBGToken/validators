@@ -12,7 +12,7 @@ export const castMintOrderRedeemer = contract.mint_order_validator.Redeemer
 export type MintOrderRedeemerType = PermissiveType<typeof castMintOrderRedeemer>
 
 export function makeMintOrder(props?: {
-    address?: Address
+    address?: Address<any, any>
     datum?: UplcData
     minTokens?: IntLike
     maxPriceAge?: IntLike

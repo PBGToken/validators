@@ -9,6 +9,7 @@ import {
     StakingValidatorHash
 } from "@helios-lang/ledger"
 import contract from "pbg-token-validators-test-context"
+import { MAX_SCRIPT_SIZE } from "./constants"
 import {
     AssetType,
     PortfolioActionType,
@@ -53,7 +54,7 @@ describe("portfolio_validator::validate_add_asset_group", () => {
             })
     }
 
-    it("portfolio_validator::validate_add_asset_group #01 (returns true if the tx doesn't have an asset group input and the new asset group is empty)", () => {
+    it("portfolio_validator::validate_add_asset_group #01 (succeeds if the tx doesn't have an asset group input and the new asset group is empty)", () => {
         const portfolio0 = makePortfolio()
         const portfolio1 = makePortfolio({ nGroups: 1 })
 
@@ -65,78 +66,78 @@ describe("portfolio_validator::validate_add_asset_group", () => {
                     portfolio1,
                     added_id: 1
                 }),
-                true
+                undefined
             )
         })
     })
 
-    it("portfolio_validator::validate_add_asset_group #02 (returns false if n_groups in the portfolio output datum isn't correct)", () => {
+    it("portfolio_validator::validate_add_asset_group #02 (throws an error if n_groups in the portfolio output datum isn't correct)", () => {
         const portfolio0 = makePortfolio()
         const portfolio1 = makePortfolio({ nGroups: 2 })
 
         configureContext().use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_add_asset_group.eval({
                     $scriptContext: ctx,
                     portfolio0,
                     portfolio1,
                     added_id: 1
                 }),
-                false
-            )
+                /wrong new asset group id/
+            })
         })
     })
 
-    it("portfolio_validator::validate_add_asset_group #03 (returns false if n_groups in the portfolio output datum matches the added_id but not the previous n_groups incremented by 1)", () => {
+    it("portfolio_validator::validate_add_asset_group #03 (throws an error if n_groups in the portfolio output datum matches the added_id but not the previous n_groups incremented by 1)", () => {
         const portfolio0 = makePortfolio()
         const portfolio1 = makePortfolio({ nGroups: 2 })
 
         configureContext({ id: 2 }).use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_add_asset_group.eval({
                     $scriptContext: ctx,
                     portfolio0,
                     portfolio1,
                     added_id: 2
                 }),
-                false
-            )
+                /n_groups not incremented by 1/
+            })
         })
     })
 
-    it("portfolio_validator::validate_add_asset_group #04 (returns false if an asset group UTxO is spent)", () => {
+    it("portfolio_validator::validate_add_asset_group #04 (throws an error if an asset group UTxO is spent)", () => {
         const portfolio0 = makePortfolio()
         const portfolio1 = makePortfolio({ nGroups: 1 })
 
         configureContext()
             .addAssetGroupInput()
             .use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_add_asset_group.eval({
                         $scriptContext: ctx,
                         portfolio0,
                         portfolio1,
                         added_id: 1
                     }),
-                    false
-                )
+                    /spent an asset group/
+                })
             })
     })
 
-    it("portfolio_validator::validate_add_asset_group #05 (returns false if the new asset group isn't empty)", () => {
+    it("portfolio_validator::validate_add_asset_group #05 (throws an error if the new asset group isn't empty)", () => {
         const portfolio0 = makePortfolio()
         const portfolio1 = makePortfolio({ nGroups: 1 })
 
         configureContext({ assets: [makeAsset()] }).use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_add_asset_group.eval({
                     $scriptContext: ctx,
                     portfolio0,
                     portfolio1,
                     added_id: 1
                 }),
-                false
-            )
+                /added group isn't empty/
+            })
         })
     })
 })
@@ -160,7 +161,7 @@ describe("portfolio_validator::validate_remove_asset_group", () => {
         return scb
     }
 
-    it("portfolio_validator::validate_remove_asset_group #01 (returns true if the tx only spends a single empty asset group)", () => {
+    it("portfolio_validator::validate_remove_asset_group #01 (succeeds if the tx only spends a single empty asset group)", () => {
         const portfolio0 = makePortfolio({ nGroups: 1 })
         const portfolio1 = makePortfolio()
         configureContext().use((ctx) => {
@@ -171,7 +172,7 @@ describe("portfolio_validator::validate_remove_asset_group", () => {
                     portfolio1,
                     burned_id: 1
                 }),
-                true
+                undefined
             )
         })
     })
@@ -189,7 +190,7 @@ describe("portfolio_validator::validate_remove_asset_group", () => {
                         portfolio1,
                         burned_id: 1
                     })
-                })
+                }, /not a singleton list/)
             })
     })
 
@@ -205,11 +206,11 @@ describe("portfolio_validator::validate_remove_asset_group", () => {
                     portfolio1,
                     burned_id: 1
                 })
-            })
+            }, /empty list/)
         })
     })
 
-    it("portfolio_validator::validate_remove_asset_group #04 (returns false if the input portfolio state isn't Idle)", () => {
+    it("portfolio_validator::validate_remove_asset_group #04 (throws an error if the input portfolio state isn't Idle)", () => {
         const portfolio0 = makePortfolio({
             nGroups: 1,
             state: {
@@ -228,19 +229,19 @@ describe("portfolio_validator::validate_remove_asset_group", () => {
         const portfolio1 = makePortfolio()
 
         configureContext().use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_remove_asset_group.eval({
                     $scriptContext: ctx,
                     portfolio0,
                     portfolio1,
                     burned_id: 1
                 }),
-                false
-            )
+                /portfolio0 state isn't idle/
+            })
         })
     })
 
-    it("portfolio_validator::validate_remove_asset_group #05 (returns false if the output portfolio state isn't Idle)", () => {
+    it("portfolio_validator::validate_remove_asset_group #05 (throws an error if the output portfolio state isn't Idle)", () => {
         const portfolio0 = makePortfolio({ nGroups: 1 })
         const portfolio1 = makePortfolio({
             state: {
@@ -258,82 +259,82 @@ describe("portfolio_validator::validate_remove_asset_group", () => {
         })
 
         configureContext().use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_remove_asset_group.eval({
                     $scriptContext: ctx,
                     portfolio0,
                     portfolio1,
                     burned_id: 1
                 }),
-                false
-            )
+                /portfolio1 state isn't idle/
+            })
         })
     })
 
-    it("portfolio_validator::validate_remove_asset_group #06 (returns false if the burned_id doesn't correspond to the spent asset group id)", () => {
+    it("portfolio_validator::validate_remove_asset_group #06 (throws an error if the burned_id doesn't correspond to the spent asset group id)", () => {
         const portfolio0 = makePortfolio({ nGroups: 1 })
         const portfolio1 = makePortfolio()
 
         configureContext().use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_remove_asset_group.eval({
                     $scriptContext: ctx,
                     portfolio0,
                     portfolio1,
                     burned_id: 2
                 }),
-                false
-            )
+                /the spent asset group id isn't equal to the burned token id/
+            })
         })
     })
 
-    it("portfolio_validator::validate_remove_asset_group #07 (returns false if the removed_id isn't the id of the last asset group)", () => {
+    it("portfolio_validator::validate_remove_asset_group #07 (throws an error if the removed_id isn't the id of the last asset group)", () => {
         const portfolio0 = makePortfolio({ nGroups: 2 })
         const portfolio1 = makePortfolio({ nGroups: 1 })
 
         configureContext().use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_remove_asset_group.eval({
                     $scriptContext: ctx,
                     portfolio0,
                     portfolio1,
                     burned_id: 1
                 }),
-                false
-            )
+                /the removed id isn't the last asset group/
+            })
         })
     })
 
-    it("portfolio_validator::validate_remove_asset_group #08 (returns false if n_groups doesn't decrease by 1)", () => {
+    it("portfolio_validator::validate_remove_asset_group #08 (throws an error if n_groups doesn't decrease by 1)", () => {
         const portfolio0 = makePortfolio({ nGroups: 2 })
         const portfolio1 = makePortfolio({ nGroups: 0 })
 
         configureContext({ id: 2 }).use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_remove_asset_group.eval({
                     $scriptContext: ctx,
                     portfolio0,
                     portfolio1,
                     burned_id: 2
                 }),
-                false
-            )
+                /n_groups not decremented by 1/
+            })
         })
     })
 
-    it("portfolio_validator::validate_remove_asset_group #09 (returns false if the removed asset group isn't empty)", () => {
+    it("portfolio_validator::validate_remove_asset_group #09 (throws an error if the removed asset group isn't empty)", () => {
         const portfolio0 = makePortfolio({ nGroups: 1 })
         const portfolio1 = makePortfolio()
         configureContext({ assets: [makeAsset()] }).use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_remove_asset_group.eval({
                     $scriptContext: ctx,
                     portfolio0,
                     portfolio1,
                     burned_id: 1
                 }),
-                false
-            )
+                /the removed asset group isn't empty/
+            })
         })
     })
 })
@@ -399,21 +400,21 @@ describe("portfolio_validator::validate_start_reduction", () => {
             n_all_groups: 4
         }
 
-        it("portfolio_validator::validate_start_reduction #01 (return true if total value and oldest timestamp match)", () => {
+        it("portfolio_validator::validate_start_reduction #01 (succeeds if total value and oldest timestamp match)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs
                     }),
-                    true
+                    undefined
                 )
             })
         })
 
-        it("portfolio_validator::validate_start_reduction #02 (returns false if the total value doesn't match)", () => {
+        it("portfolio_validator::validate_start_reduction #02 (throws an error if the total value doesn't match)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs,
@@ -424,14 +425,14 @@ describe("portfolio_validator::validate_start_reduction", () => {
                             }
                         }
                     }),
-                    false
-                )
+                    /wrong first total asset value sum/
+                })
             })
         })
 
-        it("portfolio_validator::validate_start_reduction #03 (return false if oldest timestamp doesn't match)", () => {
+        it("portfolio_validator::validate_start_reduction #03 (throws an error if oldest timestamp doesn't match)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs,
@@ -442,8 +443,8 @@ describe("portfolio_validator::validate_start_reduction", () => {
                             }
                         }
                     }),
-                    false
-                )
+                    /timestamp in reduction not equal to oldest timestamp/
+                })
             })
         })
 
@@ -455,7 +456,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
                         ...defaultTestArgs,
                         group_ptrs: groupPtrs.slice(0, 1).concat([40])
                     })
-                })
+                }, /index out of range/)
             })
         })
     })
@@ -481,14 +482,14 @@ describe("portfolio_validator::validate_start_reduction", () => {
                         $scriptContext: ctx,
                         ...defaultTestArgs
                     }),
-                    true
+                    undefined
                 )
             })
         })
 
-        it("portfolio_validator::validate_start_reduction #06 (returns false when searching if found==true for an inexistent asset class)", () => {
+        it("portfolio_validator::validate_start_reduction #06 (throws an error when searching if found==true for an inexistent asset class)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs,
@@ -499,14 +500,14 @@ describe("portfolio_validator::validate_start_reduction", () => {
                             }
                         }
                     }),
-                    false
-                )
+                    /found1 not equal to false/
+                })
             })
         })
 
-        it("portfolio_validator::validate_start_reduction #07 (returns false when searching if found==true but group iter isn't correctly set for an existing asset class)", () => {
+        it("portfolio_validator::validate_start_reduction #07 (throws an error when searching if found==true but group iter isn't correctly set for an existing asset class)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs,
@@ -517,14 +518,14 @@ describe("portfolio_validator::validate_start_reduction", () => {
                             }
                         }
                     }),
-                    false
-                )
+                    /iteration index not set to end/
+                })
             })
         })
 
-        it("portfolio_validator::validate_start_reduction #08 (returns false when searching if found==false for an existing asset class)", () => {
+        it("portfolio_validator::validate_start_reduction #08 (throws an error when searching if found==false for an existing asset class)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs,
@@ -535,12 +536,12 @@ describe("portfolio_validator::validate_start_reduction", () => {
                             }
                         }
                     }),
-                    false
-                )
+                    /found1 not equal to true/
+                })
             })
         })
 
-        it("portfolio_validator::validate_start_reduction #09 (returns true when searching if found==true for an existing asset class and the group iter is correctly set)", () => {
+        it("portfolio_validator::validate_start_reduction #09 (succeeds when searching if found==true for an existing asset class and the group iter is correctly set)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_start_reduction.eval({
@@ -554,7 +555,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
                             }
                         }
                     }),
-                    true
+                    undefined
                 )
             })
         })
@@ -567,7 +568,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
                         ...defaultTestArgs,
                         group_ptrs: groupPtrs.slice(0, 1).concat([3])
                     })
-                })
+                }, /index out of range/)
             })
         })
     })
@@ -594,27 +595,27 @@ describe("portfolio_validator::validate_start_reduction", () => {
             }
         }
 
-        it("portfolio_validator::validate_start_reduction #11 (returns true when searching for an inexistent asset class)", () => {
+        it("portfolio_validator::validate_start_reduction #11 (succeeds when searching for an inexistent asset class)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultDoesntExistsTestArgs
                     }),
-                    true
+                    undefined
                 )
             })
         })
 
-        it("portfolio_validator::validate_start_reduction #12 (returns false when searching for an existing asset class)", () => {
+        it("portfolio_validator::validate_start_reduction #12 (throws an error when searching for an existing asset class)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultExistsTestArgs
                     }),
-                    false
-                )
+                    /asset class found/
+                })
             })
         })
 
@@ -626,7 +627,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
                         ...defaultExistsTestArgs,
                         group_ptrs: groupPtrs.slice(0, 1).concat([3])
                     })
-                })
+                }, /index out of range/)
             })
         })
 
@@ -639,7 +640,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
                         ig1: 3,
                         group_ptrs: groupPtrs.concat([3])
                     })
-                })
+                }, /index out of range/)
             })
         })
 
@@ -651,7 +652,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
                         ...defaultDoesntExistsTestArgs,
                         group_ptrs: groupPtrs.slice().reverse()
                     })
-                })
+                }, /assets id doesn't match expected id/)
             })
         })
     })
@@ -672,43 +673,43 @@ describe("portfolio_validator::validate_start_reduction", () => {
             n_all_groups: 4
         }
 
-        it("portfolio_validator::validate_start_reduction #16 (returns false if an AssetGroup is spent)", () => {
+        it("portfolio_validator::validate_start_reduction #16 (throws an error if an AssetGroup is spent)", () => {
             configureContext()
                 .addAssetGroupInput()
                 .use((ctx) => {
-                    strictEqual(
+                    throws(() => {
                         validate_start_reduction.eval({
                             $scriptContext: ctx,
                             ...defaultTestArgs
                         }),
-                        false
-                    )
+                        /spent an asset group/
+                    })
                 })
         })
 
-        it("portfolio_validator::validate_start_reduction #17 (returns false if the new reducing tick isn't equal to the supply tick)", () => {
+        it("portfolio_validator::validate_start_reduction #17 (throws an error if the new reducing tick isn't equal to the supply tick)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs,
                         kp1: 1
                     }),
-                    false
-                )
+                    /start tick of reduction not equal to supply tick/
+                })
             })
         })
 
-        it("portfolio_validator::validate_start_reduction #18 (returns false if the new group_iter isn't equal to the number of group_ptrs)", () => {
+        it("portfolio_validator::validate_start_reduction #18 (throws an error if the new group_iter isn't equal to the number of group_ptrs)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_start_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs,
                         ig1: 3
                     }),
-                    false
-                )
+                    /found1 not equal to true/
+                })
             })
         })
     })
@@ -786,21 +787,21 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             group_ptrs: groupPtrs
         }
 
-        it("portfolio_validator::validate_continue_reduction #01 (return true if total value and oldest timestamp match)", () => {
+        it("portfolio_validator::validate_continue_reduction #01 (succeeds if total value and oldest timestamp match)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs
                     }),
-                    true
+                    undefined
                 )
             })
         })
 
-        it("portfolio_validator::validate_continue_reduction #02 (returns false if the total value doesn't match)", () => {
+        it("portfolio_validator::validate_continue_reduction #02 (throws an error if the total value doesn't match)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs,
@@ -811,14 +812,14 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                             }
                         }
                     }),
-                    false
-                )
+                    /wrong total asset value sum/
+                })
             })
         })
 
-        it("portfolio_validator::validate_continue_reduction #03 (returns false if oldest timestamp doesn't match)", () => {
+        it("portfolio_validator::validate_continue_reduction #03 (throws an error if oldest timestamp doesn't match)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs,
@@ -829,22 +830,22 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                             }
                         }
                     }),
-                    false
-                )
+                    /reduction timestamp not equal to oldest timestamp/
+                })
             })
         })
 
-        it("portfolio_validator::validate_continue_reduction #04 (return false if the supply tick doesn't match)", () => {
+        it("portfolio_validator::validate_continue_reduction #04 (throws an error if the supply tick doesn't match)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs,
                         kp0: 1,
                         kp1: 1
                     }),
-                    false
-                )
+                    /supply tick changed since start of reduction/
+                })
             })
         })
 
@@ -856,7 +857,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                         ...defaultTestArgs,
                         group_ptrs: groupPtrs.slice(0, 1).concat([40])
                     })
-                })
+                }, /index out of range/)
             })
         })
 
@@ -867,7 +868,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                         $scriptContext: ctx,
                         ...defaultTestArgs
                     })
-                })
+                }, /assets id doesn't match expected id/)
             })
         })
     })
@@ -915,21 +916,21 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             group_ptrs: groupPtrs
         }
 
-        it("portfolio_validator::validate_continue_reduction #07 (returns true when searching if found==false for an inexistent asset class)", () => {
+        it("portfolio_validator::validate_continue_reduction #07 (succeeds when searching if found==false for an inexistent asset class)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultDidntExistDoesntExistArgs
                     }),
-                    true
+                    undefined
                 )
             })
         })
 
-        it("portfolio_validator::validate_continue_reduction #08 (returns false when searching if found==true for an inexistent asset class)", () => {
+        it("portfolio_validator::validate_continue_reduction #08 (throws an error when searching if found==true for an inexistent asset class)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultDidntExistDoesntExistArgs,
@@ -940,24 +941,24 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                             }
                         }
                     }),
-                    false
-                )
+                    /found1 not equal to false/
+                })
             })
         })
 
-        it("portfolio_validator::validate_continue_reduction #09 (returns false when searching if found==true for an existing asset class and n_all_groups isn't correctly set)", () => {
+        it("portfolio_validator::validate_continue_reduction #09 (throws an error when searching if found==true for an existing asset class and n_all_groups isn't correctly set)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultDidntExistDoesExistArgs
                     }),
-                    false
-                )
+                    /iteration index not set to end/
+                })
             })
         })
 
-        it("portfolio_validator::validate_continue_reduction #10 (returns true when searching if found==true for an existing asset class and n_all_groups is correctly set)", () => {
+        it("portfolio_validator::validate_continue_reduction #10 (succeeds when searching if found==true for an existing asset class and n_all_groups is correctly set)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_continue_reduction.eval({
@@ -965,14 +966,14 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                         ...defaultDidntExistDoesExistArgs,
                         ig1: 10
                     }),
-                    true
+                    undefined
                 )
             })
         })
 
-        it("portfolio_validator::validate_continue_reduction #11 (returns false when searching if found==false for an existing asset class)", () => {
+        it("portfolio_validator::validate_continue_reduction #11 (throws a nerror when searching if found==false for an existing asset class)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultDidntExistDoesExistArgs,
@@ -983,8 +984,8 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                             }
                         }
                     }),
-                    false
-                )
+                    /found1 not equal to true/
+                })
             })
         })
 
@@ -996,13 +997,13 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                         ...defaultDidntExistDoesExistArgs,
                         group_ptrs: groupPtrs.slice(0, 1).concat([3])
                     })
-                })
+                }, /index out of range/)
             })
         })
 
-        it("portfolio_validator::validate_continue_reduction #13 (returns false if the asset class changes)", () => {
+        it("portfolio_validator::validate_continue_reduction #13 (throws an error if the asset class changes)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultDidntExistDoesExistArgs,
@@ -1013,8 +1014,8 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                             }
                         }
                     }),
-                    false
-                )
+                    /reduction asset class changed/
+                })
             })
         })
     })
@@ -1058,27 +1059,27 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             group_ptrs: groupPtrs
         }
 
-        it("portfolio_validator::validate_continue_reduction #14 (returns true when searching for an inexistent asset class)", () => {
+        it("portfolio_validator::validate_continue_reduction #14 (succeeds when searching for an inexistent asset class)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultDoesntExistTestArgs
                     }),
-                    true
+                    undefined
                 )
             })
         })
 
-        it("portfolio_validator::validate_continue_reduction #15 (returns false when searching for an existing asset class)", () => {
+        it("portfolio_validator::validate_continue_reduction #15 (throws an error when searching for an existing asset class)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultExistsTestArgs
                     }),
-                    false
-                )
+                    /found asset class/
+                })
             })
         })
 
@@ -1090,11 +1091,11 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                         ...defaultExistsTestArgs,
                         group_ptrs: groupPtrs.slice(0, 1).concat([3])
                     })
-                })
+                }, /index out of range/)
             })
         })
 
-        it("portfolio_validator::validate_continue_reduction #17 (throws an error if an more group ptrs are specified than referenced asset groups)", () => {
+        it("portfolio_validator::validate_continue_reduction #17 (throws an error if more group ptrs are specified than referenced asset groups)", () => {
             configureContext().use((ctx) => {
                 throws(() => {
                     validate_continue_reduction.eval({
@@ -1103,13 +1104,13 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                         ig1: 5,
                         group_ptrs: groupPtrs.concat([3])
                     })
-                })
+                }, /index out of range/)
             })
         })
 
-        it("portfolio_validator::validate_continue_reduction #18 (returns false if the asset class changes)", () => {
+        it("portfolio_validator::validate_continue_reduction #18 (throws an error if the asset class changes)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultDoesntExistTestArgs,
@@ -1119,8 +1120,8 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                             }
                         }
                     }),
-                    false
-                )
+                    /reduction asset class changed/
+                })
             })
         })
     })
@@ -1144,49 +1145,49 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             group_ptrs: groupPtrs
         }
 
-        it("portfolio_validator::validate_continue_reduction #19 (returns false if an AssetGroup is spent)", () => {
+        it("portfolio_validator::validate_continue_reduction #19 (throws an error if an AssetGroup is spent)", () => {
             configureContext()
                 .addAssetGroupInput()
                 .use((ctx) => {
-                    strictEqual(
+                    throws(() => {
                         validate_continue_reduction.eval({
                             $scriptContext: ctx,
                             ...defaultTestArgs
                         }),
-                        false
-                    )
+                        /spent an asset group/
+                    })
                 })
         })
 
-        it("portfolio_validator::validate_continue_reduction #20 (returns false if the new reducing tick isn't equal to the supply tick)", () => {
+        it("portfolio_validator::validate_continue_reduction #20 (throws an error if the new reducing tick isn't equal to the supply tick)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs,
                         kp1: 1
                     }),
-                    false
-                )
+                    /reduction tick changed/
+                })
             })
         })
 
-        it("portfolio_validator::validate_continue_reduction #21 (returns false if the new group_iter isn't equal to the number of group_ptrs)", () => {
+        it("portfolio_validator::validate_continue_reduction #21 (throws an error if the new group_iter isn't equal to the number of group_ptrs)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs,
                         ig1: 5
                     }),
-                    false
-                )
+                    /iteration index not incremented by the number of groups iterated over/
+                })
             })
         })
 
-        it("portfolio_validator::validate_continue_reduction #22 (returns false if the input and output reducing modes aren't the same)", () => {
+        it("portfolio_validator::validate_continue_reduction #22 (throws an error if the input and output reduction modes aren't the same)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_continue_reduction.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs,
@@ -1196,8 +1197,8 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                             }
                         }
                     }),
-                    false
-                )
+                    /invalid reduction state change/
+                })
             })
         })
     })
@@ -1256,14 +1257,14 @@ describe("portfolio_validator::validate_add_asset_class", () => {
         config_is_spent: true
     }
 
-    it("portfolio_validator::validate_add_asset_class #01 (returns true if the config is spent)", () => {
+    it("portfolio_validator::validate_add_asset_class #01 (succeeds if the config is spent)", () => {
         configureContext().use((ctx) => {
             strictEqual(
                 validate_add_asset_class.eval({
                     $scriptContext: ctx,
                     ...defaultTestArgs
                 }),
-                true
+                undefined
             )
         })
     })
@@ -1277,40 +1278,40 @@ describe("portfolio_validator::validate_add_asset_class", () => {
                         $scriptContext: ctx,
                         ...defaultTestArgs
                     })
-                })
+                }, /not a singleton list/)
             })
     })
 
-    it("portfolio_validator::validate_add_asset_class #03 (returns false if the group output contains more assets than expected)", () => {
+    it("portfolio_validator::validate_add_asset_class #03 (throws an error if the group output contains more assets than expected)", () => {
         configureContext({
             outputAssets: [
                 makeAsset({ assetClass, count: 0 }),
                 makeAsset({ assetClass: AssetClass.dummy(123), count: 0 })
             ]
         }).use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_add_asset_class.eval({
                     $scriptContext: ctx,
                     ...defaultTestArgs
                 }),
-                false
-            )
+                /unexpected group1 content/
+            })
         })
     })
 
-    it("portfolio_validator::validate_add_asset_class #04 (returns false if the group output contains less assets than expected)", () => {
+    it("portfolio_validator::validate_add_asset_class #04 (throws an error if the group output contains less assets than expected)", () => {
         configureContext({ outputAssets: [] }).use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_add_asset_class.eval({
                     $scriptContext: ctx,
                     ...defaultTestArgs
                 }),
-                false
-            )
+                /unexpected group1 content/
+            })
         })
     })
 
-    it("portfolio_validator::validate_add_asset_class #05 (returns false if the group output contains more than the permitted number of asset classes)", () => {
+    it("portfolio_validator::validate_add_asset_class #05 (throws an error if the group output contains more than the permitted number of asset classes)", () => {
         const inputAssets = [
             makeAsset({ assetClass: AssetClass.dummy(10), count: 0 }),
             makeAsset({ assetClass: AssetClass.dummy(11), count: 0 }),
@@ -1324,26 +1325,26 @@ describe("portfolio_validator::validate_add_asset_class", () => {
             inputAssets,
             outputAssets
         }).use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_add_asset_class.eval({
                     $scriptContext: ctx,
                     ...defaultTestArgs
                 }),
-                false
-            )
+                /group1 is overfull/
+            })
         })
     })
 
-    it("portfolio_validator::validate_add_asset_class #06 (returns false if config isn't spent according to boolean arg (actual tx doesn't matter))", () => {
+    it("portfolio_validator::validate_add_asset_class #06 (throws an error if config isn't spent according to boolean arg (actual tx doesn't matter))", () => {
         configureContext().use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_add_asset_class.eval({
                     $scriptContext: ctx,
                     ...defaultTestArgs,
                     config_is_spent: false
                 }),
-                false
-            )
+                /config isn't spent/
+            })
         })
     })
 })
@@ -1402,15 +1403,12 @@ describe("portfolio_validator::validate_remove_asset_class", () => {
         config_is_spent: true
     }
 
-    it("portfolio_validator::validate_remove_asset_class #01 (returns true if the config is spent and the asset count is at 0)", () => {
+    it("portfolio_validator::validate_remove_asset_class #01 (succeeds if the config is spent and the asset count is at 0)", () => {
         configureContext().use((ctx) => {
-            strictEqual(
-                validate_remove_asset_class.eval({
-                    $scriptContext: ctx,
-                    ...defaultTestArgs
-                }),
-                true
-            )
+            validate_remove_asset_class.eval({
+                $scriptContext: ctx,
+                ...defaultTestArgs
+            })
         })
     })
 
@@ -1423,27 +1421,27 @@ describe("portfolio_validator::validate_remove_asset_class", () => {
                         $scriptContext: ctx,
                         ...defaultTestArgs
                     })
-                })
+                }, /not a singleton list/)
             })
     })
 
-    it("portfolio_validator::validate_remove_asset_class #03 (returns false if the group output contains more assets than expected)", () => {
+    it("portfolio_validator::validate_remove_asset_class #03 (throws an error if the group output contains more assets than expected)", () => {
         configureContext({
             outputAssets: [
                 makeAsset({ assetClass: AssetClass.dummy(123), count: 0 })
             ]
         }).use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_remove_asset_class.eval({
                     $scriptContext: ctx,
                     ...defaultTestArgs
                 }),
-                false
-            )
+                /asset class not correctly removed from group/
+            })
         })
     })
 
-    it("portfolio_validator::validate_remove_asset_class #04 (returns false if the group output contains less assets than expected)", () => {
+    it("portfolio_validator::validate_remove_asset_class #04 (throws an error if the group output contains less assets than expected)", () => {
         configureContext({
             inputAssets: [
                 makeAsset({ assetClass, count: 0 }),
@@ -1451,40 +1449,40 @@ describe("portfolio_validator::validate_remove_asset_class", () => {
             ],
             outputAssets: []
         }).use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_remove_asset_class.eval({
                     $scriptContext: ctx,
                     ...defaultTestArgs
                 }),
-                false
-            )
+                /asset class not correctly removed from group/
+            })
         })
     })
 
-    it("portfolio_validator::validate_remove_asset_class #05 (returns false if the asset count for the removed asset class isn't zero)", () => {
+    it("portfolio_validator::validate_remove_asset_class #05 (throws an error if the asset count for the removed asset class isn't zero)", () => {
         configureContext({
             inputAssets: [makeAsset({ assetClass, count: 1 })]
         }).use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_remove_asset_class.eval({
                     $scriptContext: ctx,
                     ...defaultTestArgs
                 }),
-                false
-            )
+                /count not zero/
+            })
         })
     })
 
-    it("portfolio_validator::validate_remove_asset_class #06 (returns false if config isn't spent according to boolean arg (actual tx doesn't matter))", () => {
+    it("portfolio_validator::validate_remove_asset_class #06 (throws an error if config isn't spent according to boolean arg (actual tx doesn't matter))", () => {
         configureContext().use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_remove_asset_class.eval({
                     $scriptContext: ctx,
                     ...defaultTestArgs,
                     config_is_spent: false
                 }),
-                false
-            )
+                /tx not witnessed by config validator/
+            })
         })
     })
 })
@@ -1580,7 +1578,7 @@ describe("portfolio_validator::validate_update_prices", () => {
             })
     }
 
-    it("portfolio_validator::validate_update_prices #01 (returns true if the reduction state is Idle, the tx is witnessed by the oracle and only the price and priceTimestamp fields change)", () => {
+    it("portfolio_validator::validate_update_prices #01 (succeeds if the reduction state is Idle, the tx is witnessed by the oracle and only the price and priceTimestamp fields change)", () => {
         configureContext().use((ctx) => {
             validate_update_prices.eval({
                 $scriptContext: ctx,
@@ -1589,7 +1587,7 @@ describe("portfolio_validator::validate_update_prices", () => {
         })
     })
 
-    it("portfolio_validator::validate_update_prices #02 (returns false if the portfolio reducing state isn't Idle)", () => {
+    it("portfolio_validator::validate_update_prices #02 (throws an error if the portfolio reducing state isn't Idle)", () => {
         const portfolio = makePortfolio({
             state: {
                 Reducing: {
@@ -1605,38 +1603,38 @@ describe("portfolio_validator::validate_update_prices", () => {
         })
 
         configureContext({ portfolio }).use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_update_prices.eval({
                     $scriptContext: ctx,
                     portfolio0: portfolio
                 }),
-                false
-            )
+                /portfolio0 state not idle/
+            })
         })
     })
 
-    it("portfolio_validator::validate_update_prices #03 (returns false if one of the asset counts changed)", () => {
+    it("portfolio_validator::validate_update_prices #03 (throws an error if one of the asset counts changed)", () => {
         configureContext({ secondAssetOutputCount: 101 }).use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_update_prices.eval({
                     $scriptContext: ctx,
                     portfolio0: portfolio
                 }),
-                false
-            )
+                /asset count changed/
+            })
         })
     })
 
-    it("portfolio_validator::validate_update_prices #04 (returns false if not witnessed by the oracle)", () => {
+    it("portfolio_validator::validate_update_prices #04 (throws an error if not witnessed by the oracle)", () => {
         configureContext({ oracleHash: StakingValidatorHash.dummy() }).use(
             (ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_update_prices.eval({
                         $scriptContext: ctx,
                         portfolio0: portfolio
                     }),
-                    false
-                )
+                    /not witnessed by oracle/
+                })
             }
         )
     })
@@ -1648,7 +1646,7 @@ describe("portfolio_validator::validate_update_prices", () => {
                     $scriptContext: ctx,
                     portfolio0: portfolio
                 })
-            })
+            }, /not found/)
         })
     })
 
@@ -1667,7 +1665,7 @@ describe("portfolio_validator::validate_update_prices", () => {
                     $scriptContext: ctx,
                     portfolio0: portfolio
                 })
-            })
+            }, /number of assets in group changed/)
         })
     })
 })
@@ -1765,17 +1763,14 @@ describe("portfolio_validator::validate_move_assets", () => {
 
         it("portfolio_validator::validate_move_assets #01 (returns true if the portfolio reduction is in Idle state and all assets in the input groups are present in the output groups)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
-                    validate_move_assets.eval({
-                        $scriptContext: ctx,
-                        portfolio0: portfolio
-                    }),
-                    true
-                )
+                validate_move_assets.eval({
+                    $scriptContext: ctx,
+                    portfolio0: portfolio
+                })
             })
         })
 
-        it("portfolio_validator::validate_move_assets #02 (returns false if the portfolio reduction isn't in Idle state)", () => {
+        it("portfolio_validator::validate_move_assets #02 (throws an error if the portfolio reduction isn't in Idle state)", () => {
             const portfolio = makePortfolio({
                 state: {
                     Reducing: {
@@ -1791,17 +1786,17 @@ describe("portfolio_validator::validate_move_assets", () => {
             })
 
             configureContext({ portfolio }).use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_move_assets.eval({
                         $scriptContext: ctx,
                         portfolio0: portfolio
                     }),
-                    false
-                )
+                    /portfolio0 state not idle/
+                })
             })
         })
 
-        it("portfolio_validator::validate_move_assets #03 (returns false if an additional asset was added to the an asset group)", () => {
+        it("portfolio_validator::validate_move_assets #03 (throws an error if an additional asset was added to the an asset group)", () => {
             configureContext({
                 additionalFirstGroupOutputAssets: [
                     makeAsset({
@@ -1811,13 +1806,13 @@ describe("portfolio_validator::validate_move_assets", () => {
                     })
                 ]
             }).use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_move_assets.eval({
                         $scriptContext: ctx,
                         portfolio0: portfolio
                     }),
-                    false
-                )
+                    /number of assets in inputs isn't equal to number of assets in outputs/
+                })
             })
         })
 
@@ -1832,17 +1827,17 @@ describe("portfolio_validator::validate_move_assets", () => {
             })
         })
 
-        it("portfolio_validator::validate_move_assets #05 (returns false if a third asset group output is included without associated unique input)", () => {
+        it("portfolio_validator::validate_move_assets #05 (throws an error if a third asset group output is included without associated unique input)", () => {
             configureContext()
                 .addAssetGroupOutput({ id: 1, assets: inputAssets0 })
                 .use((ctx) => {
-                    strictEqual(
+                    throws(() => {
                         validate_move_assets.eval({
                             $scriptContext: ctx,
                             portfolio0: portfolio
                         }),
-                        false
-                    )
+                        /number of groups in inputs isn't equal to number of groups in outputs/
+                    })
                 })
         })
     })
@@ -1923,28 +1918,25 @@ describe("portfolio_validator::validate_move_assets", () => {
                 })
         }
 
-        it("portfolio_validator::validate_move_assets #06 (returns true if the portfolio reduction is in Idle state and all assets in the input groups are present in the output groups)", () => {
+        it("portfolio_validator::validate_move_assets #06 (succeeds if the portfolio reduction is in Idle state and all assets in the input groups are present in the output groups)", () => {
             configureContext().use((ctx) => {
-                strictEqual(
-                    validate_move_assets.eval({
-                        $scriptContext: ctx,
-                        portfolio0: portfolio
-                    }),
-                    true
-                )
+                validate_move_assets.eval({
+                    $scriptContext: ctx,
+                    portfolio0: portfolio
+                })
             })
         })
 
         it("portfolio_validator::validate_move_assets #07 (returns false if the second asset group isn't sent to the assets_validator address)", () => {
             configureContext({ secondGroupAddress: Address.dummy(false) }).use(
                 (ctx) => {
-                    strictEqual(
+                    throws(() => {
                         validate_move_assets.eval({
                             $scriptContext: ctx,
                             portfolio0: portfolio
                         }),
-                        false
-                    )
+                        /number of groups in inputs isn't equal to number of groups in outputs/
+                    })
                 }
             )
         })
@@ -1969,19 +1961,16 @@ describe("portfolio_validator::validate_reset_reduction", () => {
         })
     }
 
-    it("portfolio_validator::validate_reset_reduction #01 (returns true if the input portfolio reduction state is not Idle and no asset groups are spent)", () => {
+    it("portfolio_validator::validate_reset_reduction #01 (succeeds if the input portfolio reduction state is not Idle and no asset groups are spent)", () => {
         configureContext().use((ctx) => {
-            strictEqual(
-                validate_reset_reduction.eval({
-                    $scriptContext: ctx,
-                    portfolio0: portfolio
-                }),
-                true
-            )
+            validate_reset_reduction.eval({
+                $scriptContext: ctx,
+                portfolio0: portfolio
+            })
         })
     })
 
-    it("portfolio_validator::validate_reset_reduction #02 (returns false if the input portfolio reduction state is Idle)", () => {
+    it("portfolio_validator::validate_reset_reduction #02 (throws an error if the input portfolio reduction state is Idle)", () => {
         const portfolio = makePortfolio({
             state: {
                 Idle: {}
@@ -1989,27 +1978,27 @@ describe("portfolio_validator::validate_reset_reduction", () => {
         })
 
         configureContext({ portfolio }).use((ctx) => {
-            strictEqual(
+            throws(() => {
                 validate_reset_reduction.eval({
                     $scriptContext: ctx,
                     portfolio0: portfolio
                 }),
-                false
-            )
+                /portfolio0 state is idle/
+            })
         })
     })
 
-    it("portfolio_validator::validate_reset_reduction #03 (returns false if an asset group is spent)", () => {
+    it("portfolio_validator::validate_reset_reduction #03 (throws an error if an asset group is spent)", () => {
         configureContext()
             .addAssetGroupInput()
             .use((ctx) => {
-                strictEqual(
+                throws(() => {
                     validate_reset_reduction.eval({
                         $scriptContext: ctx,
                         portfolio0: portfolio
                     }),
-                    false
-                )
+                    /spent an asset group/
+                })
             })
     })
 })
@@ -2381,4 +2370,24 @@ describe("portfolio_validator::main", () => {
             )
         })
     })
+})
+
+describe("portfolio_validator metrics", () => {
+    const program = contract.portfolio_validator.$hash.context.program
+    
+    const n = program.toCbor().length
+
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {
+        if (n > MAX_SCRIPT_SIZE) {
+            throw new Error("program too large")
+        }
+    })
+
+    const ir = program.ir
+
+    if (ir) {
+        it("ir doesn't contain trace", () => {
+            strictEqual(!!/__core__trace/.exec(ir), false)
+        })
+    }  
 })
