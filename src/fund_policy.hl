@@ -31,6 +31,7 @@ const INITIAL_SUCCESS_FEE: SuccessFee = SuccessFee{
         SuccessFeeStep{c: 0.3, sigma: 1.05}
     }
 }
+const INITIAL_CYCLE_PERIOD: Duration = 365*Duration::DAY
 
 func validate_minted_tokens() -> () {
     tokens = Tokens::get_minted();
@@ -124,7 +125,7 @@ func validate_initial_supply() -> () {
         success_fee: SuccessFeeState{
             period_id:   0,
             start_time:  Time::new(0),
-            period:      Duration::WEEK*2, // TODO: not yet 1 year, so we can test the success fee for a few periods
+            period:      INITIAL_CYCLE_PERIOD,
             start_price: INITIAL_PRICE
         }
     }, "unexpected initial supply datum")
