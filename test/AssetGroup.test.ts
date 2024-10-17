@@ -1116,10 +1116,16 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
             makeAsset({ count: 10000, price: [100, 1], priceTimestamp })
         ]
 
-        const configureParentContext = () => {
-            return new ScriptContextBuilder()
+        const configureParentContext = (props?: {setTimeRangeStart?: boolean}) => {
+            const scb = new ScriptContextBuilder()
                 .addAssetGroupRef({ assets, id: 0 })
                 .redeemDummyTokenWithDvpPolicy()
+
+            if (props?.setTimeRangeStart ?? true) {
+                scb.setTimeRange({start: Number.MAX_SAFE_INTEGER})
+            }
+            
+            return scb
         }
 
         describe("@ all validators", () => {
@@ -1139,6 +1145,20 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                         }),
                         [priceTimestamp, 1_000_000n]
                     )
+                })
+            })
+
+            it("throws an error if the tx validity time range start isn't set", () => {
+                configureContext({setTimeRangeStart: false}).use((currentScript, ctx) => {
+                    throws(() => {
+                        sum_total_asset_value.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            group_ptrs: [0],
+                            first_id: 0
+                        }),
+                        /asd/
+                    })
                 })
             })
         })
@@ -1164,6 +1184,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
 
         const configureParentContext = () => {
             return new ScriptContextBuilder()
+                .setTimeRange({start: Number.MAX_SAFE_INTEGER})
                 .addAssetGroupRef({ assets: assets0, id: groupId0 })
                 .addDummyRefs(5)
                 .addAssetGroupRef({ assets: assets1, id: groupId1 })
@@ -1209,6 +1230,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
 
         const configureParentContext = () => {
             return new ScriptContextBuilder()
+                .setTimeRange({start: Number.MAX_SAFE_INTEGER})
                 .addAssetGroupRef({ assets: assets0, id: groupId0 })
                 .addAssetGroupRef({ assets: assets1, id: groupId1 })
                 .addAssetGroupRef({ assets: assets2, id: groupId2 })

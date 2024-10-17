@@ -379,6 +379,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
             .addPortfolioInput({
                 redeemer: { Reduce: { group_ptrs: groupPtrs } }
             })
+            .setTimeRange({start: Number.MAX_SAFE_INTEGER})
             .addSupplyRef({ supply })
             .addAssetGroupRef({ id: 1, ...group0 })
             .addAssetGroupRef({ id: 2, ...group1 })
@@ -758,6 +759,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             .addPortfolioInput({
                 redeemer: { Reduce: { group_ptrs: groupPtrs } }
             })
+            .setTimeRange({start: Number.MAX_SAFE_INTEGER})
             .addSupplyRef({ supply })
             .addAssetGroupRef({ id: 3, ...group0 })
             .addAssetGroupRef({ id: props?.secondGroupId ?? 4, ...group1 })
