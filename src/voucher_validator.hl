@@ -9,9 +9,10 @@ func main(_: Voucher, _) -> Bool {
     (id, voucher) = Voucher::get_current();
 
     if (tx.minted.get_safe(Tokens::voucher_user_nft(id)) == -1) {
-        signed_by_agent()
-        && tx.minted.get_safe(Tokens::voucher_ref_token(id)) == -1
+        assert(signed_by_agent(), "not signed by agent");
+        assert(tx.minted.get_safe(Tokens::voucher_ref_token(id)) == -1, "voucher ref token not burned")
     } else {
-        tx.inputs.any(Tokens::contains_reimbursement[TxInput](voucher.period_id))
-    }
+        assert(tx.inputs.any(Tokens::contains_reimbursement[TxInput](voucher.period_id)), "not witnessed by reimbursement validator")
+    };
+    true
 }

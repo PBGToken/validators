@@ -54,11 +54,12 @@ describe("mint_order_validator::main", () => {
 
         it("mint_order_validator::main #01 (succeeds if the tx signed by the address pubkey)", () => {
             configureContext().use((ctx) => {
+                strictEqual(
                 main.eval({
                     $scriptContext: ctx,
                     order: mintOrder,
                     redeemer
-                })
+                }), undefined)
             })
         })
 
@@ -70,7 +71,7 @@ describe("mint_order_validator::main", () => {
                         order: mintOrder,
                         redeemer
                     })
-                })
+                }, /not approved by owner/)
             })
         })
 
@@ -79,11 +80,12 @@ describe("mint_order_validator::main", () => {
                 pkh: PubKeyHash.dummy(1),
                 dummyInputAddr: returnAddress
             }).use((ctx) => {
+                strictEqual(
                 main.eval({
                     $scriptContext: ctx,
                     order: mintOrder,
                     redeemer
-                })
+                }), undefined)
             })
         })
     })
@@ -196,7 +198,9 @@ describe("mint_order_validator::main", () => {
 
         it("mint_order_validator::main #04 (succeeds if enough tokens are returned)", () => {
             configureContext().use((ctx) => {
-                main.eval({ $scriptContext: ctx, order: mintOrder, redeemer })
+                strictEqual(
+                main.eval({ $scriptContext: ctx, order: mintOrder, redeemer }),
+                undefined)
             })
         })
 
@@ -208,7 +212,7 @@ describe("mint_order_validator::main", () => {
                         order: mintOrder,
                         redeemer
                     })
-                })
+                }, /not signed by agent/)
             })
         })
 
@@ -220,7 +224,7 @@ describe("mint_order_validator::main", () => {
                         order: mintOrder,
                         redeemer
                     })
-                })
+                }, /token price too old/)
             })
         })
 
@@ -232,7 +236,7 @@ describe("mint_order_validator::main", () => {
                         order: mintOrder,
                         redeemer
                     })
-                })
+                }, /not enough tokens returned wrt. contract price/)
             })
         })
 
@@ -244,7 +248,7 @@ describe("mint_order_validator::main", () => {
                         order: mintOrder,
                         redeemer
                     })
-                })
+                }, /not enough tokens returned wrt\. order/)
             })
         })
 
@@ -256,7 +260,7 @@ describe("mint_order_validator::main", () => {
                         order: mintOrder,
                         redeemer
                     })
-                })
+                }, /not found/)
             })
         })
 
@@ -268,7 +272,7 @@ describe("mint_order_validator::main", () => {
                         order: mintOrder,
                         redeemer
                     })
-                })
+                }, /not found/)
             })
         })
 
@@ -282,7 +286,7 @@ describe("mint_order_validator::main", () => {
                         order: mintOrder,
                         redeemer
                     })
-                })
+                }, /wrong voucher return address/)
             })
         })
 
@@ -296,7 +300,7 @@ describe("mint_order_validator::main", () => {
                         order: mintOrder,
                         redeemer
                     })
-                })
+                }, /wrong voucher datum/)
             })
         })
 
@@ -309,7 +313,7 @@ describe("mint_order_validator::main", () => {
                             order: mintOrder,
                             redeemer
                         })
-                    })
+                    }, /unexpected number of tokens in voucher/)
                 }
             )
         })
@@ -323,7 +327,7 @@ describe("mint_order_validator::main", () => {
                             order: mintOrder,
                             redeemer
                         })
-                    })
+                    }, /unexpected number of tokens in voucher/)
                 }
             )
         })

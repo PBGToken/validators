@@ -12,8 +12,9 @@ func main(_: Price, _) -> Bool {
 
     TotalAssetValue{V, tp} = portfolio.get_reduction_result(Option[Int]::Some{supply.tick});
 
-    signed_by_agent()
-    && price1.value.top == V // must compare bottom and top separately, to avoid unboundedness
-    && price1.value.bottom == supply.n_tokens
-    && price1.timestamp == tp
+    assert(signed_by_agent(), "not signed by agent");
+    assert(price1.value.top == V, "price numerator not equal to total asset value"); // must compare bottom and top separately, to avoid unboundedness
+    assert(price1.value.bottom == supply.n_tokens, "price denominator not equal to token circulating supply");
+    assert(price1.timestamp == tp, "price timestamp not equal to oldest timestamp from reduction");
+    true 
 }

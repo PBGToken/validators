@@ -18,7 +18,7 @@ enum Redeemer {
 func main(order: MintOrder, redeemer: Redeemer) -> Bool {
     redeemer.switch{
         Cancel => {
-            tx.is_approved_by(order.return_address.credential)
+            assert(tx.is_approved_by(order.return_address.credential), "not approved by owner")
         },
         Fulfill{ptrs} => {
             price = Price::find_ref();
@@ -29,22 +29,21 @@ func main(order: MintOrder, redeemer: Redeemer) -> Bool {
             n_expected = deduct_mint_fee((order.value_lovelace(ptrs) / price.value).floor());
             print("expected min returned tokens: " + n_expected.show());
 
-            signed_by_agent().trace_if_false("not signed by agent")
-            && price.is_not_expired(order.price_expiry()).trace_if_false("token price too old")
-            && (n_actual >= order.min_tokens).trace_if_false("not enough tokens returned wrt. order")
-            && (n_actual >= n_expected).trace_if_false("not enough tokens returned wrt. contract price")
-            && if (supply.is_successful(price.relative_to_benchmark())) {
+            assert(signed_by_agent(), "not signed by agent");
+            assert(price.is_not_expired(order.price_expiry()), "token price too old");
+            assert(n_actual >= order.min_tokens, "not enough tokens returned wrt. order");
+            assert(n_actual >= n_expected, "not enough tokens returned wrt. contract price");
+            if (supply.is_successful(price.relative_to_benchmark())) {
                 voucher_id = order.voucher_id();
                 print("created voucher: " + voucher_id.show());
                 voucher = Voucher::find_output(voucher_id);
 
-                (voucher.return_address == order.return_address).trace_if_false("wrong voucher return address")
-                && (voucher.return_datum == order.return_datum).trace_if_false("wrong voucher datum")
-                && (voucher.tokens == n_expected).trace_if_false("too few tokens in voucher")
+                assert(voucher.return_address == order.return_address, "wrong voucher return address");
+                assert(voucher.return_datum == order.return_datum, "wrong voucher datum");
+                assert(voucher.tokens == n_expected, "unexpected number of tokens in voucher")
                 // voucher.price and voucher.period_id don't need to be checked here because they are already checked in validate_minted_vouchers() in lib/Voucher.hl
-            } else {
-                true
             }
         }
-    }
+    };
+    true
 }

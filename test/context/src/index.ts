@@ -44,7 +44,7 @@ const context = ContractContextBuilder.new()
     .with(voucher_validator)
     .build({
         isMainnet: false,
-        debug: true, // if `true`: significantly blows up the size of the bundle
+        debug: false, // if `true`: significantly blows up the size of the bundle
         parameters: {
             "fund_policy::SEED_ID": SEED_ID.toUplcData(),
             "fund_policy::INITIAL_AGENT": INITIAL_AGENT.toUplcData(),

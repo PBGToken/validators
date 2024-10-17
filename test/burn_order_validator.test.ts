@@ -140,7 +140,7 @@ describe("burn_order_validator::main", () => {
                     order: new IntData(0),
                     redeemer: new IntData(0)
                 })
-            })
+            }, /empty list in headList/)
         })
     })
 
@@ -175,11 +175,12 @@ describe("burn_order_validator::main", () => {
 
         it("burn_order_validator::main #02 (succeeds if the tx signed by the address pubkey)", () => {
             configureContext().use((ctx) => {
+                strictEqual(
                 main.eval({
                     $scriptContext: ctx,
                     order: burnOrder,
                     redeemer
-                })
+                }), undefined)
             })
         })
 
@@ -191,7 +192,7 @@ describe("burn_order_validator::main", () => {
                         order: burnOrder,
                         redeemer
                     })
-                })
+                }, /cancelation not approved by owner/)
             })
         })
 
@@ -200,11 +201,12 @@ describe("burn_order_validator::main", () => {
                 pkh: PubKeyHash.dummy(1),
                 dummyInputAddr: returnAddress
             }).use((ctx) => {
+                strictEqual(
                 main.eval({
                     $scriptContext: ctx,
                     order: burnOrder,
                     redeemer
-                })
+                }), undefined)
             })
         })
     })
@@ -307,11 +309,12 @@ describe("burn_order_validator::main", () => {
 
         it("burn_order_validator::main #05 (succeeds if enough lovelace returned)", () => {
             configureContext().use((ctx) => {
+                strictEqual(
                 main.eval({
                     $scriptContext: ctx,
                     order: burnOrder,
                     redeemer
-                })
+                }), undefined)
             })
         })
 
@@ -323,7 +326,7 @@ describe("burn_order_validator::main", () => {
                         order: burnOrder,
                         redeemer
                     })
-                })
+                }, /not signed by agent/)
             })
         })
 
@@ -335,7 +338,7 @@ describe("burn_order_validator::main", () => {
                         order: burnOrder,
                         redeemer
                     })
-                })
+                }, /price expired/)
             })
         })
 
@@ -347,7 +350,7 @@ describe("burn_order_validator::main", () => {
                         order: burnOrder,
                         redeemer
                     })
-                })
+                }, /not enough value returned .as required by contract/)
             })
         })
 
@@ -367,7 +370,7 @@ describe("burn_order_validator::main", () => {
                             order: burnOrder,
                             redeemer
                         })
-                    })
+                    }, /not enough value returned .as requested by user/)
                 }
             )
         })
@@ -388,7 +391,7 @@ describe("burn_order_validator::main", () => {
                             order: burnOrder,
                             redeemer
                         })
-                    })
+                    }, /price expired/)
                 }
             )
         })
@@ -406,7 +409,7 @@ describe("burn_order_validator::main", () => {
                         order: burnOrder,
                         redeemer
                     })
-                })
+                }, /empty list in tailList/)
             })
         })
 
@@ -427,7 +430,7 @@ describe("burn_order_validator::main", () => {
                         order: burnOrder,
                         redeemer
                     })
-                })
+                }, /not enough value returned .as requested by user/)
             })
         })
 
@@ -442,11 +445,12 @@ describe("burn_order_validator::main", () => {
             })
 
             configureContext({ burnOrder }).use((ctx) => {
+                strictEqual(
                 main.eval({
                     $scriptContext: ctx,
                     order: burnOrder,
                     redeemer
-                })
+                }), undefined)
             })
         })
 
@@ -467,7 +471,7 @@ describe("burn_order_validator::main", () => {
                         order: burnOrder,
                         redeemer
                     })
-                })
+                }, /not enough value returned .as requested by user/)
             })
         })
 
@@ -504,11 +508,12 @@ describe("burn_order_validator::main", () => {
                     ]
                 })
                 .use((ctx) => {
+                    strictEqual(
                     main.eval({
                         $scriptContext: ctx,
                         order: burnOrder,
                         redeemer
-                    })
+                    }), undefined)
                 })
         })
 
@@ -559,7 +564,7 @@ describe("burn_order_validator::main", () => {
                             order: burnOrder,
                             redeemer
                         })
-                    })
+                    }, /empty list in tailList/)
                 })
         })
 
@@ -578,11 +583,12 @@ describe("burn_order_validator::main", () => {
                     price: [140, 1]
                 }
             }).use((ctx) => {
+                strictEqual(
                 main.eval({
                     $scriptContext: ctx,
                     order: burnOrder,
                     redeemer
-                })
+                }), undefined)
             })
         })
 
@@ -607,7 +613,7 @@ describe("burn_order_validator::main", () => {
                         order: burnOrder,
                         redeemer
                     })
-                })
+                }, /not enough value returned/)
             })
         })
     })

@@ -67,7 +67,9 @@ describe("price_validator::main", () => {
 
     it("price_validator::main #01 (succeeds if the price matches the ratio of the vault lovelace value and the number of tokens in circulation)", () => {
         configureContext().use((ctx) => {
+            strictEqual(
             main.eval({ $scriptContext: ctx, ...defaultTestArgs })
+            , undefined)
         })
     })
 
@@ -78,7 +80,7 @@ describe("price_validator::main", () => {
                     $scriptContext: ctx,
                     ...defaultTestArgs
                 })
-            })
+            }, /not signed by agent/)
         })
     })
 
@@ -92,12 +94,12 @@ describe("price_validator::main", () => {
                     ...defaultTestArgs,
                     $datum: price
                 })
-            })
+            }, /price denominator not equal to token circulating supply/)
         })
     })
 
     it("price_validator::main #04 (throws an error if the new price timestamp doesn't match oldest timestamp from the portfolio reduction result)", () => {
-        const price = makePrice({ ratio: [1, 1], timestamp: 1 })
+        const price = makePrice({ ratio: [1000, 1000], timestamp: 1 })
 
         configureContext({ price }).use((ctx) => {
             throws(() => {
@@ -106,7 +108,7 @@ describe("price_validator::main", () => {
                     ...defaultTestArgs,
                     $datum: price
                 })
-            })
+            }, /price timestamp not equal to oldest timestamp from reduction/)
         })
     })
 
@@ -119,7 +121,7 @@ describe("price_validator::main", () => {
                     $scriptContext: ctx,
                     ...defaultTestArgs
                 })
-            })
+            }, /unexpected constructor index/)
         })
     })
 
@@ -130,7 +132,7 @@ describe("price_validator::main", () => {
                     $scriptContext: ctx,
                     ...defaultTestArgs
                 })
-            })
+            }, /reduction is incomplete/)
         })
     })
 
@@ -138,7 +140,7 @@ describe("price_validator::main", () => {
         configureContext({ supplyTick: 1 }).use((ctx) => {
             throws(() => {
                 main.eval({ $scriptContext: ctx, ...defaultTestArgs })
-            })
+            }, /unexpected tick/)
         })
     })
 })

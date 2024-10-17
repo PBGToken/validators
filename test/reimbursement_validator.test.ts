@@ -159,7 +159,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                         reim: reimbursement,
                         period_id: periodId
                     })
-                })
+                }, /voucher ref not burned/)
             })
         })
 
@@ -171,7 +171,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                         reim: reimbursement,
                         period_id: periodId
                     })
-                })
+                }, /key not found/)
             })
         })
 
@@ -184,7 +184,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                             reim: reimbursement,
                             period_id: periodId
                         })
-                    })
+                    }, /not found/)
                 }
             )
         })
@@ -197,7 +197,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                         reim: reimbursement,
                         period_id: periodId
                     })
-                })
+                }, /voucher is from other period/)
             })
         })
     })
@@ -258,11 +258,12 @@ describe("reimbursement_validator::main", () => {
 
         it("reimbursement_validator::main #01 (succeeds if all remaining vouchers have been reimbursed and burned)", () => {
             configureContext().use((ctx) => {
+                strictEqual(
                 main.eval({
                     $scriptContext: ctx,
                     $datum: reimbursement,
                     _: new IntData(0)
-                })
+                }), undefined)
             })
         })
 
@@ -274,7 +275,7 @@ describe("reimbursement_validator::main", () => {
                         $datum: reimbursement,
                         _: new IntData(0)
                     })
-                })
+                }, /key not found/)
             })
         })
 
@@ -287,7 +288,7 @@ describe("reimbursement_validator::main", () => {
                             $datum: reimbursement,
                             _: new IntData(0)
                         })
-                    })
+                    }, /not exactly one reimbursement token burned/)
                 }
             )
         })
@@ -300,7 +301,7 @@ describe("reimbursement_validator::main", () => {
                         $datum: reimbursement,
                         _: new IntData(0)
                     })
-                })
+                }, /not found/)
             })
         })
     })
@@ -382,10 +383,11 @@ describe("reimbursement_validator::main", () => {
 
         it("reimbursement_validator::main #05 (succeeds if the number of remaining vouchers and tokens in the reimbursement output is correct)", () => {
             configureContext().use((ctx) => {
+                strictEqual(
                 main.eval({
                     $scriptContext: ctx,
                     ...defaultTestArgs
-                })
+                }), undefined)
             })
         })
 
@@ -397,7 +399,7 @@ describe("reimbursement_validator::main", () => {
                             $scriptContext: ctx,
                             ...defaultTestArgs
                         })
-                    })
+                    }, /not signed by agent/)
                 }
             )
         })
@@ -409,7 +411,7 @@ describe("reimbursement_validator::main", () => {
                         $scriptContext: ctx,
                         ...defaultTestArgs
                     })
-                })
+                }, /number of success fee tokens remaining not decremented by the number of reimbursed tokens/)
             })
         })
 
@@ -420,7 +422,7 @@ describe("reimbursement_validator::main", () => {
                         $scriptContext: ctx,
                         ...defaultTestArgs
                     })
-                })
+                }, /number of success fee tokens remaining not decremented by the number of reimbursed tokens/)
             })
         })
 
@@ -431,7 +433,7 @@ describe("reimbursement_validator::main", () => {
                         $scriptContext: ctx,
                         ...defaultTestArgs
                     })
-                })
+                }, /invalid datum change/)
             })
         })
 
@@ -442,7 +444,7 @@ describe("reimbursement_validator::main", () => {
                         $scriptContext: ctx,
                         ...defaultTestArgs
                     })
-                })
+                }, /key not found/)
             })
         })
 
@@ -453,7 +455,7 @@ describe("reimbursement_validator::main", () => {
                         $scriptContext: ctx,
                         ...defaultTestArgs
                     })
-                })
+                }, /voucher is from other period/)
             })
         })
     })

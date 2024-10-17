@@ -5,7 +5,7 @@ import { Address, PubKeyHash } from "@helios-lang/ledger"
 import { IntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
-import { makeConfig, makeVoucher } from "./data"
+import { makeConfig, makeVoucher, VoucherType } from "./data"
 import { makeVoucherPair, makeVoucherUserToken } from "./tokens"
 import { ScriptContextBuilder } from "./tx"
 
@@ -13,12 +13,16 @@ const { main } = contract.voucher_validator
 
 describe("voucher_validator::main", () => {
     const periodId = 1
-    const voucher = makeVoucher({
-        periodId: periodId,
-        address: Address.dummy(false, 0),
-        datum: new IntData(0),
-        tokens: 1000
-    })
+    const configureVoucher = (props?: {
+        periodId?: number
+    }) => {
+        return makeVoucher({
+            periodId: props?.periodId ?? periodId,
+            address: Address.dummy(false, 0),
+            datum: new IntData(0),
+            tokens: 1000
+        })
+    } 
 
     const configureContext = (props?: {
         signingAgent?: PubKeyHash | null
@@ -26,7 +30,9 @@ describe("voucher_validator::main", () => {
         nVoucherUserTokensBurned?: IntLike
         burnedVoucherId?: IntLike
         spentReimbursementPeriodId?: IntLike
+        voucher?: VoucherType
     }) => {
+        const voucher = props?.voucher ?? configureVoucher()
         const voucherId = 1
         const scb = new ScriptContextBuilder().addVoucherInput({
             id: voucherId,
@@ -67,23 +73,24 @@ describe("voucher_validator::main", () => {
 
     it("succeeds if signed by the agent and the voucher pair is burned", () => {
         configureContext({ nVoucherPairsBurned: 1 }).use((ctx) => {
+            strictEqual(
             main.eval({
                 $scriptContext: ctx,
-                $datum: voucher,
+                $datum: configureVoucher(),
                 _: new IntData(0)
-            })
+            }), undefined)
         })
     })
 
     it("throws an error if a voucher pair is burned but the tx isn't signed by the agent", () => {
-        configureContext({ signingAgent: null }).use((ctx) => {
+        configureContext({ nVoucherPairsBurned: 1, signingAgent: null }).use((ctx) => {
             throws(() => {
                 main.eval({
                     $scriptContext: ctx,
-                    $datum: voucher,
+                    $datum: configureVoucher(),
                     _: new IntData(0)
                 })
-            })
+            }, /not signed by agent/)
         })
     })
 
@@ -92,10 +99,10 @@ describe("voucher_validator::main", () => {
             throws(() => {
                 main.eval({
                     $scriptContext: ctx,
-                    $datum: voucher,
+                    $datum: configureVoucher(),
                     _: new IntData(0)
                 })
-            })
+            }, /voucher ref token not burned/)
         })
     })
 
@@ -104,20 +111,21 @@ describe("voucher_validator::main", () => {
             throws(() => {
                 main.eval({
                     $scriptContext: ctx,
-                    $datum: voucher,
+                    $datum: configureVoucher(),
                     _: new IntData(0)
                 })
-            })
+            }, /not witnessed by reimbursement validator/)
         })
     })
 
     it("succeeds if the user token isn't burned but the tx is witnessed by the reimbursement UTxO of the same period is spent", () => {
         configureContext({ spentReimbursementPeriodId: 1 }).use((ctx) => {
+            strictEqual(
             main.eval({
                 $scriptContext: ctx,
-                $datum: voucher,
+                $datum: configureVoucher(),
                 _: new IntData(0)
-            })
+            }), undefined)
         })
     })
 
@@ -126,10 +134,10 @@ describe("voucher_validator::main", () => {
             throws(() => {
                 main.eval({
                     $scriptContext: ctx,
-                    $datum: voucher,
+                    $datum: configureVoucher(),
                     _: new IntData(0)
                 })
-            })
+            }, /not witnessed by reimbursement validator/)
         })
     })
 })

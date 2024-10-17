@@ -68,16 +68,17 @@ func main(_: Reimbursement, _) -> Bool {
     
     (n_vouchers_burned, n_tokens_reimbursed) = validate_burned_vouchers(reim0, id);
 
-    signed_by_agent()
-    && if (n_vouchers_burned >= reim0.n_remaining_vouchers) {
+    assert(signed_by_agent(), "not signed by agent");
+    if (n_vouchers_burned >= reim0.n_remaining_vouchers) {
         // the reimbursement token itself must be burned, output isn't validated
-        Tokens::get_minted().get(TokenNames::reimbursement(id)) == -1
+        assert(Tokens::get_minted().get(TokenNames::reimbursement(id)) == -1, "not exactly one reimbursement token burned")
     } else {
         (reim1, n1) = Reimbursement::find_output(id, 0);
 
-        n1 == n0 - n_tokens_reimbursed
-        && reim1 == reim0.copy(
+        assert(n1 == n0 - n_tokens_reimbursed, "number of success fee tokens remaining not decremented by the number of reimbursed tokens");
+        assert(reim1 == reim0.copy(
             n_remaining_vouchers: reim0.n_remaining_vouchers - n_vouchers_burned
-        )
-    }
+        ), "invalid datum change")
+    };
+    true
 } 
