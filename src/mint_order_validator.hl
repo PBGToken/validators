@@ -41,7 +41,6 @@ func main(order: MintOrder, redeemer: Redeemer) -> Bool {
                 assert(voucher.return_address == order.return_address, "wrong voucher return address");
                 assert(voucher.return_datum == order.return_datum, "wrong voucher datum");
                 assert(voucher.tokens == n_expected, "unexpected number of tokens in voucher")
-                // voucher.price and voucher.period_id don't need to be checked here because they are already checked in validate_minted_vouchers() in lib/Voucher.hl
             }
         }
     };

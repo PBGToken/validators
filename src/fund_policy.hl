@@ -115,20 +115,19 @@ func validate_initial_price() -> () {
 func validate_initial_supply() -> () {
     supply = Supply::find_output();
 
-    assert(supply == Supply{
-        tick:       INITIAL_TICK,
-        n_tokens:   0,
-        n_vouchers: 0,
-        last_voucher_id: 0,
-        n_lovelace: 0,
-        management_fee_timestamp: Time::new(0),
-        success_fee: SuccessFeeState{
-            period_id:   0,
-            start_time:  Time::new(0),
-            period:      INITIAL_CYCLE_PERIOD,
-            start_price: INITIAL_PRICE
-        }
-    }, "unexpected initial supply datum")
+    assert(tx.time_range.end - tx.time_range.start < Duration::DAY, "validity time range is too large");
+    assert(supply.tick == INITIAL_TICK, "supply tick not correctly set");
+    assert(supply.n_tokens == 0, "circulating supply not set to 0");
+    assert(supply.n_vouchers == 0, "voucher count not set to 0");
+    assert(supply.last_voucher_id == 0, "last_voucher_id not set to 0");
+    assert(supply.n_lovelace == 0, "n_lovelace not set to 0");
+    assert(supply.management_fee_timestamp > tx.time_range.end, "management fee timestamp lies in the past");
+    assert(supply.management_fee_timestamp < tx.time_range.end + Duration::DAY, "management fee timestamp lies too far in the future");
+    assert(supply.success_fee.period_id == 0, "cycle id not set to 0");
+    assert(supply.success_fee.start_time > tx.time_range.end, "cycle start time lies in the past");
+    assert(supply.success_fee.start_time < tx.time_range.end + Duration::DAY, "success fee timestamp lies too far in the future");
+    assert(supply.success_fee.period == INITIAL_CYCLE_PERIOD, "cycle period not correctly set");
+    assert(supply.success_fee.start_price == INITIAL_PRICE, "cycle price not correctly set")
 }
 
 func validate_initialization() -> () {

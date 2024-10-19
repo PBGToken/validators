@@ -64,7 +64,7 @@ describe("AssetGroupModule::AssetGroup::find_current", () => {
                 scripts
             )
 
-            it("returns the asset group id and data if the current input contains an asset group token", () => {
+            it("AssetGroupModule::AssetGroup::find_current #01 (returns the asset group id and data if the current input contains an asset group token)", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         find_current.eval({
@@ -76,7 +76,7 @@ describe("AssetGroupModule::AssetGroup::find_current", () => {
                 })
             })
 
-            it("returns the asset group id and data even if the asset group UTxO, containing an asset group token, is at the wrong address", () => {
+            it("AssetGroupModule::AssetGroup::find_current #02 (returns the asset group id and data even if the asset group UTxO, containing an asset group token, is at the wrong address)", () => {
                 configureContext({ address: Address.dummy(false) }).use(
                     (currentScript, ctx) => {
                         deepEqual(
@@ -90,7 +90,7 @@ describe("AssetGroupModule::AssetGroup::find_current", () => {
                 )
             })
 
-            it("throws an error if the asset group UTxO doesn't contain an asset group token", () => {
+            it("AssetGroupModule::AssetGroup::find_current #03 (throws an error if the asset group UTxO doesn't contain an asset group token)", () => {
                 configureContext({ token: makeConfigToken() }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -136,7 +136,7 @@ describe("AssetGroupModule::AssetGroup::find_output", () => {
                 scripts
             )
 
-            it("returns the group data if the asset group output containing the asset group token is sent to the assets_validator address", () => {
+            it("AssetGroupModule::AssetGroup::find_output #01 (returns the group data if the asset group output containing the asset group token is sent to the assets_validator address)", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         find_output.eval({
@@ -149,7 +149,7 @@ describe("AssetGroupModule::AssetGroup::find_output", () => {
                 })
             })
 
-            it("throws an error if the asset group output isn't sent to the assets_validator address", () => {
+            it("AssetGroupModule::AssetGroup::find_output #02 (throws an error if the asset group output isn't sent to the assets_validator address)", () => {
                 configureContext({ address: Address.dummy(false) }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -163,7 +163,7 @@ describe("AssetGroupModule::AssetGroup::find_output", () => {
                 )
             })
 
-            it("throws an error if the asset group output doesn't contain the asset group token", () => {
+            it("AssetGroupModule::AssetGroup::find_output #03 (throws an error if the asset group output doesn't contain the asset group token)", () => {
                 configureContext({ token: makeConfigToken() }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -184,7 +184,7 @@ describe("AssetGroupModule::AssetGroup::find_output", () => {
                 indirectPolicyScripts
             )
 
-            it("throws an error if no UTxO containing a policy token is spent", () => {
+            it("AssetGroupModule::AssetGroup::find_output #04 (throws an error if no UTxO containing a policy token is spent)", () => {
                 configureContext({ withoutDummyRedeemer: true }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -221,7 +221,7 @@ describe("AssetGroupModule::AssetGroup::find_output_asset", () => {
                 scripts
             )
 
-            it("returns the asset data if found", () => {
+            it("AssetGroupModule::AssetGroup::find_output_asset #01 (returns the asset data if found)", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         find_output_asset.eval({
@@ -274,7 +274,7 @@ describe("AssetGroupModule::AssetGroup::find_output_asset", () => {
                 scripts
             )
 
-            it("returns the asset data if found", () => {
+            it("AssetGroupModule::AssetGroup::find_output_asset #02 (returns the asset data if found)", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         find_output_asset.eval({
@@ -287,7 +287,7 @@ describe("AssetGroupModule::AssetGroup::find_output_asset", () => {
                 })
             })
 
-            it("throws an error if the asset class isn't found", () => {
+            it("AssetGroupModule::AssetGroup::find_output_asset #03 (throws an error if the asset class isn't found)", () => {
                 configureContext().use((currentScript, ctx) => {
                     throws(() => {
                         find_output_asset.eval({
@@ -299,7 +299,7 @@ describe("AssetGroupModule::AssetGroup::find_output_asset", () => {
                 })
             })
 
-            it("throws an error if one of asset group outputs doesn't contain exactly one asset group token", () => {
+            it("AssetGroupModule::AssetGroup::find_output_asset #04 (throws an error if one of asset group outputs doesn't contain exactly one asset group token)", () => {
                 configureContext({
                     firstGroupToken: makeAssetsToken(0).add(makeConfigToken())
                 }).use((currentScript, ctx) => {
@@ -313,7 +313,7 @@ describe("AssetGroupModule::AssetGroup::find_output_asset", () => {
                 })
             })
 
-            it("throws an error if an asset group output isn't at the correct address", () => {
+            it("AssetGroupModule::AssetGroup::find_output_asset #05 (throws an error if an asset group output isn't at the correct address)", () => {
                 configureContext({
                     secondGroupAddress: Address.dummy(false)
                 }).use((currentScript, ctx) => {
@@ -349,7 +349,7 @@ describe("AssetGroupModule::AssetGroup::find_input_asset", () => {
                 scripts
             )
 
-            it("returns the asset data if found", () => {
+            it("AssetGroupModule::AssetGroup::find_input_asset #01 (returns the asset data if found)", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         find_input_asset.eval({
@@ -402,7 +402,7 @@ describe("AssetGroupModule::AssetGroup::find_input_asset", () => {
                 scripts
             )
 
-            it("returns the asset data if found", () => {
+            it("AssetGroupModule::AssetGroup::find_input_asset #02 (returns the asset data if found)", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         find_input_asset.eval({
@@ -415,7 +415,7 @@ describe("AssetGroupModule::AssetGroup::find_input_asset", () => {
                 })
             })
 
-            it("throws an error if not found", () => {
+            it("AssetGroupModule::AssetGroup::find_input_asset #03 (throws an error if not found)", () => {
                 configureContext().use((currentScript, ctx) => {
                     throws(() => {
                         find_input_asset.eval({
@@ -427,7 +427,7 @@ describe("AssetGroupModule::AssetGroup::find_input_asset", () => {
                 })
             })
 
-            it("throws an error if one of the asset group inputs doesn't contain exactly one asset group token", () => {
+            it("AssetGroupModule::AssetGroup::find_input_asset #04 (throws an error if one of the asset group inputs doesn't contain exactly one asset group token)", () => {
                 configureContext({
                     firstGroupToken: makeAssetsToken(0).add(makeConfigToken())
                 }).use((currentScript, ctx) => {
@@ -441,7 +441,7 @@ describe("AssetGroupModule::AssetGroup::find_input_asset", () => {
                 })
             })
 
-            it("throws an error if the asset group containing the searched asset isn't at the correct address", () => {
+            it("AssetGroupModule::AssetGroup::find_input_asset #05 (throws an error if the asset group containing the searched asset isn't at the correct address)", () => {
                 configureContext({
                     secondGroupAddress: Address.dummy(false)
                 }).use((currentScript, ctx) => {
@@ -478,7 +478,7 @@ describe("AssetGroupModule::AssetGroup::find_single_input", () => {
                 scripts
             )
 
-            it("returns the asset group id and data if only a single asset group UTxO is being spent", () => {
+            it("AssetGroupModule::AssetGroup::find_single_input #01 (returns the asset group id and data if only a single asset group UTxO is being spent)", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         find_single_input.eval({
@@ -490,7 +490,7 @@ describe("AssetGroupModule::AssetGroup::find_single_input", () => {
                 })
             })
 
-            it("throws an error if the asset group input doesn't contain an asset group token", () => {
+            it("AssetGroupModule::AssetGroup::find_single_input #02 (throws an error if the asset group input doesn't contain an asset group token)", () => {
                 configureContext({ token: makeConfigToken() }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -541,7 +541,7 @@ describe("AssetGroupModule::AssetGroup::find_single_input", () => {
                 scripts
             )
 
-            it("throws an error even if the second asset group doesn't contain an asset group token (only address matters for the singleton check)", () => {
+            it("AssetGroupModule::AssetGroup::find_single_input #03 (throws an error even if the second asset group doesn't contain an asset group token (only address matters for the singleton check))", () => {
                 configureContext({ secondGroupToken: makeConfigToken() }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -561,7 +561,7 @@ describe("AssetGroupModule::AssetGroup::find_single_input", () => {
                 scripts
             )
 
-            it("throws an error if both asset groups are at the asset_validator address and contain an asset group token", () => {
+            it("AssetGroupModule::AssetGroup::find_single_input #04 (throws an error if both asset groups are at the asset_validator address and contain an asset group token)", () => {
                 configureContext().use((currentScript, ctx) => {
                     throws(() => {
                         find_single_input.eval({
@@ -579,7 +579,7 @@ describe("AssetGroupModule::AssetGroup::find_asset", () => {
     describe("empty asset group", () => {
         const assets: AssetType[] = []
 
-        it("returns None", () => {
+        it("AssetGroupModule::AssetGroup::find_asset #01 (returns None if not found)", () => {
             strictEqual(
                 find_asset.eval({
                     self: { assets },
@@ -597,7 +597,7 @@ describe("AssetGroupModule::AssetGroup::find_asset", () => {
             makeAsset({ assetClass: AssetClass.dummy(3) })
         ]
 
-        it("returns None if the asset class isn't found", () => {
+        it("AssetGroupModule::AssetGroup::find_asset #02 (returns None if the asset class isn't found)", () => {
             strictEqual(
                 find_asset.eval({
                     self: { assets },
@@ -607,7 +607,7 @@ describe("AssetGroupModule::AssetGroup::find_asset", () => {
             )
         })
 
-        it("returns Some if found as the first entry", () => {
+        it("AssetGroupModule::AssetGroup::find_asset #03 (returns Some if found as the first entry)", () => {
             deepEqual(
                 find_asset.eval({
                     self: { assets },
@@ -617,7 +617,7 @@ describe("AssetGroupModule::AssetGroup::find_asset", () => {
             )
         })
 
-        it("returns Some if found as the middle entry", () => {
+        it("AssetGroupModule::AssetGroup::find_asset #04 (returns Some if found as the middle entry)", () => {
             deepEqual(
                 find_asset.eval({
                     self: { assets },
@@ -627,7 +627,7 @@ describe("AssetGroupModule::AssetGroup::find_asset", () => {
             )
         })
 
-        it("returns Some if found as the last entry", () => {
+        it("AssetGroupModule::AssetGroup::find_asset #05 (returns Some if found as the last entry)", () => {
             deepEqual(
                 find_asset.eval({
                     self: { assets },
@@ -643,7 +643,7 @@ describe("AssetGroupModule::AssetGroup::has_asset", () => {
     describe("empty asset group", () => {
         const assets: AssetType[] = []
 
-        it("returns false", () => {
+        it("AssetGroupModule::AssetGroup::has_asset #01 (returns false)", () => {
             strictEqual(
                 has_asset.eval({
                     self: { assets },
@@ -661,7 +661,7 @@ describe("AssetGroupModule::AssetGroup::has_asset", () => {
             makeAsset({ assetClass: AssetClass.dummy(3) })
         ]
 
-        it("returns false if not found", () => {
+        it("AssetGroupModule::AssetGroup::has_asset #02 (returns false if not found)", () => {
             strictEqual(
                 has_asset.eval({
                     self: { assets },
@@ -671,7 +671,7 @@ describe("AssetGroupModule::AssetGroup::has_asset", () => {
             )
         })
 
-        it("returns true if found as the first entry", () => {
+        it("AssetGroupModule::AssetGroup::has_asset #03 (returns true if found as the first entry)", () => {
             strictEqual(
                 has_asset.eval({
                     self: { assets },
@@ -681,7 +681,7 @@ describe("AssetGroupModule::AssetGroup::has_asset", () => {
             )
         })
 
-        it("returns true if found as the middle entry", () => {
+        it("AssetGroupModule::AssetGroup::has_asset #04 (returns true if found as the middle entry)", () => {
             strictEqual(
                 has_asset.eval({
                     self: { assets },
@@ -691,7 +691,7 @@ describe("AssetGroupModule::AssetGroup::has_asset", () => {
             )
         })
 
-        it("returns true if found as the last entry", () => {
+        it("AssetGroupModule::AssetGroup::has_asset #05 (returns true if found as the last entry)", () => {
             deepEqual(
                 has_asset.eval({
                     self: { assets },
@@ -704,7 +704,7 @@ describe("AssetGroupModule::AssetGroup::has_asset", () => {
 })
 
 describe("AssetGroupModule::AssetGroup::is_empty", () => {
-    it("returns true for empty list", () => {
+    it("AssetGroupModule::AssetGroup::is_empty #01 (returns true for empty list)", () => {
         const assets: AssetType[] = []
 
         strictEqual(
@@ -715,13 +715,13 @@ describe("AssetGroupModule::AssetGroup::is_empty", () => {
         )
     })
 
-    it("returns false for non-empty list with one entry", () => {
+    it("AssetGroupModule::AssetGroup::is_empty #02 (returns false for non-empty list with one entry)", () => {
         const assets = [makeAsset()]
 
         strictEqual(is_empty.eval({ self: { assets } }), false)
     })
 
-    it("returns false for non-empty list with three entries", () => {
+    it("AssetGroupModule::AssetGroup::is_empty #03 (returns false for non-empty list with three entries)", () => {
         const assets = [
             makeAsset({ assetClass: AssetClass.dummy(0) }),
             makeAsset({ assetClass: AssetClass.dummy(1) }),
@@ -733,7 +733,7 @@ describe("AssetGroupModule::AssetGroup::is_empty", () => {
 })
 
 describe("AssetGroupModule::AssetGroup::is_not_overfull", () => {
-    it("returns true for empty list", () => {
+    it("AssetGroupModule::AssetGroup::is_not_overfull #01 (returns true for empty list)", () => {
         const assets: AssetType[] = []
 
         strictEqual(
@@ -744,7 +744,7 @@ describe("AssetGroupModule::AssetGroup::is_not_overfull", () => {
         )
     })
 
-    it("returns true for full list", () => {
+    it("AssetGroupModule::AssetGroup::is_not_overfull #02 (returns true for full list)", () => {
         const assets: AssetType[] = []
 
         for (let i = 0; i < expectedMaxSize; i++) {
@@ -759,7 +759,7 @@ describe("AssetGroupModule::AssetGroup::is_not_overfull", () => {
         )
     })
 
-    it("returns false for list containing one more asset than the maximum", () => {
+    it("AssetGroupModule::AssetGroup::is_not_overfull #03 (returns false for list containing one more asset than the maximum)", () => {
         const assets: AssetType[] = []
 
         for (let i = 0; i < expectedMaxSize + 1; i++) {
@@ -776,7 +776,7 @@ describe("AssetGroupModule::AssetGroup::is_not_overfull", () => {
 })
 
 describe("AssetGroupModule::AssetGroup::nothing_spent", () => {
-    it("returns true for an unrelated tx", () => {
+    it("AssetGroupModule::AssetGroup::nothing_spent #01 (returns true for an unrelated tx)", () => {
         new ScriptContextBuilder().use((ctx) => {
             strictEqual(
                 nothing_spent.eval({
@@ -787,7 +787,7 @@ describe("AssetGroupModule::AssetGroup::nothing_spent", () => {
         })
     })
 
-    it("returns false if a single input is at the assets_validator address", () => {
+    it("AssetGroupModule::AssetGroup::nothing_spent #02 (returns false if a single input is at the assets_validator address)", () => {
         new ScriptContextBuilder()
             .addDummyInputs(7)
             .addAssetGroupInput()
@@ -797,7 +797,7 @@ describe("AssetGroupModule::AssetGroup::nothing_spent", () => {
             })
     })
 
-    it("returns true if an input is spent from an address with the same spending credential as the assets_validator, but a non-empty staking credential", () => {
+    it("AssetGroupModule::AssetGroup::nothing_spent #03 (returns true if an input is spent from an address with the same spending credential as the assets_validator, but a non-empty staking credential)", () => {
         const similarAddress = Address.fromHashes(
             false,
             contract.assets_validator.$hash,
@@ -828,7 +828,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                 scripts
             )
 
-            it("returns false", () => {
+            it("AssetGroupModule::search_for_asset_class #01 (returns false if not found)", () => {
                 configureContext().use((currentScript, ctx) => {
                     strictEqual(
                         search_for_asset_class.eval({
@@ -865,7 +865,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                 scripts
             )
 
-            it("returns true if found", () => {
+            it("AssetGroupModule::search_for_asset_class #02 (returns true if found)", () => {
                 configureContext().use((currentScript, ctx) => {
                     strictEqual(
                         search_for_asset_class.eval({
@@ -880,7 +880,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                 })
             })
 
-            it("throws an error if the pointer is out-of-range", () => {
+            it("AssetGroupModule::search_for_asset_class #03 (throws an error if the pointer is out-of-range)", () => {
                 configureContext().use((currentScript, ctx) => {
                     throws(() => {
                         search_for_asset_class.eval({
@@ -894,7 +894,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                 })
             })
 
-            it("throws an error if the expected asset group id doesn't match", () => {
+            it("AssetGroupModule::search_for_asset_class #04 (throws an error if the expected asset group id doesn't match)", () => {
                 configureContext().use((currentScript, ctx) => {
                     throws(() => {
                         search_for_asset_class.eval({
@@ -908,7 +908,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                 })
             })
 
-            it("throws an error if the asset group is at the wrong address", () => {
+            it("AssetGroupModule::search_for_asset_class #05 (throws an error if the asset group is at the wrong address)", () => {
                 configureContext({ address: Address.dummy(false) }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -945,7 +945,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                 scripts
             )
 
-            it("returns false if not found", () => {
+            it("AssetGroupModule::search_for_asset_class #06 (returns false if not found)", () => {
                 configureContext().use((currentScript, ctx) => {
                     strictEqual(
                         search_for_asset_class.eval({
@@ -998,7 +998,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                 scripts
             )
 
-            it("returns true if found in the second asset group", () => {
+            it("AssetGroupModule::search_for_asset_class #07 (returns true if found in the second asset group)", () => {
                 configureContext().use((currentScript, ctx) => {
                     strictEqual(
                         search_for_asset_class.eval({
@@ -1013,7 +1013,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                 })
             })
 
-            it("throws an error if found in the first asset group (which is error-free), but the second asset group doesn't have the expected id", () => {
+            it("AssetGroupModule::search_for_asset_class #08 (throws an error if found in the first asset group (which is error-free), but the second asset group doesn't have the expected id)", () => {
                 configureContext({ secondGroupId: 5 }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -1029,7 +1029,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                 )
             })
 
-            it("throws an error if found in the first asset group (which is error-free), but the second asset group isn't at the assets_validator address", () => {
+            it("AssetGroupModule::search_for_asset_class #09 (throws an error if found in the first asset group (which is error-free), but the second asset group isn't at the assets_validator address)", () => {
                 configureContext({
                     secondGroupAddress: Address.dummy(false)
                 }).use((currentScript, ctx) => {
@@ -1045,7 +1045,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                 })
             })
 
-            it("throws an error if found in the first asset group (which is error-free), but the second asset group doesn't contain the asset group token", () => {
+            it("AssetGroupModule::search_for_asset_class #10 (throws an error if found in the first asset group (which is error-free), but the second asset group doesn't contain the asset group token)", () => {
                 configureContext({ secondGroupToken: makeConfigToken() }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -1061,7 +1061,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                 )
             })
 
-            it("throws an error if found in the first asset group (which is error-free), but the second asset group pointer is out-of-range", () => {
+            it("AssetGroupModule::search_for_asset_class #11 (throws an error if found in the first asset group (which is error-free), but the second asset group pointer is out-of-range)", () => {
                 configureContext().use((currentScript, ctx) => {
                     throws(() => {
                         search_for_asset_class.eval({
@@ -1083,8 +1083,9 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
         const assets: AssetType[] = []
         const groupId = 0
 
-        const configureParentContext = () => {
+        const configureParentContext = (props?: {startTime?: number, endTime?: number}) => {
             return new ScriptContextBuilder()
+                .setTimeRange({start: props?.startTime, end: props?.endTime})
                 .addAssetGroupRef({ assets, id: groupId })
                 .redeemDummyTokenWithDvpPolicy()
         }
@@ -1095,7 +1096,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                 scripts
             )
 
-            it("throws an error because an oldest price timestamp can't be determined", () => {
+            it("AssetGroupModule::sum_total_asset_value #01 (throws an error if the validity time range isn't set)", () => {
                 configureContext().use((currentScript, ctx) => {
                     throws(() => {
                         sum_total_asset_value.eval({
@@ -1104,7 +1105,46 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                             group_ptrs: [0],
                             first_id: 0
                         })
-                    })
+                    }, /empty list in headList/)
+                })
+            })
+
+            it("AssetGroupModule::sum_total_asset_value #02 (throws an error if the validity time start isn't set)", () => {
+                configureContext({endTime: 1000}).use((currentScript, ctx) => {
+                    throws(() => {
+                        sum_total_asset_value.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            group_ptrs: [0],
+                            first_id: 0
+                        })
+                    }, /empty list in headList/)
+                })
+            })
+
+            it("AssetGroupModule::sum_total_asset_value #03 (throws an error if the validity time range end isn't set)", () => {
+                configureContext({startTime: 1000}).use((currentScript, ctx) => {
+                    throws(() => {
+                        sum_total_asset_value.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            group_ptrs: [0],
+                            first_id: 0
+                        })
+                    }, /empty list in headList/)
+                })
+            })
+
+            it("AssetGroupModule::sum_total_asset_value #04 (throws an error if the validity time range interval is too large)", () => {
+                configureContext({startTime: 1000, endTime: 90_000_000}).use((currentScript, ctx) => {
+                    throws(() => {
+                        sum_total_asset_value.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            group_ptrs: [0],
+                            first_id: 0
+                        })
+                    }, /validity time range too large/)
                 })
             })
         })
@@ -1122,7 +1162,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                 .redeemDummyTokenWithDvpPolicy()
 
             if (props?.setTimeRangeStart ?? true) {
-                scb.setTimeRange({start: Number.MAX_SAFE_INTEGER})
+                scb.setTimeRange({start: Number.MAX_SAFE_INTEGER, end: Number.MAX_SAFE_INTEGER})
             }
             
             return scb
@@ -1134,7 +1174,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                 scripts
             )
 
-            it("returns the price timestamp and lovelace value of the single asset", () => {
+            it("AssetGroupModule::sum_total_asset_value #05 (returns the price timestamp and lovelace value of the single asset)", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         sum_total_asset_value.eval({
@@ -1148,7 +1188,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                 })
             })
 
-            it("throws an error if the tx validity time range start isn't set", () => {
+            it("AssetGroupModule::sum_total_asset_value #06 (throws an error if the tx validity time range start isn't set)", () => {
                 configureContext({setTimeRangeStart: false}).use((currentScript, ctx) => {
                     throws(() => {
                         sum_total_asset_value.eval({
@@ -1157,7 +1197,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                             group_ptrs: [0],
                             first_id: 0
                         }),
-                        /asd/
+                        /empty list in headList/
                     })
                 })
             })
@@ -1184,7 +1224,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
 
         const configureParentContext = () => {
             return new ScriptContextBuilder()
-                .setTimeRange({start: Number.MAX_SAFE_INTEGER})
+                .setTimeRange({start: Number.MAX_SAFE_INTEGER, end: Number.MAX_SAFE_INTEGER})
                 .addAssetGroupRef({ assets: assets0, id: groupId0 })
                 .addDummyRefs(5)
                 .addAssetGroupRef({ assets: assets1, id: groupId1 })
@@ -1197,7 +1237,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                 scripts
             )
 
-            it("returns oldest timestamp and correct lovelace value for multiple assets", () => {
+            it("AssetGroupModule::sum_total_asset_value #07 (returns oldest timestamp and correct lovelace value for multiple assets)", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         sum_total_asset_value.eval({
@@ -1230,7 +1270,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
 
         const configureParentContext = () => {
             return new ScriptContextBuilder()
-                .setTimeRange({start: Number.MAX_SAFE_INTEGER})
+                .setTimeRange({start: Number.MAX_SAFE_INTEGER, end: Number.MAX_SAFE_INTEGER})
                 .addAssetGroupRef({ assets: assets0, id: groupId0 })
                 .addAssetGroupRef({ assets: assets1, id: groupId1 })
                 .addAssetGroupRef({ assets: assets2, id: groupId2 })
@@ -1243,7 +1283,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                 scripts
             )
 
-            it("returns the price timestamp and lovelace value of the single asset", () => {
+            it("AssetGroupModule::sum_total_asset_value #08 (returns the price timestamp and lovelace value of the single asset)", () => {
                 configureContext().use((currentScript, ctx) => {
                     deepEqual(
                         sum_total_asset_value.eval({
@@ -1312,7 +1352,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                 first_id: 0
             }
 
-            it("throws an error if one of the referenced asset groups is not at the assets_validator address", () => {
+            it("AssetGroupModule::sum_total_asset_value #09 (throws an error if one of the referenced asset groups is not at the assets_validator address)", () => {
                 configureContext({
                     thirdGroupAddress: Address.dummy(false)
                 }).use((currentScript, ctx) => {
@@ -1326,7 +1366,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                 })
             })
 
-            it("throws an error if one of the referenced asset groups doesn't have expected id", () => {
+            it("AssetGroupModule::sum_total_asset_value #10 (throws an error if one of the referenced asset groups doesn't have expected id)", () => {
                 configureContext({ secondGroupId: 3 }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -1340,7 +1380,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                 )
             })
 
-            it("throws an error if an additional pointer is included which is out-of-range", () => {
+            it("AssetGroupModule::sum_total_asset_value #11 (throws an error if an additional pointer is included which is out-of-range)", () => {
                 configureContext().use((currentScript, ctx) => {
                     throws(() => {
                         sum_total_asset_value.eval({
@@ -1354,7 +1394,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                 })
             })
 
-            it("throws an error if one of the pointers doesn't point to a related UTxO", () => {
+            it("AssetGroupModule::sum_total_asset_value #12 (throws an error if one of the pointers doesn't point to a related UTxO)", () => {
                 configureContext({ injectDummyRef: true }).use(
                     (currentScript, ctx) => {
                         throws(() => {
@@ -1368,7 +1408,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
                 )
             })
 
-            it("throws an error if one of the pointers doesn't point to an asset group", () => {
+            it("AssetGroupModule::sum_total_asset_value #13 (throws an error if one of the pointers doesn't point to an asset group)", () => {
                 configureContext({ injectConfigRef: true }).use(
                     (currentScript, ctx) => {
                         throws(() => {

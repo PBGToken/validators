@@ -48,7 +48,7 @@ const context = ContractContextBuilder.new()
         parameters: {
             "fund_policy::SEED_ID": SEED_ID.toUplcData(),
             "fund_policy::INITIAL_AGENT": INITIAL_AGENT.toUplcData(),
-            "fund_policy::INITIAL_CYCLE_PERIOD": new IntData(14*24*3600*1000),
+            "fund_policy::INITIAL_CYCLE_PERIOD": new IntData(365*24*3600*1000),
             "governance_delegate::GOV_KEYS": new ListData([
                 GOV_KEY_1.toUplcData(),
                 GOV_KEY_2.toUplcData(),

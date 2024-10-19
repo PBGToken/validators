@@ -153,6 +153,8 @@ func search_for_asset_class(asset_class: AssetClass, group_ptrs: []Int, first_id
  * Note: group_ptrs can be empty if the vault only contains ADA, which we can handle gracefully by using the tx validity time range start as the initial oldest timestamp in the fold
  */
 func sum_total_asset_value(group_ptrs: []Int, first_id: Int) -> (Time, Int) {
+    assert(tx.time_range.end - tx.time_range.start < Duration::DAY, "validity time range too large");
+    
     ref_inputs = tx.ref_inputs;
 
     (_, tp: Time, dV: Int) = group_ptrs.fold3((expected_id: Int, tp: Time, dV: Int, ptr: Int) -> (Int, Time, Int) {

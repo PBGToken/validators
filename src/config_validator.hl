@@ -33,6 +33,7 @@ func main(_: Config, _) -> Bool {
     old_state = config0.state;
     new_state = config1.state;
 
+    assert(tx.time_range.end - tx.time_range.start < Duration::DAY, "validity time range too large");
     (old_state, new_state).switch{
         (Idle, changing: Changing) => {
             assert(witnessed_by_governance(), "not witnessed by governance");

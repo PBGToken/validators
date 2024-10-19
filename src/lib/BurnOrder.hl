@@ -84,6 +84,7 @@ struct BurnOrder {
         self.diff().get(Tokens::dvp_token)
     }
 
+    // only used for checks resulting in booleans, so tx.time_range.end doesn't need to bounded by tx.time_range.start + Duration::DAY
     func price_expiry(self) -> Time {
         tx.time_range.end - self.max_price_age
     }

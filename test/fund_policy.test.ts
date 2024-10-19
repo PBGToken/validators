@@ -384,34 +384,67 @@ describe("func_policy::validate_initial_price", () => {
     })
 })
 
-function makeInitialSupply(props?: { initialTick?: number }) {
+function makeInitialSupply(props?: { 
+    initialTick?: number
+    managementFeeTimestmap?: number
+    successFeeStart?: number 
+    nTokens?: number
+    nVouchers?: number
+    lastVoucherId?: number
+    nLovelace?: number
+    successFeePeriodId?: number
+    successFeePeriod?: number
+    successFeeStartPrice?: [number, number]
+}) {
     return makeSupply({
         tick: props?.initialTick ?? 0,
-        nTokens: 0,
-        nVouchers: 0,
-        lastVoucherId: 0,
-        nLovelace: 0,
-        managementFeeTimestamp: 0,
+        nTokens: props?.nTokens ?? 0,
+        nVouchers: props?.nVouchers ?? 0,
+        lastVoucherId: props?.lastVoucherId ?? 0,
+        nLovelace: props?.nLovelace ?? 0,
+        managementFeeTimestamp: props?.managementFeeTimestmap ?? 0,
         successFee: {
-            periodId: 0,
-            start_time: 0,
-            period: 2 * 7 * 24 * 60 * 60 * 1000
+            periodId: props?.successFeePeriodId ?? 0,
+            start_time: props?.successFeeStart ?? 0,
+            period: props?.successFeePeriod ?? 365 * 24 * 60 * 60 * 1000
         },
-        startPrice: [100, 1]
+        startPrice: props?.successFeeStartPrice ?? [100, 1]
     })
 }
 
 describe("fund_policy::validate_initial_supply", () => {
     const configureContext = (props?: {
         initialTick?: number
+        nTokens?: number
+        nVouchers?: number
+        lastVoucherId?: number
         token?: Assets
+        nLovelace?: number 
+        managementFeeTimestamp?: number
+        successFeeTimestamp?: number
+        successFeePeriodId?: number
+        successFeePeriod?: number
+        successFeeStartPrice?: [number, number]
     }) => {
-        const supply = makeInitialSupply({ initialTick: props?.initialTick })
-
-        return new ScriptContextBuilder().addSupplyOutput({
-            supply,
-            token: props?.token
+        const supply = makeInitialSupply({ 
+            initialTick: props?.initialTick, 
+            managementFeeTimestmap: props?.managementFeeTimestamp ?? 124, 
+            successFeeStart: props?.successFeeTimestamp ?? 124,
+            nTokens: props?.nTokens ?? 0,
+            nVouchers: props?.nVouchers ?? 0,
+            lastVoucherId: props?.lastVoucherId ?? 0,
+            nLovelace: props?.nLovelace ?? 0,
+            successFeePeriodId: props?.successFeePeriodId ?? 0,
+            successFeePeriod: props?.successFeePeriod ?? 365*24*3600*1000,
+            successFeeStartPrice: props?.successFeeStartPrice ?? [100, 1]
         })
+
+        return new ScriptContextBuilder()
+            .setTimeRange({start: 100, end: 123})
+            .addSupplyOutput({
+                supply,
+                token: props?.token
+            })
     }
 
     it("fund_policy::validate_initial_supply #01 (returns true if the supply output datum is correct)", () => {
@@ -424,7 +457,7 @@ describe("fund_policy::validate_initial_supply", () => {
         configureContext({ token: makeDvpTokens(1) }).use((ctx) => {
             throws(() => {
                 validate_initial_supply.eval({ $scriptContext: ctx })
-            })
+            }, /doesn't contain only the supply token/)
         })
     })
 
@@ -432,9 +465,145 @@ describe("fund_policy::validate_initial_supply", () => {
         configureContext({ initialTick: 1 }).use((ctx) => {
             throws(() => {
                 validate_initial_supply.eval({ $scriptContext: ctx })
-            }, /unexpected initial supply datum/)
+            }, /supply tick not correctly set/)
         })
     })
+
+    it("fund_policy::validate_initial_supply #04 (throws an error if the validity time range start isn't set)", () => {
+        configureContext().setTimeRange({start:undefined})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /empty list in headList/)
+        })
+    })
+
+    it("fund_policy::validate_initial_supply #05 (throws an error if the validity time range end isn't set)", () => {
+        configureContext().setTimeRange({end:undefined})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /empty list in headList/)
+        })
+    })
+
+    it("fund_policy::validate_initial_supply #06 (throws an error if the validity time range is too large)", () => {
+        configureContext().setTimeRange({start: 0, end:90_000_000})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /validity time range is too large/)
+        })
+    })
+
+    it("fund_policy::validate_initial_supply #07 (throws an error if the circulating token supply isn't zero)", () => {
+        configureContext({nTokens: 1})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /circulating supply not set to 0/)
+        })
+    })
+
+    it("fund_policy::validate_initial_supply #08 (throws an error if the circulating token supply isn't zero)", () => {
+        configureContext({nTokens: 1})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /circulating supply not set to 0/)
+        })
+    })
+
+    it("fund_policy::validate_initial_supply #09 (throws an error if the voucher count isn't zero)", () => {
+        configureContext({nVouchers: 1})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /voucher count not set to 0/)
+        })
+    })
+
+    it("fund_policy::validate_initial_supply #10 (throws an error if the last_voucher_id isn't zero)", () => {
+        configureContext({lastVoucherId: 1})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /last_voucher_id not set to 0/)
+        })
+    })
+
+    it("fund_policy::validate_initial_supply #11 (throws an error if the number of lovelace isn't zero)", () => {
+        configureContext({nLovelace: 1})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /n_lovelace not set to 0/)
+        })
+    })
+
+    it("fund policy::validate_initial_supply #12 (throws an error if the management fee timestamp doesn't lie in the future)", () => {
+        configureContext({managementFeeTimestamp: 122})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /management fee timestamp lies in the past/)
+        })   
+    })
+
+    it("fund policy::validate_initial_supply #13 (throws an error if the management fee timestamp lies too far in the future)", () => {
+        configureContext({managementFeeTimestamp: 90_000_000})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /management fee timestamp lies too far in the future/)
+        })   
+    })
+
+    it("fund_policy::validate_initial_supply #14 (throws an error if the success fee cycle period id isn't zero)", () => {
+        configureContext({successFeePeriodId: 1})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /cycle id not set to 0/)
+        })
+    })
+
+    it("fund policy::validate_initial_supply #15 (throws an error if the success fee cycle start timestamp doesn't lie in the future)", () => {
+        configureContext({successFeeTimestamp: 122})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /cycle start time lies in the past/)
+        })   
+    })
+
+    it("fund policy::validate_initial_supply #16 (throws an error if the success fee cycle start timestamp lies too far in the future)", () => {
+        configureContext({successFeeTimestamp: 90_000_000})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /success fee timestamp lies too far in the future/)
+        })   
+    })
+    
+    it("fund_policy::validate_initial_supply #17 (throws an error if the success fee cycle period isn't set to 1 year)", () => {
+        configureContext({successFeePeriod: 366*24*3600*1000})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /cycle period not correctly set/)
+        })
+    })
+
+    it("fund_policy::validate_initial_supply #18 (throws an error if the success fee start price isn't set to 100/1)", () => {
+        configureContext({successFeeStartPrice: [1000, 10]})
+        .use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /cycle price not correctly set/)
+        })
+    })
+
 })
 
 describe("fund_policy::validate_initialization", () => {
@@ -449,7 +618,7 @@ describe("fund_policy::validate_initialization", () => {
         const config = makeInitialConfig({ relMintFee: props?.relMintFee })
         const portfolio = makeInitialPortfolio({ nGroups: props?.nGroups })
         const price = makeInitialPrice({ timestamp: props?.priceTimestamp })
-        const supply = makeInitialSupply({ initialTick: props?.initialTick })
+        const supply = makeInitialSupply({ initialTick: props?.initialTick, managementFeeTimestmap: 124, successFeeStart: 125 })
 
         const metadataToken = makeMetadataToken(1)
         const configToken = makeConfigToken(1)
@@ -463,6 +632,7 @@ describe("fund_policy::validate_initialization", () => {
             .mint({ assets: portfolioToken })
             .mint({ assets: priceToken })
             .mint({ assets: supplyToken })
+            .setTimeRange({start: 100, end: 123})
             .addSupplyOutput({ supply, token: supplyToken })
             .addPriceOutput({ price, token: priceToken })
             .addPortfolioOutput({ portfolio, token: portfolioToken })
@@ -513,7 +683,7 @@ describe("fund_policy::validate_initialization", () => {
         configureContext({ initialTick: -1 }).use((ctx) => {
             throws(() => {
                 validate_initialization.eval({ $scriptContext: ctx })
-            }, /unexpected initial supply datum/)
+            }, /supply tick not correctly set/)
         })
     })
 })
@@ -731,7 +901,7 @@ describe("fund_policy::main", () => {
             const config = makeInitialConfig()
             const portfolio = makeInitialPortfolio()
             const price = makeInitialPrice()
-            const supply = makeInitialSupply()
+            const supply = makeInitialSupply({managementFeeTimestmap: 124, successFeeStart: 124})
 
             const metadataToken = makeMetadataToken(1)
             const configToken = makeConfigToken(1)
@@ -740,6 +910,7 @@ describe("fund_policy::main", () => {
             const supplyToken = makeSupplyToken(1)
 
             return new ScriptContextBuilder()
+                .setTimeRange({start: 100, end: 123})
                 .mint({ assets: metadataToken, redeemer })
                 .mint({ assets: configToken })
                 .mint({ assets: portfolioToken })

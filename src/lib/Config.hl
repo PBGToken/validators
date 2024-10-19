@@ -247,6 +247,7 @@ func deduct_mint_fee(n: Int) -> Int {
     config.fees.mint_fee.deduct(n)
 }
 
+// only used for checks resulting in booleans, so tx.time_range.end doesn't need to bounded by tx.time_range.start + Duration::DAY
 func price_expiry() -> Time {
     (config, _) = Config::find();
 
