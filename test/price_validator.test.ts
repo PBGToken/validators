@@ -2,7 +2,7 @@ import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { IntLike } from "@helios-lang/codec-utils"
 import { AssetClass, PubKeyHash } from "@helios-lang/ledger"
-import { IntData } from "@helios-lang/uplc"
+import { IntData, ListData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
 import {
@@ -19,6 +19,7 @@ const { main } = contract.price_validator
 
 describe("price_validator::main", () => {
     const price = makePrice({ ratio: [1000, 1000], timestamp: 0 })
+    const price0 = makePrice( {ratio : [100, 1], timestamp: 0})
 
     const configureContext = (props?: {
         nGroups?: IntLike
@@ -26,6 +27,7 @@ describe("price_validator::main", () => {
         supplyTick?: IntLike
         reductionMode?: PortfolioReductionModeType
         signingAgent?: PubKeyHash
+        nTokens?: IntLike
     }) => {
         const portfolio = makePortfolio({
             nGroups: 1,
@@ -45,7 +47,7 @@ describe("price_validator::main", () => {
 
         const supply = makeSupply({
             tick: props?.supplyTick,
-            nTokens: 1000
+            nTokens: props?.nTokens ?? 1000
         })
 
         const agent = PubKeyHash.dummy(10)
@@ -62,6 +64,7 @@ describe("price_validator::main", () => {
 
     const defaultTestArgs = {
         $datum: price,
+        price0,
         _: new IntData(0)
     }
 
@@ -91,8 +94,7 @@ describe("price_validator::main", () => {
             throws(() => {
                 main.eval({
                     $scriptContext: ctx,
-                    ...defaultTestArgs,
-                    $datum: price
+                    ...defaultTestArgs
                 })
             }, /price denominator not equal to token circulating supply/)
         })
@@ -105,8 +107,7 @@ describe("price_validator::main", () => {
             throws(() => {
                 main.eval({
                     $scriptContext: ctx,
-                    ...defaultTestArgs,
-                    $datum: price
+                    ...defaultTestArgs
                 })
             }, /price timestamp not equal to oldest timestamp from reduction/)
         })
@@ -142,6 +143,24 @@ describe("price_validator::main", () => {
                 main.eval({ $scriptContext: ctx, ...defaultTestArgs })
             }, /unexpected tick/)
         })
+    })
+
+    it("price_validator::main #08 (throws an error if the number of tokens is zero and the price ratio isn't copied from the previous datum)", () => {
+        configureContext({nTokens: 0}).use((ctx) => {
+            throws(() => {
+                main.eval({$scriptContext: ctx, ...defaultTestArgs})
+            }, /price can't change if n_tokens is zero/)
+        })
+    })
+
+    it("price_validator::main #09 (succeeds if the number of tokens is zero and the price doesn't change", () => {
+        configureContext({nTokens: 0, price: makePrice({ratio: price0.ratio, timestamp: price.timestamp})}).use(ctx => {
+            strictEqual(
+                main.eval({$scriptContext: ctx, ...defaultTestArgs}),
+                undefined
+            )
+        })
+        
     })
 })
 

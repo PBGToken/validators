@@ -44,7 +44,6 @@ func validate_remove_asset_group(portfolio0: Portfolio, portfolio1: Portfolio, b
     assert(removed_group.is_empty(), "the removed asset group isn't empty")
 }
 
-
 func validate_start_reduction(
     ig1: Int, kp1: Int, mode1: PortfolioReductionMode,
     group_ptrs: []Int,
@@ -66,6 +65,9 @@ func validate_start_reduction(
             assert(tp1 == tp_oldest, "timestamp in reduction not equal to oldest timestamp")
         },
         Exists{asset_class, found1} => {
+            assert(asset_class.mph.bytes.length == 28, "asset class mph isn't 28 bytes long");
+            assert(asset_class.token_name.length <= 32, "asset class token name too long");
+
             found = search_for_asset_class(asset_class, group_ptrs, 1);
 
             if (found) {
@@ -77,6 +79,9 @@ func validate_start_reduction(
             }         
         },
         DoesNotExist{asset_class} => {
+            assert(asset_class.mph.bytes.length == 28, "asset class mph isn't 28 bytes long");
+            assert(asset_class.token_name.length <= 32, "asset class token name too long");
+
             found = search_for_asset_class(asset_class, group_ptrs, 1);
 
             assert(!found, "asset class found");
@@ -159,6 +164,7 @@ func validate_remove_asset_class(config0: Config, config_is_spent: Bool) -> () {
 func validate_update_prices(portfolio0: Portfolio) -> () {
     assert(portfolio0.reduction.is_idle(), "portfolio0 state not idle");
     assert(witnessed_by_oracle(), "not witnessed by oracle");
+    assert(tx.time_range.end - tx.time_range.start < Duration::DAY, "validity time range interval too large");
     tx.inputs.for_each((input: TxInput) -> {
         if (input.address == Addresses::assets) {
             id = Tokens::parse_assets(input);
@@ -172,10 +178,13 @@ func validate_update_prices(portfolio0: Portfolio) -> () {
             // group0 and group1 must have same length, zip() doesn't assure this
             assert(assets0.length == assets1.length, "number of assets in group changed");
 
-            // TODO: can the same-length-check be incorporated cheaply in zip() ?
             assets0.zip(assets1).for_each((asset0: Asset, asset1: Asset) -> {
                 assert(asset1.asset_class == asset0.asset_class, "asset class changed");
-                assert(asset1.count == asset0.count, "asset count changed")
+                assert(asset1.count == asset0.count, "asset count changed");
+                assert(asset1.price.top >= 0, "asset price numerator is negative"); // allowed to be zero for extreme market situations, but can't be negative
+                // denominator check isn't necessary because it is already being done by AssetGroup::find_output()
+                assert(asset1.price_timestamp > asset0.price_timestamp, "asset price timestamp didn't increase");
+                assert(asset1.price_timestamp < tx.time_range.end, "asset price timestamp lies too far in the future") // we can't used `< tx.time_range.start` because for some on-demand price feeds the price stamp might lie after tx.time_range.start
 
                 // priceTimestamp remains unbound here (responsability of the oracle)
             })
