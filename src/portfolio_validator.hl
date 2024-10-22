@@ -183,10 +183,8 @@ func validate_update_prices(portfolio0: Portfolio) -> () {
                 assert(asset1.count == asset0.count, "asset count changed");
                 assert(asset1.price.top >= 0, "asset price numerator is negative"); // allowed to be zero for extreme market situations, but can't be negative
                 // denominator check isn't necessary because it is already being done by AssetGroup::find_output()
-                assert(asset1.price_timestamp > asset0.price_timestamp, "asset price timestamp didn't increase");
+                assert(asset1.price_timestamp >= asset0.price_timestamp, "asset price timestamp can't decrease");
                 assert(asset1.price_timestamp < tx.time_range.end, "asset price timestamp lies too far in the future") // we can't used `< tx.time_range.start` because for some on-demand price feeds the price stamp might lie after tx.time_range.start
-
-                // priceTimestamp remains unbound here (responsability of the oracle)
             })
         } else {
             print("ok")

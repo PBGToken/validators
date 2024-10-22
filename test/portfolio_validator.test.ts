@@ -1850,11 +1850,23 @@ describe("portfolio_validator::validate_update_prices", () => {
                         $scriptContext: ctx,
                         portfolio0: portfolio
                     })
-                }, /asset price timestamp didn't increase/)
+                }, /asset price timestamp can't decrease/)
             })
     })
 
-    it("portfolio_validator::validate_update_prices #11 (throws an error if a price timestamp is too far in the future)", () => {
+    it("portfolio_validator::validate_update_prices #11 (succeeds if a price timestamp stays the same)", () => {
+        configureContext({secondAssetOutputTimestamp: 123})
+            .use((ctx) => {
+                strictEqual(
+                    validate_update_prices.eval({
+                        $scriptContext: ctx,
+                        portfolio0: portfolio
+                    })
+                , undefined)
+            })
+    })
+
+    it("portfolio_validator::validate_update_prices #12 (throws an error if a price timestamp is too far in the future)", () => {
         configureContext({secondAssetOutputTimestamp: 203})
             .use((ctx) => {
                 throws(() => {
@@ -1866,7 +1878,7 @@ describe("portfolio_validator::validate_update_prices", () => {
             })
     })
 
-    it("portfolio_validator::validate_update_prices #12 (throws an error if the price denominator is 0)", () => {
+    it("portfolio_validator::validate_update_prices #13 (throws an error if the price denominator is 0)", () => {
         configureContext({secondAssetOutputPrice: [200, 0]})
             .use((ctx) => {
                 throws(() => {
@@ -1878,7 +1890,7 @@ describe("portfolio_validator::validate_update_prices", () => {
             })
     })
 
-    it("portfolio_validator::validate_update_prices #13 (throws an error if the price denominator is negative)", () => {
+    it("portfolio_validator::validate_update_prices #14 (throws an error if the price denominator is negative)", () => {
         configureContext({secondAssetOutputPrice: [200, -1]})
             .use((ctx) => {
                 throws(() => {
@@ -1890,7 +1902,7 @@ describe("portfolio_validator::validate_update_prices", () => {
             })
     })
 
-    it("portfolio_validator::validate_update_prices #14 (throws an error if the price numerator is negative)", () => {
+    it("portfolio_validator::validate_update_prices #15 (throws an error if the price numerator is negative)", () => {
         configureContext({secondAssetOutputPrice: [-200, 1]})
             .use((ctx) => {
                 throws(() => {
@@ -1902,7 +1914,7 @@ describe("portfolio_validator::validate_update_prices", () => {
             })
     })
 
-    it("portfolio_validator::validate_update_prices #15 (succeeds if the price numerator is 0)", () => {
+    it("portfolio_validator::validate_update_prices #16 (succeeds if the price numerator is 0)", () => {
         configureContext({secondAssetOutputPrice: [0, 1]})
             .use((ctx) => {
                 strictEqual(
