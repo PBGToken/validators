@@ -108,7 +108,7 @@ func validate_continue_reduction(
 
             (tp_oldest, dV) = sum_total_asset_value(group_ptrs, next_id);
 
-            assert(V1 == V0 + dV, "wrong total asset value sum, expected" + V0.show() + " + " + dV.show() + ", got " + V1.show());
+            assert(V1 == V0 + dV, "wrong total asset value sum, expected " + V0.show() + " + " + dV.show() + ", got " + V1.show());
             assert(kp1 == supply.tick, "supply tick changed since start of reduction");
             assert(ig1 == ig0 + n_groups, "iteration index not incremented by the number of groups iterated over");
             assert(tp1 == if (tp_oldest < tp0) {tp_oldest} else {tp0}, "reduction timestamp not equal to oldest timestamp")

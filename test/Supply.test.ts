@@ -14,6 +14,7 @@ const {
     "Supply::find_ref": find_ref,
     "Supply::find_thread": find_thread,
     "Supply::calc_management_fee_dilution": calc_management_fee_dilution,
+    "Supply::calc_success_fee_dilution_internal": calc_success_fee_dilution_internal,
     "Supply::calc_success_fee_dilution": calc_success_fee_dilution,
     "Supply::is_successful": is_successful,
     "Supply::period_end": period_end,
@@ -523,8 +524,79 @@ describe("Supply::calc_management_fee_dilution", () => {
     })
 })
 
+
+describe("Supply::calc_success_fee_dilution_internal", () => {
+    it("Supply::calc_success_fee_dilution_internal #01 (whitepaper example)", () => {
+        const config = makeConfig({
+            successFee: {
+                c0: 0,
+                steps: [{ sigma: 1.05, c: 0.3 }]
+            }
+        })
+
+        const supply = makeSupply({
+            startPrice: [100, 1]
+        })
+
+        // in the whitepaper example this number is 98.901099, which is the correcly rounded number
+        // but the on-chain math rounds down
+        strictEqual(
+            calc_success_fee_dilution_internal.eval({
+                self: supply,
+                end_price: [150, 1],
+                success_fee: config.fees.success_fee
+            }),
+            98_901_098n
+        )
+    })
+
+    it("Supply::calc_success_fee_dilution_internal #02 (0 fee gives 0 dilution)", () => {
+        const config = makeConfig({
+            successFee: {
+                c0: 0,
+                steps: []
+            }
+        })
+
+        const supply = makeSupply({
+            startPrice: [100, 1]
+        })
+
+        strictEqual(
+            calc_success_fee_dilution_internal.eval({
+                self: supply,
+                end_price: [150, 1],
+                success_fee: config.fees.success_fee
+            }),
+            0n
+        )
+    })
+
+    it("Supply::calc_success_fee_dilution_internal #03 (0 success gives 0 dilution)", () => {
+        const config = makeConfig({
+            successFee: {
+                c0: 0,
+                steps: [{ sigma: 1.05, c: 0.3 }]
+            }
+        })
+
+        const supply = makeSupply({
+            startPrice: [100, 1]
+        })
+
+        strictEqual(
+            calc_success_fee_dilution_internal.eval({
+                self: supply,
+                end_price: [90, 1],
+                success_fee: config.fees.success_fee
+            }),
+            0n
+        )
+    })
+})
+
 describe("Supply::calc_success_fee_dilution", () => {
-    it("whitepaper example", () => {
+    it("Supply::calc_success_fee_dilution #01 (whitepaper example)", () => {
         const config = makeConfig({
             successFee: {
                 c0: 0,
@@ -560,7 +632,7 @@ describe("Supply::calc_success_fee_dilution", () => {
             })
     })
 
-    it("0 fee gives 0 dilution", () => {
+    it("Supply::calc_success_fee_dilution #02 (0 fee gives 0 dilution)", () => {
         const config = makeConfig({
             successFee: {
                 c0: 0,
@@ -594,7 +666,7 @@ describe("Supply::calc_success_fee_dilution", () => {
             })
     })
 
-    it("0 success gives 0 dilution", () => {
+    it("Supply::calc_success_fee_dilution #03 (0 success gives 0 dilution)", () => {
         const config = makeConfig({
             successFee: {
                 c0: 0,
