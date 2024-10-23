@@ -62,6 +62,7 @@ func diff() -> Value {
 func diff_lovelace(ptrs: []AssetPtr) -> Int {
     d = diff();
 
+    // TODO: separate price_expiry() for swap txs?
     sum_lovelace(d, tx.inputs, ptrs, price_expiry())
 }
 
