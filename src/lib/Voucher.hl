@@ -43,11 +43,13 @@ struct Voucher {
         output.datum.inline.as_strictly[Voucher]
     }
 
-    func find_return(self) -> TxOutput {
-        tx.outputs.find((output: TxOutput) -> {
-            output.address == self.return_address
-            && output.datum.inline == self.return_datum
-        })
+    func find_return(self, ptr: Int) -> TxOutput {
+        output = tx.outputs.get(ptr);
+
+        assert(output.address == self.return_address, "unexpected voucher return address");
+        assert(output.datum.inline == self.return_datum, "unexpected voucher return datum");
+
+        output
     }
 }
 

@@ -13,14 +13,15 @@ import { Voucher } from VoucherModule
  * Each voucher is also validated
  * Each spent voucher ref token
  */
-func validate_burned_vouchers(reim: Reimbursement, period_id: Int) -> (Int, Int) {
+func validate_burned_vouchers(reim: Reimbursement, period_id: Int, voucher_output_ptrs: []Int) -> (Int, Int) {
     config = Config::find_ref();
     minted_tokens = Tokens::get_minted();
     main_phi_alpha_ratio = reim.calc_phi_alpha_ratio();
 
-    tx.inputs.fold2((n_vouchers_burned: Int, n_tokens_reimbursed: Int, input: TxInput) -> (Int, Int) {
+    (n_vouchers_burned, n_tokens_reimbursed, _) = tx.inputs.fold3((n_vouchers_burned: Int, n_tokens_reimbursed: Int, voucher_output_ptrs: []Int, input: TxInput) -> (Int, Int, []Int) {
         if (input.address == Addresses::voucher) {
             id = Tokens::parse_voucher_ref(input);
+            ptr = voucher_output_ptrs.head;
 
             assert(minted_tokens.get(TokenNames::voucher_ref(id)) == -1, "voucher ref not burned");
 
@@ -34,7 +35,7 @@ func validate_burned_vouchers(reim: Reimbursement, period_id: Int) -> (Int, Int)
 
             // the reimbursement is only necessary if it is more than a certain amount of tokens
             if (expected_reimbursed_tokens >= config.fees.success_fee.min_reimbursement) {
-                return = voucher.find_return();
+                return = voucher.find_return(ptr);
 
                 // avoid token dust attack
                 //   for which it is sufficient to check that returned value only contains a DVP policy or ADA
@@ -49,24 +50,28 @@ func validate_burned_vouchers(reim: Reimbursement, period_id: Int) -> (Int, Int)
     
                 (
                     n_vouchers_burned + 1,
-                    n_tokens_reimbursed + expected_reimbursed_tokens
+                    n_tokens_reimbursed + expected_reimbursed_tokens,
+                    voucher_output_ptrs.tail
                 )
             } else {
                 (
                     n_vouchers_burned + 1,
-                    n_tokens_reimbursed
+                    n_tokens_reimbursed,
+                    voucher_output_ptrs.tail
                 )
             }
         } else {
-            (n_vouchers_burned, n_tokens_reimbursed)
+            (n_vouchers_burned, n_tokens_reimbursed, voucher_output_ptrs)
         }
-    }, 0, 0)
+    }, 0, 0, voucher_output_ptrs);
+
+    (n_vouchers_burned, n_tokens_reimbursed)
 }
 
-func main(_: Reimbursement, _) -> Bool {
+func main(_: Reimbursement, voucher_output_ptrs: []Int) -> Bool {
     (id, reim0, n0) = Reimbursement::find_input();
     
-    (n_vouchers_burned, n_tokens_reimbursed) = validate_burned_vouchers(reim0, id);
+    (n_vouchers_burned, n_tokens_reimbursed) = validate_burned_vouchers(reim0, id, voucher_output_ptrs);
 
     assert(signed_by_agent(), "not signed by agent");
     if (n_vouchers_burned >= reim0.n_remaining_vouchers) {

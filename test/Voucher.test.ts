@@ -290,10 +290,15 @@ describe("VoucherModule::Voucher::find_return", () => {
             )
     }
 
-    it("VoucherModule::Voucher::find_return #01 (returns the output matching the address and datum)", () => {
+    const defaultTestArgs = {
+        self: voucher,
+        ptr: 10
+
+    }
+    it("VoucherModule::Voucher::find_return #01 (returns the output at the given index, matching the address and datum)", () => {
         configureContext().use((ctx) => {
             const actual = find_return.eval({
-                self: voucher,
+                ...defaultTestArgs,
                 $scriptContext: ctx
             })
 
@@ -305,21 +310,44 @@ describe("VoucherModule::Voucher::find_return", () => {
         configureContext({ datum: null }).use((ctx) => {
             throws(() => {
                 find_return.eval({
-                    self: voucher,
+                    ...defaultTestArgs,
                     $scriptContext: ctx
                 })
-            })
+            }, /not an inline datum/)
         })
     })
 
-    it("VoucherModule::Voucher::find_return #03 (throws an error if the voucher return output isn't at the requested address)", () => {
+    it("VoucherModule::Voucher::find_return #03 (throws an error if the voucher return output has the wrong datum)", () => {
+        configureContext({ datum: new IntData(1) }).use((ctx) => {
+            throws(() => {
+                find_return.eval({
+                    ...defaultTestArgs,
+                    $scriptContext: ctx
+                })
+            }, /unexpected voucher return datum/)
+        })
+    })
+
+    it("VoucherModule::Voucher::find_return #04 (throws an error if the voucher return output isn't at the requested address)", () => {
         configureContext({ address: Address.dummy(false, 6) }).use((ctx) => {
             throws(() => {
                 find_return.eval({
-                    self: voucher,
+                    ...defaultTestArgs,
                     $scriptContext: ctx
                 })
-            })
+            }, /unexpected voucher return address/)
+        })
+    })
+
+    it("VoucherModule::Voucher::find_return #05 (throws an error if the output at the given index isn't a voucher)", () => {
+        configureContext().use((ctx) => {
+            throws(() => {
+                find_return.eval({
+                    ...defaultTestArgs,
+                    ptr: 9,
+                    $scriptContext: ctx
+                })
+            }, /unexpected voucher return address/)
         })
     })
 })

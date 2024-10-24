@@ -76,7 +76,6 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
             const expectedReim2 = 190285
 
             return new ScriptContextBuilder()
-
                 .addReimbursementInput({
                     id: periodId,
                     reimbursement,
@@ -115,13 +114,18 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                 .addConfigRef()
         }
 
+        const defaultTestArgs = {
+            reim: reimbursement,
+            period_id: periodId,
+            voucher_output_ptrs: [0, 1, 2]
+        }
+
         it("reimbursement_validator::validate_burned_vouchers #01 (returns the number of vouchers burned and the total number of tokens reimbursed)", () => {
             configureContext().use((ctx) => {
                 deepEqual(
                     validate_burned_vouchers.eval({
-                        $scriptContext: ctx,
-                        reim: reimbursement,
-                        period_id: periodId
+                        ...defaultTestArgs,
+                        $scriptContext: ctx
                     }),
                     [3n, 50153n + 123946n + 190285n]
                 )
@@ -142,60 +146,92 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                 .use((ctx) => {
                     deepEqual(
                         validate_burned_vouchers.eval({
-                            $scriptContext: ctx,
-                            reim: reimbursement,
-                            period_id: periodId
+                            ...defaultTestArgs,
+                            voucher_output_ptrs: [0,1,2,-1], // dummy ptrs are needed for voucher that are so small they don't require reimbursement
+                            $scriptContext: ctx
                         }),
                         [4n, 50153n + 123946n + 190285n]
                     )
                 })
         })
 
-        it("reimbursement_validator::validate_burned_vouchers #03 (throws an error if one of the vouchers is burned more than once)", () => {
+        it("reimbursement_validator::validate_burned_vouchers #03 (throws an error if an pointer is missing for a small voucher that doens't require reimbursement)", () => {
+            configureContext()
+                .addVoucherInput({
+                    id: 3,
+                    voucher: makeVoucher({
+                        periodId,
+                        price: [100, 1],
+                        tokens: 100
+                    })
+                })
+                .mint({ assets: makeVoucherRefToken(3, -1) })
+                .use((ctx) => {
+                    throws(() => {
+                        validate_burned_vouchers.eval({
+                            ...defaultTestArgs,
+                            voucher_output_ptrs: [0,1,2], // dummy ptrs are needed for voucher that are so small they don't require reimbursement
+                            $scriptContext: ctx
+                        })
+                    }, /empty list in headList/)
+                })
+        })
+
+        it("reimbursement_validator::validate_burned_vouchers #04 (throws an error if one of the vouchers is burned more than once)", () => {
             configureContext({ nThirdVouchersBurned: 2 }).use((ctx) => {
                 throws(() => {
                     validate_burned_vouchers.eval({
+                        ...defaultTestArgs,
                         $scriptContext: ctx,
-                        reim: reimbursement,
-                        period_id: periodId
                     })
                 }, /voucher ref not burned/)
             })
         })
 
-        it("reimbursement_validator::validate_burned_vouchers #04 (throws an error if one of the vouchers isn't actually burned)", () => {
+        it("reimbursement_validator::validate_burned_vouchers #05 (throws an error if one of the vouchers isn't actually burned)", () => {
             configureContext({ thirdVoucherToken: null }).use((ctx) => {
                 throws(() => {
                     validate_burned_vouchers.eval({
-                        $scriptContext: ctx,
-                        reim: reimbursement,
-                        period_id: periodId
+                        ...defaultTestArgs,
+                        $scriptContext: ctx
                     })
                 }, /key not found/)
             })
         })
 
-        it("reimbursement_validator::validate_burned_vouchers #05 (throws an error if no voucher return found)", () => {
+        it("reimbursement_validator::validate_burned_vouchers #06 (throws an error if a voucher datum doesn't match)", () => {
             configureContext({ thirdReturnDatum: new ByteArrayData([]) }).use(
                 (ctx) => {
                     throws(() => {
                         validate_burned_vouchers.eval({
-                            $scriptContext: ctx,
-                            reim: reimbursement,
-                            period_id: periodId
+                            ...defaultTestArgs,
+                            $scriptContext: ctx
                         })
-                    }, /not found/)
+                    }, /unexpected voucher return datum/)
                 }
             )
         })
 
-        it("reimbursement_validator::validate_burned_vouchers #06 (throws an error if one of the vouchers is from another period)", () => {
+        it("reimbursement_validator::validate_burned_vouchers #07 (throws an error if the pointers are in the wrong order)", () => {
+            configureContext({ thirdReturnDatum: new ByteArrayData([]) }).use(
+                (ctx) => {
+                    throws(() => {
+                        validate_burned_vouchers.eval({
+                            ...defaultTestArgs,
+                            voucher_output_ptrs: [2,1,0],
+                            $scriptContext: ctx
+                        })
+                    }, /unexpected voucher return address/)
+                }
+            )
+        })
+
+        it("reimbursement_validator::validate_burned_vouchers #08 (throws an error if one of the vouchers is from another period)", () => {
             configureContext({ thirdVoucherPeriodId: 123 }).use((ctx) => {
                 throws(() => {
                     validate_burned_vouchers.eval({
-                        $scriptContext: ctx,
-                        reim: reimbursement,
-                        period_id: periodId
+                        ...defaultTestArgs,
+                        $scriptContext: ctx
                     })
                 }, /voucher is from other period/)
             })
@@ -256,50 +292,62 @@ describe("reimbursement_validator::main", () => {
             return scb
         }
 
+        const defaultTestArgs = {
+            _: reimbursement,
+            voucher_output_ptrs: [0]
+        }
         it("reimbursement_validator::main #01 (succeeds if all remaining vouchers have been reimbursed and burned)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                 main.eval({
-                    $scriptContext: ctx,
-                    $datum: reimbursement,
-                    _: new IntData(0)
+                    ...defaultTestArgs,
+                    $scriptContext: ctx
                 }), undefined)
             })
         })
-
-        it("reimbursement_validator::main #02 (throws an error if the reimbursement token isn't burned)", () => {
+        
+        it("reimbursement_validator::main #02 (throws an error if the given pointer is out of range)", () => {
             configureContext({ token: null }).use((ctx) => {
                 throws(() => {
                     main.eval({
-                        $scriptContext: ctx,
-                        $datum: reimbursement,
-                        _: new IntData(0)
+                        ...defaultTestArgs,
+                        voucher_output_ptrs: [1],
+                        $scriptContext: ctx
+                    })
+                }, /index out of range/)
+            })
+        })
+
+        it("reimbursement_validator::main #03 (throws an error if the reimbursement token isn't burned)", () => {
+            configureContext({ token: null }).use((ctx) => {
+                throws(() => {
+                    main.eval({
+                        ...defaultTestArgs,
+                        $scriptContext: ctx
                     })
                 }, /key not found/)
             })
         })
 
-        it("reimbursement_validator::main #03 (throws an error if the reimbursement token is burned more than once)", () => {
+        it("reimbursement_validator::main #04 (throws an error if the reimbursement token is burned more than once)", () => {
             configureContext({ token: makeReimbursementToken(0, -3) }).use(
                 (ctx) => {
                     throws(() => {
                         main.eval({
-                            $scriptContext: ctx,
-                            $datum: reimbursement,
-                            _: new IntData(0)
+                            ...defaultTestArgs,
+                            $scriptContext: ctx
                         })
                     }, /not exactly one reimbursement token burned/)
                 }
             )
         })
 
-        it("reimbursement_validator::main #04 (throws an error if the voucher isn't burned)", () => {
+        it("reimbursement_validator::main #05 (throws an error if the voucher isn't burned)", () => {
             configureContext({ burnVoucher: false }).use((ctx) => {
                 throws(() => {
                     main.eval({
-                        $scriptContext: ctx,
-                        $datum: reimbursement,
-                        _: new IntData(0)
+                        ...defaultTestArgs,
+                        $scriptContext: ctx
                     })
                 }, /not found/)
             })
@@ -377,11 +425,11 @@ describe("reimbursement_validator::main", () => {
         }
 
         const defaultTestArgs = {
-            $datum: reimbursement0,
-            _: new IntData(0)
+            _: reimbursement0,
+            voucher_output_ptrs: [1]
         }
 
-        it("reimbursement_validator::main #05 (succeeds if the number of remaining vouchers and tokens in the reimbursement output is correct)", () => {
+        it("reimbursement_validator::main #06 (succeeds if the number of remaining vouchers and tokens in the reimbursement output is correct)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
                 main.eval({
@@ -391,7 +439,18 @@ describe("reimbursement_validator::main", () => {
             })
         })
 
-        it("reimbursement_validator::main #06 (throws an error if not signed by the correct agent)", () => {
+        it("reimbursement_validator::main #07 (succeeds even if too many pointers are included)", () => {
+            configureContext().use((ctx) => {
+                strictEqual(
+                main.eval({
+                    $scriptContext: ctx,
+                    ...defaultTestArgs,
+                    voucher_output_ptrs: [1,2,3,4,5]
+                }), undefined)
+            })
+        })
+
+        it("reimbursement_validator::main #08 (throws an error if not signed by the correct agent)", () => {
             configureContext({ signingAgent: PubKeyHash.dummy(11) }).use(
                 (ctx) => {
                     throws(() => {
@@ -404,7 +463,7 @@ describe("reimbursement_validator::main", () => {
             )
         })
 
-        it("reimbursement_validator::main #07 (throws an error if less than the expected number of DVP tokens remain in the reimbursement output)", () => {
+        it("reimbursement_validator::main #09 (throws an error if less than the expected number of DVP tokens remain in the reimbursement output)", () => {
             configureContext({ nRemainingTokens: 40_000 }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -415,7 +474,7 @@ describe("reimbursement_validator::main", () => {
             })
         })
 
-        it("reimbursement_validator::main #08 (throws an error if more than the expected number of DVP tokens remain in the reimbursement output)", () => {
+        it("reimbursement_validator::main #10 (throws an error if more than the expected number of DVP tokens remain in the reimbursement output)", () => {
             configureContext({ nRemainingTokens: 100_000 }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -426,7 +485,7 @@ describe("reimbursement_validator::main", () => {
             })
         })
 
-        it("reimbursement_validator::main #09 (throws an error if the number of remaining vouchers in the reimbursement datum didn't decrement by the number of actually burned vouchers)", () => {
+        it("reimbursement_validator::main #11 (throws an error if the number of remaining vouchers in the reimbursement datum didn't decrement by the number of actually burned vouchers)", () => {
             configureContext({ nRemainingVouchers: 2 }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -437,7 +496,7 @@ describe("reimbursement_validator::main", () => {
             })
         })
 
-        it("reimbursement_validator::main #10 (throws an error if the period id of the reimbursement output changes)", () => {
+        it("reimbursement_validator::main #12 (throws an error if the period id of the reimbursement output changes)", () => {
             configureContext({ outputPeriodId: 1 }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -448,7 +507,7 @@ describe("reimbursement_validator::main", () => {
             })
         })
 
-        it("reimbursement_validator::main #11 (throws an error if the voucher being burned is from another period)", () => {
+        it("reimbursement_validator::main #13 (throws an error if the voucher being burned is from another period)", () => {
             configureContext({ voucherPeriodId: 123 }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -456,6 +515,17 @@ describe("reimbursement_validator::main", () => {
                         ...defaultTestArgs
                     })
                 }, /voucher is from other period/)
+            })
+        })
+
+        it("reimbursement_validator::main #14 (throws an error if the pointer points to the wrong output)", () => {
+            configureContext().use((ctx) => {
+                throws(() => {
+                main.eval({
+                    $scriptContext: ctx,
+                    ...defaultTestArgs,
+                    voucher_output_ptrs: [0]
+                })}, /unexpected voucher return address/)
             })
         })
     })
