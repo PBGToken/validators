@@ -32,6 +32,7 @@ const INITIAL_SUCCESS_FEE: SuccessFee = SuccessFee{
     }
 }
 const INITIAL_CYCLE_PERIOD: Duration = 365*Duration::DAY
+const INITIAL_UPDATE_DELAY: Duration = 2*Duration::WEEK
 
 func validate_minted_tokens() -> () {
     tokens = Tokens::get_minted();
@@ -87,7 +88,7 @@ func validate_initial_config() -> () {
         },
         oracle: Scripts::oracle_delegate,
         governance: GovernanceConfig{
-            update_delay: Duration::WEEK*2,
+            update_delay: INITIAL_UPDATE_DELAY,
             delegate:     Scripts::governance_delegate
         },
         state: ConfigState::Idle
