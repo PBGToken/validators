@@ -24,6 +24,7 @@ struct Supply {
     func find_input() -> Supply {
         input = current_script.switch{
             config_validator => tx.inputs.find(Tokens::contains_supply[TxInput]),
+            reimbursement_validator => tx.inputs.find(Tokens::contains_supply[TxInput]),
             else => {
                 input = tx.inputs.find((input: TxInput) -> {input.address == Addresses::supply});
 

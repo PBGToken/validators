@@ -61,7 +61,7 @@ import {
     makeMintOrder,
     makePortfolio,
     makePrice,
-    makeReimbursement,
+    makeExtractingReimbursement,
     makeSupply,
     makeVoucher
 } from "../data"
@@ -375,10 +375,10 @@ export class ScriptContextBuilder {
         return this
     }
 
-    addDummyOutput(props?: { address?: Address }): ScriptContextBuilder {
+    addDummyOutput(props?: { address?: Address, value?: Value }): ScriptContextBuilder {
         const address = props?.address ?? Address.dummy(false)
 
-        this.tx.outputs.push(new TxOutput(address, new Value(2_000_000)))
+        this.tx.outputs.push(new TxOutput(address, props?.value ?? new Value(2_000_000)))
 
         return this
     }
@@ -535,7 +535,7 @@ export class ScriptContextBuilder {
     }
 
     addOutput(
-        props: TxOutput | { address?: Address; datum?: UplcData; value?: Value }
+        props: TxOutput<any, any> | { address?: Address; datum?: UplcData; value?: Value }
     ): ScriptContextBuilder {
         if (props instanceof TxOutput) {
             this.tx.outputs.push(props)
@@ -746,7 +746,7 @@ export class ScriptContextBuilder {
     }): ScriptContextBuilder {
         const address = props?.address ?? Addresses.reimbursementValidator
         const datum =
-            props?.datum ?? props?.reimbursement ?? makeReimbursement()
+            props?.datum ?? props?.reimbursement ?? makeExtractingReimbursement()
         let tokens = makeReimbursementToken(props?.id ?? 0).add(
             makeDvpTokens(props?.nDvpTokens ?? 1000n)
         )
@@ -789,7 +789,7 @@ export class ScriptContextBuilder {
     }): ScriptContextBuilder {
         const address = props?.address ?? Addresses.reimbursementValidator
         const datum =
-            props?.datum ?? props?.reimbursement ?? makeReimbursement()
+            props?.datum ?? props?.reimbursement ?? makeExtractingReimbursement()
         let token =
             props?.token ??
             makeReimbursementToken(props?.id ?? 0).add(
@@ -817,12 +817,14 @@ export class ScriptContextBuilder {
         datum?: ReimbursementType
         id?: IntLike
         nDvpTokens?: IntLike
+        extraInputTokens?: Assets
         redeemer?: UplcData
     }): ScriptContextBuilder {
         return this.addReimbursementInput({
             datum: props?.datum,
             id: props?.id,
             nDvpTokens: props?.nDvpTokens,
+            extraTokens: props?.extraInputTokens,
             redeemer: props?.redeemer
         }).addReimbursementOutput({
             datum: props?.datum,
@@ -841,11 +843,13 @@ export class ScriptContextBuilder {
         return this
     }
 
-    addSigner(pkh: PubKeyHash): ScriptContextBuilder {
-        if (this.tx.signers) {
-            this.tx.signers.push(pkh)
-        } else {
-            this.tx.signers = [pkh]
+    addSigner(pkh: PubKeyHash | null): ScriptContextBuilder {
+        if (pkh !== null) {
+            if (this.tx.signers) {
+                this.tx.signers.push(pkh)
+            } else {
+                this.tx.signers = [pkh]
+            }
         }
 
         return this

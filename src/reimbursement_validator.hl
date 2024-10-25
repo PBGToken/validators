@@ -2,8 +2,11 @@ spending reimbursement_validator
 
 import Addresses
 import { Config, signed_by_agent } from ConfigModule
-import { Reimbursement } from ReimbursementModule
+import { Price } from PriceModule
+import { Reimbursement, ReimbursementState } from ReimbursementModule
 import { tx } from ScriptContext
+import { SuccessFee } from SuccessFeeModule
+import { Supply } from SupplyModule
 import TokenNames
 import Tokens
 import { Voucher } from VoucherModule
@@ -68,22 +71,106 @@ func validate_burned_vouchers(reim: Reimbursement, period_id: Int, voucher_outpu
     (n_vouchers_burned, n_tokens_reimbursed)
 }
 
+func sum_net_tokens() -> Int {
+    tokens_minted = Tokens::get_minted();
+
+    sum = tx.inputs.fold((sum: Int, input: TxInput) -> {
+        sum + input.value.get_safe(Tokens::dvp_token)
+    }, 0);
+
+    sum + tokens_minted.get_safe(TokenNames::dvp_token).switch{
+        Some{n} => n,
+        else => 0
+    }
+}
+
+func validate_start_extracting(id: Int, start_price0: Ratio) -> () {
+    // minting success fee
+    (reim1, n1) = Reimbursement::find_output(id);
+
+    (config0, is_updated) = Config::find();
+    price = Price::find_ref();
+    supply0 = Supply::find_input();
+
+    current_end_price = price.relative_to_benchmark();
+        
+    assert(reim1.start_price == start_price0, "start_price changed");
+    reim1.state.switch{
+        Collecting => {
+            error("unexpected output reimbursement state")
+        },
+        Extracting{actual_end_price, actual_success_fee, actual_n_vouchers} => {
+            assert(n1 == sum_net_tokens(), "not all output dvp tokens collected by reimbursement");
+            assert(actual_end_price == current_end_price, "end price in reimbursement datum doesn't match dvp price datum");
+            assert(actual_success_fee == config0.fees.success_fee.fee,"success fee not copied from config0");
+            assert(actual_n_vouchers == supply0.n_vouchers, "n remaining vouchers in reimbursement datum doesn't match n_vouchers in input supply datum")
+        }
+    };
+
+    (reim_next, n_next) = Reimbursement::find_output(id + 1);
+
+    assert(n_next == 0, "unexpected dvp tokens in next reimbursement");
+    assert(reim_next.state == ReimbursementState::Collecting, "next reimbursement state not set to Collecting");
+
+    if (is_updated) {
+        config1 = Config::find_output();
+        updated_end_price = config1.fees.success_fee.get_benchmark_price(price.value);
+
+        assert(reim_next.start_price == updated_end_price, "start_price of next reimbursement doesn't match end_price relative to new benchmark")
+    } else {
+        assert(reim_next.start_price == current_end_price, "start_price of next reimbursement doesn't match current end_price")
+    }
+}
+
+func validate_continue_collecting(id: Int, start_price0: Ratio) -> () {
+    (reim1, n1) = Reimbursement::find_output(id);
+    
+    reim1.state.switch{
+        Collecting => {
+            // n1 == dvp tokens in inputs + dvp tokens minted - dvp tokens burned
+            assert(n1 == sum_net_tokens(), "not all dvp tokens collected by reimbursement");
+            assert(reim1.start_price == start_price0, "reimbursement start price changed")
+        },
+        Extracting => {
+            // next reimbursement token must be minted (datum check of next reimbursement token is performed by supply validator)
+            error("next reimbursement token must be minted to be able to change to Extracting state")
+        }
+    }
+}
+
 func main(_: Reimbursement, voucher_output_ptrs: []Int) -> Bool {
+    tokens_minted = Tokens::get_minted();
     (id, reim0, n0) = Reimbursement::find_input();
     
-    (n_vouchers_burned, n_tokens_reimbursed) = validate_burned_vouchers(reim0, id, voucher_output_ptrs);
-
     assert(signed_by_agent(), "not signed by agent");
-    if (n_vouchers_burned >= reim0.n_remaining_vouchers) {
-        // the reimbursement token itself must be burned, output isn't validated
-        assert(Tokens::get_minted().get(TokenNames::reimbursement(id)) == -1, "not exactly one reimbursement token burned")
+    if (tokens_minted.get_safe(TokenNames::reimbursement(id + 1)) == Option[Int]::Some{1}) {
+        validate_start_extracting(id, reim0.start_price)
     } else {
-        (reim1, n1) = Reimbursement::find_output(id, 0);
+        // not minting success fee (collecting burn fees or reimbursing)
+        reim0.state.switch {
+            Collecting => {
+                validate_continue_collecting(id, reim0.start_price)
+            },
+            Extracting{end_price, success_fee, n_remaining_vouchers} => {
+                (n_vouchers_burned, n_tokens_reimbursed) = validate_burned_vouchers(reim0, id, voucher_output_ptrs);
+    
+                if (n_vouchers_burned >= n_remaining_vouchers) {
+                    // the reimbursement token itself must be burned, output isn't validated
+                    assert(tokens_minted.get(TokenNames::reimbursement(id)) == -1, "not exactly one reimbursement token burned")
+                } else {
+                    (reim1, n1) = Reimbursement::find_output(id);
 
-        assert(n1 == n0 - n_tokens_reimbursed, "number of success fee tokens remaining not decremented by the number of reimbursed tokens");
-        assert(reim1 == reim0.copy(
-            n_remaining_vouchers: reim0.n_remaining_vouchers - n_vouchers_burned
-        ), "invalid datum change")
+                    assert(n1 == n0 - n_tokens_reimbursed, "number of success fee tokens remaining not decremented by the number of reimbursed tokens");
+                    assert(reim1 == reim0.copy(
+                        state: ReimbursementState::Extracting{
+                            end_price,
+                            success_fee,
+                            n_remaining_vouchers - n_vouchers_burned
+                        }
+                    ), "invalid datum change")
+                }
+            }
+        }
     };
     true
 } 

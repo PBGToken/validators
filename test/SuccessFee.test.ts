@@ -1,5 +1,6 @@
 import { strictEqual } from "node:assert"
 import { describe, it } from "node:test"
+import { IntData, ListData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { makeSuccessFee } from "./data"
 
@@ -8,7 +9,8 @@ const {
     is_valid_internal,
     "SuccessFee::MAX_SUCCESS_FEE_STEPS": MAX_SUCCESS_FEE_STEPS,
     "SuccessFee::apply": apply,
-    "SuccessFee::is_valid": is_valid
+    "SuccessFee::is_valid": is_valid,
+    calc_alpha
 } = contract.SuccessFeeModule
 
 describe("SuccessFeeModule::apply_internal", () => {
@@ -231,6 +233,41 @@ describe("SuccessFeeModule::SuccessFee::is_valid", () => {
                 self
             }),
             true
+        )
+    })
+})
+
+
+describe("SuccessFeeModule::calc_alpha", () => {
+    it("SuccessFeeModule::calc_alpha #01 (correct ratio division (typesafe eval))", () => {
+        strictEqual(
+            calc_alpha.eval({
+                start_price: [200_000_000n, 1_000_000n],
+                end_price: [200_000_000, 1_000_000]
+            }),
+            1.0
+        )
+    })
+
+    it("SuccessFeeModule::calc_alpha #02 (correct ratio division (evalUnsafe))", () => {
+        const startPrice = new ListData([
+            new IntData(200_000_000),
+            new IntData(1_000_000)
+        ])
+
+        const endPrice = new ListData([
+            new IntData(200_000_000),
+            new IntData(1_000_000)
+        ])
+
+        strictEqual(
+            calc_alpha
+                .evalUnsafe({
+                    start_price: startPrice,
+                    end_price: endPrice
+                })
+                .toString(),
+            "1000000"
         )
     })
 })

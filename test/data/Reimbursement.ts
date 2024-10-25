@@ -8,22 +8,40 @@ export const castReimbursement = contract.ReimbursementModule.Reimbursement
 export type ReimbursementType = PermissiveType<typeof castReimbursement>
 type ReimbursementStrictType = StrictType<typeof castReimbursement>
 
-export function makeReimbursement(props?: {
+export function makeExtractingReimbursement(props?: {
     nRemainingVouchers?: IntLike
     startPrice?: RatioType
     endPrice?: RatioType
     successFee?: SuccessFeeType
 }): ReimbursementStrictType {
     return {
-        n_remaining_vouchers: BigInt(props?.nRemainingVouchers ?? 0),
         start_price: castRatio.fromUplcData(
             castRatio.toUplcData(props?.startPrice ?? [100n, 1n])
         ),
-        end_price: castRatio.fromUplcData(
-            castRatio.toUplcData(props?.endPrice ?? [200n, 1n])
+        state: {
+            Extracting: {
+                n_remaining_vouchers: BigInt(props?.nRemainingVouchers ?? 0),
+                
+                end_price: castRatio.fromUplcData(
+                    castRatio.toUplcData(props?.endPrice ?? [200n, 1n])
+                ),
+                success_fee: castSuccessFee.fromUplcData(
+                    castSuccessFee.toUplcData(props?.successFee ?? makeSuccessFee())
+                )
+            }
+        }
+    }
+}
+
+export function makeCollectingReimbursement(props?: {
+    startPrice?: RatioType
+}): ReimbursementStrictType {
+    return {
+        start_price: castRatio.fromUplcData(
+            castRatio.toUplcData(props?.startPrice ?? [100n, 1n])
         ),
-        success_fee: castSuccessFee.fromUplcData(
-            castSuccessFee.toUplcData(props?.successFee ?? makeSuccessFee())
-        )
+        state: {
+            Collecting: {}
+        }
     }
 }

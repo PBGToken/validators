@@ -18,7 +18,7 @@ import {
     makeAssetPtr,
     makeConfig,
     makePrice,
-    makeReimbursement,
+    makeExtractingReimbursement,
     makeSuccessFee,
     makeSupply,
     makeVoucher
@@ -97,7 +97,7 @@ describe("charge the success fee by diluting the token supply", () => {
         nVouchersToBeReimbursed?: IntLike
         reimbursementStartPrice?: RatioType
         reimbursementEndPrice?: RatioType
-        reimbursementSuccessFee?: SuccessFeeType
+        reimbursementPeriodId?: IntLike
         signingAgent?: PubKeyHash
         supply1?: SupplyType
     }) => {
@@ -119,11 +119,11 @@ describe("charge the success fee by diluting the token supply", () => {
             agent
         })
 
-        const reimbursement = makeReimbursement({
+        const reimbursement = makeExtractingReimbursement({
             nRemainingVouchers: props?.nVouchersToBeReimbursed ?? 0,
             startPrice: props?.reimbursementStartPrice ?? startPrice,
             endPrice: props?.reimbursementEndPrice ?? endPrice,
-            successFee: props?.reimbursementSuccessFee ?? successFee
+            successFee: successFee
         })
 
         const nMinted = props?.dilution ?? expectedDilution
@@ -136,11 +136,11 @@ describe("charge the success fee by diluting the token supply", () => {
                 outputSupply: props?.supply1 ?? supply1
             })
             .observeBenchmark({ redeemer: [1, 1] })
-            .mint({ assets: makeReimbursementToken(periodId, 1) })
+            .mint({ assets: makeReimbursementToken(periodId + 1, 1) })
             .mint({ assets: makeDvpTokens(nMinted) })
             .setTimeRange({ start: 0, end: 1001 })
-            .addReimbursementOutput({
-                id: periodId,
+            .addReimbursementInput({
+                id: props?.reimbursementPeriodId ?? periodId,
                 reimbursement,
                 extraTokens: makeDvpTokens(nMinted)
             })
@@ -259,38 +259,41 @@ describe("charge the success fee by diluting the token supply", () => {
             })
         })
 
-        it("supply_validator::validate_reward_success #08 (throws an error if the remaining vouchers count in the new reimbursement datum isn't copied from the old supply datum)", () => {
+        it("supply_validator::validate_reward_success #08 (succeeds even if the remaining vouchers count in the new reimbursement datum isn't copied from the old supply datum (validated by reimbursement validator))", () => {
             configureContext({ nVouchersToBeReimbursed: 10 }).use((ctx) => {
-                throws(() => {
+                strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs
-                    })
-                }, /n remaining vouchers in reimbursement not set to expected value/)
+                    }), 
+                    undefined
+                )
             })
         })
 
-        it("supply_validator::validate_reward_success #09 (throws an error if the start price in the new reimbursement datum isn't copied from the old supply datum)", () => {
+        it("supply_validator::validate_reward_success #09 (succeeds even if the start price in the new reimbursement datum isn't copied from the old supply datum (validated by reimbursement validator))", () => {
             configureContext({ reimbursementStartPrice: [101, 1] }).use(
                 (ctx) => {
-                    throws(() => {
+                    strictEqual(
                         validate_reward_success.eval({
                             $scriptContext: ctx,
                             ...defaultTestArgs
-                        })
-                    }, /reimbursement start price not set to expected value/)
+                        }), 
+                        undefined
+                    )
                 }
             )
         })
 
-        it("supply_validator::validate_reward_success #10 (returns false if the end price in the new reimbursement datum isn't the current price relative to the benchmark)", () => {
+        it("supply_validator::validate_reward_success #10 (succeeds even if the end price in the new reimbursement datum isn't the current price relative to the benchmark (validated by reimbursement validator))", () => {
             configureContext({ reimbursementEndPrice: [139, 1] }).use((ctx) => {
-                throws(() => {
+                strictEqual(
                     validate_reward_success.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs
-                    })
-                }, /unexpected reimbursement end price/)
+                    }), 
+                    undefined
+                )
             })
         })
 
@@ -400,24 +403,37 @@ describe("charge the success fee by diluting the token supply", () => {
                             $scriptContext: ctx,
                             ...defaultTestArgs
                         })
-                    }, /illegal tokens minted/)
+                    }, /no other tokens can be minted\/burned/)
                 })
         })
 
-        it("supply_validator::validate_reward_success #15 (throws an error if the reimbursement token is minted more than once)", () => {
+        it("supply_validator::validate_reward_success #15 (throws an error if we try to mint the current reimbursement token instead of the next)", () => {
             configureContext()
-                .mint({ assets: makeReimbursementToken(periodId, 1) })
+                .mint({ assets: makeReimbursementToken(periodId+1, -1).add(makeReimbursementToken(periodId, 1)) })
                 .use((ctx) => {
                     throws(() => {
                         validate_reward_success.eval({
                             $scriptContext: ctx,
                             ...defaultTestArgs
                         })
-                    }, /illegal tokens minted/)
+                    }, /key not found/)
                 })
         })
 
-        it("supply_validator::validate_reward_success #16 (succeeds if the config datum is in Changing state, but not in UpdatingSuccessFee state)", () => {
+        it("supply_validator::validate_reward_success #16 (throws an error if the next reimbursement token is minted more than once)", () => {
+            configureContext()
+                .mint({ assets: makeReimbursementToken(periodId+1, 1) })
+                .use((ctx) => {
+                    throws(() => {
+                        validate_reward_success.eval({
+                            $scriptContext: ctx,
+                            ...defaultTestArgs
+                        })
+                    }, /next reimbursement token not minted/)
+                })
+        })
+
+        it("supply_validator::validate_reward_success #17 (succeeds if the config datum is in Changing state, but not in UpdatingSuccessFee state)", () => {
             configureContext({
                 configState: {
                     Changing: {
@@ -437,7 +453,7 @@ describe("charge the success fee by diluting the token supply", () => {
             })
         })
 
-        it("supply_validator::validate_reward_success #17 (throws an error if the config datum is in Changing::UpdatingSuccessFee state)", () => {
+        it("supply_validator::validate_reward_success #18 (throws an error if the config datum is in Changing::UpdatingSuccessFee state)", () => {
             configureContext({
                 configState: {
                     Changing: {
@@ -461,7 +477,7 @@ describe("charge the success fee by diluting the token supply", () => {
             })
         })
 
-        it("supply_validator::validate_reward_success #18 (throws an error if something is spent from the vault)", () => {
+        it("supply_validator::validate_reward_success #19 (throws an error if something is spent from the vault)", () => {
             configureContext()
                 .takeFromVault()
                 .use((ctx) => {
@@ -474,23 +490,20 @@ describe("charge the success fee by diluting the token supply", () => {
                 })
         })
 
-        it("supply_validator::validate_reward_success #19 (throws an error if the success fee in the reimbursement datum doesn't match the success fee in the config datum)", () => {
+        it("supply_validator::validate_reward_success #20 (throws an error if not witnessed by the reimbursement validator)", () => {
             configureContext({
-                reimbursementSuccessFee: makeSuccessFee({
-                    c0: 0,
-                    steps: [{ sigma: 1.06, c: 0.3 }]
-                })
+                reimbursementPeriodId: 999
             }).use((ctx) => {
                 throws(() => {
                     validate_reward_success.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs
                     })
-                }, /unexpected reimbursement success fee settings/)
+                }, /not witnessed by reimbursement validator/)
             })
         })
 
-        it("supply_validator::validate_reward_success #20 (throws an error if the supply output last voucher id isn't equal to the supply input last voucher id)", () => {
+        it("supply_validator::validate_reward_success #21 (throws an error if the supply output last voucher id isn't equal to the supply input last voucher id)", () => {
             const supply1 = configureSupply1({ lastVoucherId: 123 })
             configureContext().use((ctx) => {
                 throws(() => {
@@ -584,19 +597,16 @@ describe("charge the success fee by diluting the token supply", () => {
                 })
         })
 
-        it("supply_validator::main #07 (throws an error if the success fee in the reimbursement datum doesn't match the success fee in the config datum)", () => {
+        it("supply_validator::main #07 (throws an error if the transaction isn't witnessed by the reimbursement validator)", () => {
             configureContext({
-                reimbursementSuccessFee: makeSuccessFee({
-                    c0: 0.1,
-                    steps: [{ c: 0.3, sigma: 1.05 }]
-                })
+                reimbursementPeriodId: 999
             }).use((ctx) => {
                 throws(() => {
                     main.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs
                     })
-                }, /unexpected reimbursement success fee settings/)
+                }, /not witnessed by reimbursement validator/)
             })
         })
 
@@ -1163,6 +1173,7 @@ describe("supply_validator::validate_mint_user_tokens", () => {
 describe("supply_validator::validate_burn_user_tokens", () => {
     describe("takes pure lovelace from vault, one voucher burned", () => {
         const lastVoucherId = 1
+        const periodId = 1
         const burnedTokens = 1_000_000
         const supply0 = makeSupply({
             lastVoucherId,
@@ -1178,6 +1189,7 @@ describe("supply_validator::validate_burn_user_tokens", () => {
             nVouchers?: IntLike
             managementFeeTimestamp?: number
             successFeeStartTime?: IntLike
+            periodId?: IntLike
         }) => {
             return makeSupply({
                 lastVoucherId: props?.lastVoucherId ?? lastVoucherId,
@@ -1188,7 +1200,8 @@ describe("supply_validator::validate_burn_user_tokens", () => {
                 nVouchers: props?.nVouchers ?? 0,
                 managementFeeTimestamp: props?.managementFeeTimestamp,
                 successFee: {
-                    start_time: props?.successFeeStartTime
+                    start_time: props?.successFeeStartTime,
+                    periodId: props?.periodId ?? 0
                 }
             })
         }
@@ -1199,6 +1212,7 @@ describe("supply_validator::validate_burn_user_tokens", () => {
             priceTimestamp?: number
             lovelaceFromVault?: IntLike
             maxTokenSupply?: IntLike
+            reimbursementId?: IntLike
         }) => {
             const price = makePrice({
                 ratio: [100, 1],
@@ -1227,6 +1241,7 @@ describe("supply_validator::validate_burn_user_tokens", () => {
                     value: new Value(props?.lovelaceFromVault ?? 100_000_000)
                 })
                 .addSupplyInput({ supply: supply0, redeemer: [] })
+                .addReimbursementInput({id: props?.reimbursementId ?? 0})
         }
 
         const defaultTestArgs = {
@@ -1361,6 +1376,20 @@ describe("supply_validator::validate_burn_user_tokens", () => {
                         })
                     }, /counters aren't consistent/)
                 })
+        })
+
+
+        it("supply_validator::validate_burn_user_tokens #10 (throws an error if the transaction isn't witnessed by spending the correct reimbursement token)", () => {
+            configureContext({reimbursementId: 10})
+            .use((ctx) => {
+                throws(() => {
+                    validate_burn_user_tokens.eval({
+                        $scriptContext: ctx,
+                        ...defaultTestArgs,
+                        supply1
+                    })
+                }, /token burn not witnessed by reimbursement/)
+            })
         })
     })
 })

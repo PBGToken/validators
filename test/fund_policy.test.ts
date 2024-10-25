@@ -1,5 +1,6 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
+import { IntLike } from "@helios-lang/codec-utils"
 import {
     Address,
     AssetClass,
@@ -16,8 +17,11 @@ import contract, {
 import { MAX_SCRIPT_SIZE } from "./constants"
 import {
     RatioType,
+    ReimbursementType,
     SuccessFeeType,
+    makeCollectingReimbursement,
     makeConfig,
+    makeExtractingReimbursement,
     makeMetadata,
     makePortfolio,
     makePrice,
@@ -45,11 +49,15 @@ const {
     INITIAL_AGENT,
     INITIAL_TICK,
     INITIAL_SUCCESS_FEE,
+    INITIAL_CYCLE_PERIOD,
+    INITIAL_UPDATE_DELAY,
+    INITIAL_CYCLE_ID,
     validate_minted_tokens,
     validate_initial_metadata,
     validate_initial_config,
     validate_initial_portfolio,
     validate_initial_price,
+    validate_initial_reimbursement,
     validate_initial_supply,
     validate_initialization,
     validate_vault_spending,
@@ -80,6 +88,18 @@ describe("fund_policy constants", () => {
             })
         )
     })
+
+    it("INITIAL_CYCLE_PERIOD equals 365 days", () => {
+        strictEqual(INITIAL_CYCLE_PERIOD.eval({}), 365n*24n*3600n*1000n)
+    })
+
+    it("INITIAL_UPDATE_DELAY equals 2 weeks", () => {
+        strictEqual(INITIAL_UPDATE_DELAY.eval({}), 2n*7n*24n*3600n*1000n)
+    })
+
+    it("INITIAL_CYCLE_ID equals 1", () => {
+        strictEqual(INITIAL_CYCLE_ID.eval({}), 1n)
+    })
 })
 
 describe("fund_policy::validate_minted_tokens", () => {
@@ -90,6 +110,7 @@ describe("fund_policy::validate_minted_tokens", () => {
             .mint({ assets: makePortfolioToken(1) })
             .mint({ assets: makePriceToken(1) })
             .mint({ assets: makeSupplyToken(1) })
+            .mint({ assets: makeReimbursementToken(1, 1)})
     }
 
     it("fund_policy::validate_minted_tokens #01 (succeeds if all five tokens are minted)", () => {
@@ -104,18 +125,18 @@ describe("fund_policy::validate_minted_tokens", () => {
             .use((ctx) => {
                 throws(() => {
                     validate_minted_tokens.eval({ $scriptContext: ctx })
-                }, /not precisely 5 tokens minted/)
+                }, /not precisely 6 tokens minted/)
             })
     })
 
-    it("fund_policy::validate_minted_tokens #03 (throws an error if the total tokens is 5 but a token is missing)", () => {
+    it("fund_policy::validate_minted_tokens #03 (throws an error if the total tokens is 6 but a token is missing)", () => {
         configureContext()
             .mint({ assets: makeConfigToken(-1) })
             .mint({ assets: makeDvpTokens(1) })
             .use((ctx) => {
                 throws(() => {
                     validate_minted_tokens.eval({ $scriptContext: ctx })
-                })
+                }, /key not found/)
             })
     })
 
@@ -125,17 +146,37 @@ describe("fund_policy::validate_minted_tokens", () => {
             .use((ctx) => {
                 throws(() => {
                     validate_minted_tokens.eval({ $scriptContext: ctx })
-                }, /not precisely 5 tokens minted/)
+                }, /not precisely 6 tokens minted/)
             })
     })
 
-    it("fund_policy::validate_minted_tokens #05 (throws an error if one of the initial tokens is minted twice)", () => {
+    it("fund_policy::validate_minted_tokens #05 (throws an error if the initial supply token is minted twice)", () => {
         configureContext()
             .mint({ assets: makeSupplyToken(1) })
             .use((ctx) => {
                 throws(() => {
                     validate_minted_tokens.eval({ $scriptContext: ctx })
                 }, /supply token not minted/)
+            })
+    })
+
+    it("fund_policy::validate_minted_tokens #06 (throws an error if the initial reimbursement token has the wrong id)", () => {
+        configureContext()
+            .mint({ assets: makeReimbursementToken(1, -1).add(makeReimbursementToken(2, 1)) })
+            .use((ctx) => {
+                throws(() => {
+                    validate_minted_tokens.eval({ $scriptContext: ctx })
+                }, /key not found/)
+            })
+    })
+
+    it("fund_policy::validate_minted_tokens #07 (throws an error if the initial reimbursement token is minted twice)", () => {
+        configureContext()
+            .mint({ assets: makeReimbursementToken(1, 1) })
+            .use((ctx) => {
+                throws(() => {
+                    validate_minted_tokens.eval({ $scriptContext: ctx })
+                }, /reimbursement token not minted/)
             })
     })
 })
@@ -412,6 +453,60 @@ function makeInitialSupply(props?: {
     })
 }
 
+describe("fund_policy::validate_initial_reimbursement", () => {
+    
+
+    const configureContext = (props?: {reimbursement?: ReimbursementType, id?: IntLike}) => {
+        const reimbursement = makeCollectingReimbursement()
+
+        return new ScriptContextBuilder()
+            .addReimbursementOutput({id: props?.id ?? 1, reimbursement: props?.reimbursement ?? reimbursement})
+            .addDummyInputs(10)
+    }
+
+    it("fund_policy::validate_initial_reimbursement #01 (succeeds if the initial reimbursement with id 1 has the correct datum)", () => {
+        configureContext().use((ctx) => {
+            strictEqual(
+                validate_initial_reimbursement.eval({ $scriptContext: ctx}),
+                undefined
+            )
+        })
+    })
+
+    it("fund_policy::validate_initial_reimbursement #02 (throws an error if the reimbursement id of the output doesn't correspond)", () => {
+        configureContext({id: 0}).use((ctx) => {
+            throws(
+                () => {
+                    validate_initial_reimbursement.eval({ $scriptContext: ctx})
+                },
+                /not found/
+            )
+        })
+    })
+
+    it("fund_policy::validate_initial_reimbursement #03 (throws an error if the reimbursement datum contains the wrong start price)", () => {
+        configureContext({reimbursement: makeCollectingReimbursement({startPrice: [1000, 10]})}).use((ctx) => {
+            throws(
+                () => {
+                    validate_initial_reimbursement.eval({ $scriptContext: ctx})
+                },
+                /initial reimbursement start_price not correctly set/
+            )
+        })
+    })
+
+    it("fund_policy::validate_initial_reimbursement #04 (throws an error if the reimbursement datum isn't in Collecting state)", () => {
+        configureContext({reimbursement: makeExtractingReimbursement()}).use((ctx) => {
+            throws(
+                () => {
+                    validate_initial_reimbursement.eval({ $scriptContext: ctx})
+                },
+                /initial reimbursement state not set to Collecting/
+            )
+        })
+    })
+})
+
 describe("fund_policy::validate_initial_supply", () => {
     const configureContext = (props?: {
         initialTick?: number
@@ -434,7 +529,7 @@ describe("fund_policy::validate_initial_supply", () => {
             nVouchers: props?.nVouchers ?? 0,
             lastVoucherId: props?.lastVoucherId ?? 0,
             nLovelace: props?.nLovelace ?? 0,
-            successFeePeriodId: props?.successFeePeriodId ?? 0,
+            successFeePeriodId: props?.successFeePeriodId ?? 1,
             successFeePeriod: props?.successFeePeriod ?? 365*24*3600*1000,
             successFeeStartPrice: props?.successFeeStartPrice ?? [100, 1]
         })
@@ -447,9 +542,12 @@ describe("fund_policy::validate_initial_supply", () => {
             })
     }
 
-    it("fund_policy::validate_initial_supply #01 (returns true if the supply output datum is correct)", () => {
+    it("fund_policy::validate_initial_supply #01 (succeeds if the supply output datum is correct)", () => {
         configureContext().use((ctx) => {
-            validate_initial_supply.eval({ $scriptContext: ctx })
+            strictEqual(
+                validate_initial_supply.eval({ $scriptContext: ctx }),
+                undefined
+            )
         })
     })
 
@@ -559,12 +657,12 @@ describe("fund_policy::validate_initial_supply", () => {
         })   
     })
 
-    it("fund_policy::validate_initial_supply #14 (throws an error if the success fee cycle period id isn't zero)", () => {
-        configureContext({successFeePeriodId: 1})
+    it("fund_policy::validate_initial_supply #14 (throws an error if the success fee cycle period id isn't 1)", () => {
+        configureContext({successFeePeriodId: 0})
         .use((ctx) => {
             throws(() => {
                 validate_initial_supply.eval({ $scriptContext: ctx })
-            }, /cycle id not set to 0/)
+            }, /cycle id not set to 1/)
         })
     })
 
@@ -613,24 +711,28 @@ describe("fund_policy::validate_initialization", () => {
         nGroups?: number
         priceTimestamp?: number
         relMintFee?: number
+        reimbursement?: ReimbursementType
     }) => {
         const metadata = makeInitialMetadata({ logo: props?.metadataLogo })
         const config = makeInitialConfig({ relMintFee: props?.relMintFee })
         const portfolio = makeInitialPortfolio({ nGroups: props?.nGroups })
         const price = makeInitialPrice({ timestamp: props?.priceTimestamp })
-        const supply = makeInitialSupply({ initialTick: props?.initialTick, managementFeeTimestmap: 124, successFeeStart: 125 })
+        const supply = makeInitialSupply({ initialTick: props?.initialTick, managementFeeTimestmap: 124, successFeeStart: 125, successFeePeriodId: 1 })
+        const reimbursement = props?.reimbursement ?? makeCollectingReimbursement({ startPrice: price.value})
 
         const metadataToken = makeMetadataToken(1)
         const configToken = makeConfigToken(1)
         const portfolioToken = makePortfolioToken(1)
         const priceToken = makePriceToken(1)
         const supplyToken = makeSupplyToken(1)
+        const reimbursementToken = makeReimbursementToken(1, 1)
 
         return new ScriptContextBuilder()
             .mint({ assets: metadataToken })
             .mint({ assets: configToken })
             .mint({ assets: portfolioToken })
             .mint({ assets: priceToken })
+            .mint({ assets: reimbursementToken })
             .mint({ assets: supplyToken })
             .setTimeRange({start: 100, end: 123})
             .addSupplyOutput({ supply, token: supplyToken })
@@ -639,6 +741,7 @@ describe("fund_policy::validate_initialization", () => {
             .addSigner(INITIAL_AGENT_PARAM)
             .addConfigOutput({ config, token: configToken })
             .addMetadataOutput({ metadata, token: metadataToken })
+            .addReimbursementOutput({ reimbursement, token: reimbursementToken})
     }
 
     it("fund_policy::validate_initialization #01 (succeeds if all UTxO are correctly initialized and contain the correct tokens)", () => {
@@ -684,6 +787,14 @@ describe("fund_policy::validate_initialization", () => {
             throws(() => {
                 validate_initialization.eval({ $scriptContext: ctx })
             }, /supply tick not correctly set/)
+        })
+    })
+
+    it("fund_policy::validate_initialization #07 (throws an error if the reimbursement datum is in the wrong state)", () => {
+        configureContext({ reimbursement: makeExtractingReimbursement() }).use((ctx) => {
+            throws(() => {
+                validate_initialization.eval({ $scriptContext: ctx })
+            }, /initial reimbursement state not set to Collecting/)
         })
     })
 })
@@ -901,12 +1012,14 @@ describe("fund_policy::main", () => {
             const config = makeInitialConfig()
             const portfolio = makeInitialPortfolio()
             const price = makeInitialPrice()
-            const supply = makeInitialSupply({managementFeeTimestmap: 124, successFeeStart: 124})
+            const supply = makeInitialSupply({managementFeeTimestmap: 124, successFeeStart: 124, successFeePeriodId: 1 })
+            const reimbursement = makeCollectingReimbursement({startPrice: price.value})
 
             const metadataToken = makeMetadataToken(1)
             const configToken = makeConfigToken(1)
             const portfolioToken = makePortfolioToken(1)
             const priceToken = makePriceToken(1)
+            const reimbursementToken = makeReimbursementToken(1, 1)
             const supplyToken = makeSupplyToken(1)
 
             return new ScriptContextBuilder()
@@ -915,10 +1028,12 @@ describe("fund_policy::main", () => {
                 .mint({ assets: configToken })
                 .mint({ assets: portfolioToken })
                 .mint({ assets: priceToken })
+                .mint({ assets: reimbursementToken })
                 .mint({ assets: supplyToken })
                 .addSupplyOutput({ supply, token: supplyToken })
                 .addPriceOutput({ price, token: priceToken })
                 .addPortfolioOutput({ portfolio, token: portfolioToken })
+                .addReimbursementOutput({ reimbursement, token: reimbursementToken })
                 .addSigner(INITIAL_AGENT_PARAM)
                 .addConfigOutput({ config, token: configToken })
                 .addMetadataOutput({ metadata, token: metadataToken })
@@ -1086,6 +1201,19 @@ describe("fund_policy::main", () => {
                     $scriptContext: ctx,
                     ...defaultTestArgs
                 })
+            })
+        })
+
+        it("fund_policy::main #12 (throws an error when minting reimbursement token with the initial cycle id)", () => {
+            configureContext({
+                assets: makeReimbursementToken(1, 1)
+            }).use((ctx) => {
+                throws(() => {
+                    main.eval({
+                        $scriptContext: ctx,
+                        ...defaultTestArgs
+                    })
+                }, /UTxO with SEED_ID not spent/)
             })
         })
     })

@@ -2,15 +2,22 @@ module ReimbursementModule
 
 import Addresses
 import { current_script, get_current_input, tx } from ScriptContext
-import { SuccessFee } from SuccessFeeModule
+import { SuccessFee, calc_alpha } from SuccessFeeModule
 import TokenNames
 import Tokens
 
+enum ReimbursementState {
+    Collecting 
+    Extracting {
+        end_price:            Ratio
+        success_fee:          SuccessFee
+        n_remaining_vouchers: Int
+    }
+}
+
 struct Reimbursement {
-    n_remaining_vouchers: Int
-    start_price:          Ratio
-    end_price:            Ratio
-    success_fee:          SuccessFee
+    start_price: Ratio
+    state:       ReimbursementState
 
     func find_input() -> (Int, Reimbursement, Int) {
         input = current_script.switch{
@@ -29,9 +36,12 @@ struct Reimbursement {
         )
     }
 
-    func find_output(id: Int, min_tokens: Int) -> (Reimbursement, Int) {
+    func find_output(id: Int) -> (Reimbursement, Int) {
+        token_asset_class = Tokens::reimbursement(id);
+
         output = tx.outputs.find((output: TxOutput) -> {
             output.address == Addresses::reimbursement
+            && output.value.get_safe(token_asset_class) == 1
         });
 
         tokens = output.value.get_policy(Tokens::policy);
@@ -40,8 +50,6 @@ struct Reimbursement {
             else => 0
         };
 
-        assert(tokens.get(TokenNames::reimbursement(id)) == 1, "output doesnt contain reimbursement token");
-        assert(n_dvp_tokens >= min_tokens, "output doesnt contain enough dvp tokens");
         assert(tokens.length <= 2, "output contains unexpected tokens");
         assert(output.value.delete_lovelace().to_map().length == 1, "output contains unexpected token policies");
 
@@ -50,20 +58,28 @@ struct Reimbursement {
 
     func find_thread() -> (Int, Reimbursement, Int, Reimbursement, Int) {
         (id, r0, n0) = Reimbursement::find_input();
-        (r1, n1) = Reimbursement::find_output(id, 0);
+        (r1, n1) = Reimbursement::find_output(id);
     
         (id, r0, n0, r1, n1)
     }
 
-    func calc_alpha(self, start_price: Ratio = self.start_price) -> Real {
-        (self.end_price/start_price).to_real()
-    }
-
     func calc_phi_alpha_ratio(self, start_price: Ratio = self.start_price) -> Real {
-        alpha = self.calc_alpha(start_price);
+        self.state.switch{
+            Extracting{end_price, success_fee, _} => {
+                alpha = calc_alpha(start_price, end_price);
 
-        phi_alpha = self.success_fee.apply(alpha);
-
-        phi_alpha/(alpha - phi_alpha)
+                phi_alpha = success_fee.apply(alpha);
+        
+                phi_alpha/(alpha - phi_alpha)
+            },
+            else => error("can't calculate phi alpha ratio while in Collecting state")
+        }
     }
+}
+
+func witnessed_by_reimbursement(id: Int) -> Bool {
+    tx.inputs.any((input: TxInput) -> {
+        input.address == Addresses::reimbursement
+        && Tokens::parse_reimbursement(input) == id
+    })
 }

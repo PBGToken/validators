@@ -57,7 +57,10 @@ describe("Supply::find_input", () => {
         })
     })
 
-    it("nok if nothing is spent from supply address in all scripts except config_validator", () => {
+    const downstreamScripts = ["config_validator", "reimbursement_validator"]
+    const upstreamScripts = scripts.filter(s => !downstreamScripts.includes(s))
+
+    it("nok if nothing is spent from supply address in all scripts except config_validator and reimbursement_validator", () => {
         new ScriptContextBuilder()
             .addSupplyInput({
                 supply,
@@ -65,8 +68,7 @@ describe("Supply::find_input", () => {
                 address: Address.dummy(false)
             })
             .use((ctx) => {
-                scripts
-                    .filter((s) => s != "config_validator")
+                upstreamScripts
                     .forEach((currentScript) => {
                         throws(() => {
                             find_input.eval({
@@ -86,13 +88,15 @@ describe("Supply::find_input", () => {
                 address: Address.dummy(false)
             })
             .use((ctx) => {
-                deepEqual(
-                    find_input.eval({
-                        $currentScript: "config_validator",
-                        $scriptContext: ctx
-                    }),
-                    supply
-                )
+                downstreamScripts.forEach((currentScript) => {
+                    deepEqual(
+                        find_input.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }),
+                        supply
+                    )
+                })
             })
     })
 

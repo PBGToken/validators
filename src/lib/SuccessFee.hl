@@ -55,3 +55,7 @@ struct SuccessFee {
         && is_valid_internal(1.0, self.c0, self.steps)
     }
 }
+
+func calc_alpha(start_price: Ratio, end_price: Ratio) -> Real {
+    (end_price/start_price).to_real()
+}

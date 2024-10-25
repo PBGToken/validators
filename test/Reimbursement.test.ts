@@ -2,32 +2,35 @@ import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { IntLike } from "@helios-lang/codec-utils"
 import { Address, AssetClass, Assets } from "@helios-lang/ledger"
-import { ByteArrayData, IntData, ListData, UplcData } from "@helios-lang/uplc"
+import { ByteArrayData, ConstrData, IntData, ListData, UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { scripts } from "./constants"
 import {
     RatioType,
+    ReimbursementType,
     castReimbursement,
-    makeReimbursement,
+    makeCollectingReimbursement,
+    makeExtractingReimbursement,
     makeSuccessFee
 } from "./data"
-import { makeConfigToken } from "./tokens"
+import { makeConfigToken, makeDvpTokens, makeReimbursementToken } from "./tokens"
 import { ScriptContextBuilder, withScripts } from "./tx"
 
 const {
     "Reimbursement::find_input": find_input,
     "Reimbursement::find_output": find_output,
     "Reimbursement::find_thread": find_thread,
-    "Reimbursement::calc_alpha": calc_alpha,
-    "Reimbursement::calc_phi_alpha_ratio": calc_phi_alpha_ratio
+    "Reimbursement::calc_phi_alpha_ratio": calc_phi_alpha_ratio,
+    witnessed_by_reimbursement
 } = contract.ReimbursementModule
 
 describe("ReimbursementModule::Reimbursement::find_input", () => {
     const nDvpTokens = 1000n
     const reimbursementId = 0n
-    const reimbursement = makeReimbursement()
+    const reimbursement = makeExtractingReimbursement()
 
     const configureParentContext = (props?: {
+        datum?: ReimbursementType
         address?: Address
         extraTokens?: Assets
         redeemer?: UplcData
@@ -36,7 +39,7 @@ describe("ReimbursementModule::Reimbursement::find_input", () => {
         const scb = new ScriptContextBuilder().addReimbursementInput({
             address: props?.address,
             redeemer: props?.redeemer,
-            datum: reimbursement,
+            datum: props?.datum ??reimbursement,
             id: reimbursementId,
             extraTokens: props?.extraTokens,
             nDvpTokens: props?.nDvpTokens ?? nDvpTokens
@@ -142,7 +145,20 @@ describe("ReimbursementModule::Reimbursement::find_input", () => {
             })
         })
 
-        it("ReimbursementModule::Reimbursement::find_input #07 (throws an error if the reimbursement UTxO isn't at the reimbursement_validator address)", () => {
+        it("ReimbursementModule::Reimbursement::find_input #07 (also returns the reimbursement id, data and number of DVP tokens if a reimbursement UTxO is in Collecting state)", () => {
+            const reimbursement = makeCollectingReimbursement()
+            configureContext({datum: reimbursement}).use((currentScript, ctx) => {
+                deepEqual(
+                    find_input.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    }),
+                    [reimbursementId, reimbursement, nDvpTokens]
+                )
+            })
+        })
+
+        it("ReimbursementModule::Reimbursement::find_input #08 (throws an error if the reimbursement UTxO isn't at the reimbursement_validator address)", () => {
             configureContext({ address: Address.dummy(false) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
@@ -160,14 +176,15 @@ describe("ReimbursementModule::Reimbursement::find_input", () => {
 describe("ReimbursementModule::Reimbursement::find_output", () => {
     const reimbursementId = 0
     const nDvpTokens = 1000n
-    const reimbursement = makeReimbursement()
+    const reimbursement = makeExtractingReimbursement()
     const configureParentContext = (props?: {
         address?: Address
         datum?: UplcData
         nDvpTokens?: IntLike
         extraTokens?: Assets
+        secondReimbursementOutput?: IntLike
     }) => {
-        return new ScriptContextBuilder()
+        const b = new ScriptContextBuilder()
             .addDummyOutputs(5)
             .addReimbursementOutput({
                 address: props?.address,
@@ -178,6 +195,12 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
             })
             .addDummyOutputs(5)
             .redeemDummyTokenWithDvpPolicy()
+
+        if (props?.secondReimbursementOutput) {
+            b.addReimbursementOutput({id: props.secondReimbursementOutput, reimbursement: makeCollectingReimbursement()})
+        }
+
+        return b
     }
 
     describe("@ all validators", () => {
@@ -189,51 +212,47 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
                     find_output.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
-                        id: reimbursementId,
-                        min_tokens: 0
+                        id: reimbursementId
                     }),
                     [reimbursement, nDvpTokens]
                 )
             })
         })
 
-        it("ReimbursementModule::Reimbursement::find_output #02 (returns the reimbursement data and zero DVP tokens if the reimbursement UTxO is returned to the reimbursement_validator address with the reimbursement token but no DVP tokens)", () => {
-            configureContext({ nDvpTokens: 0 }).use((currentScript, ctx) => {
+        it("ReimbursementModule::Reimbursement::find_output #02 (returns the reimbursement data and number of DVP tokens even if there is another reimbursement UTxO)", () => {
+            configureContext({ secondReimbursementOutput: 3 }).use((currentScript, ctx) => {
                 deepEqual(
                     find_output.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
                         id: reimbursementId,
-                        min_tokens: 0
+                    })
+                , [reimbursement, nDvpTokens])
+            })
+        })
+
+        it("ReimbursementModule::Reimbursement::find_output #03 (returns the reimbursement data and zero DVP tokens if the reimbursement UTxO is returned to the reimbursement_validator address with the reimbursement token but no DVP tokens)", () => {
+            configureContext({ nDvpTokens: 0 }).use((currentScript, ctx) => {
+                deepEqual(
+                    find_output.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx,
+                        id: reimbursementId
                     }),
                     [reimbursement, 0]
                 )
             })
         })
 
-        it("ReimbursementModule::Reimbursement::find_output #03 (throws an error if the reimbursement output contains less DVP tokens than the minimum required)", () => {
-            configureContext({ nDvpTokens: 0 }).use((currentScript, ctx) => {
-                throws(() => {
-                    find_output.eval({
-                        $currentScript: currentScript,
-                        $scriptContext: ctx,
-                        id: reimbursementId,
-                        min_tokens: 1
-                    })
-                })
-            })
-        })
-
-        it("ReimbursementModule::Reimbursement::find_output #04 (throws an error if the reimbursement output doesn't contain a reimbursement token with the expected id)", () => {
+        it("ReimbursementModule::Reimbursement::find_output #04 (throws an error if there is no reimbursement output with the expected id)", () => {
             configureContext().use((currentScript, ctx) => {
                 throws(() => {
                     find_output.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
                         id: reimbursementId + 1,
-                        min_tokens: 0
                     })
-                })
+                }, /not found/)
             })
         })
 
@@ -245,9 +264,8 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
                             $currentScript: currentScript,
                             $scriptContext: ctx,
                             id: reimbursementId,
-                            min_tokens: 0
                         })
-                    })
+                    }, /output contains unexpected tokens/)
                 }
             )
         })
@@ -260,10 +278,9 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
                     find_output.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
-                        id: reimbursementId,
-                        min_tokens: 0
+                        id: reimbursementId
                     })
-                })
+                }, /output contains unexpected token policies/)
             })
         })
 
@@ -274,10 +291,9 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
                         find_output.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
-                            id: reimbursementId,
-                            min_tokens: 0
+                            id: reimbursementId
                         })
-                    })
+                    }, /not found/)
                 }
             )
         })
@@ -293,10 +309,9 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
                     find_output.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
-                        id: reimbursementId,
-                        min_tokens: 0
+                        id: reimbursementId
                     })
-                })
+                }, /invalid data structure/)
             })
         })
 
@@ -311,10 +326,9 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
                     find_output.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
-                        id: reimbursementId,
-                        min_tokens: 0
+                        id: reimbursementId
                     })
-                })
+                }, /invalid data structure/)
             })
         })
 
@@ -322,17 +336,16 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
             const datum = ListData.expect(
                 castReimbursement.toUplcData(reimbursement)
             )
-            ListData.expect(datum.items[1]).items[1] = new IntData(0)
+            ListData.expect(datum.items[0]).items[1] = new IntData(0)
 
             configureContext({ datum }).use((currentScript, ctx) => {
                 throws(() => {
                     find_output.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
-                        id: reimbursementId,
-                        min_tokens: 0
+                        id: reimbursementId
                     })
-                })
+                }, /invalid data structure/)
             })
         })
 
@@ -340,17 +353,16 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
             const datum = ListData.expect(
                 castReimbursement.toUplcData(reimbursement)
             )
-            ListData.expect(datum.items[2]).items[1] = new IntData(0)
+            ConstrData.expect(datum.items[1]).fields[0] = new IntData(0)
 
             configureContext({ datum }).use((currentScript, ctx) => {
                 throws(() => {
                     find_output.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
-                        id: reimbursementId,
-                        min_tokens: 0
+                        id: reimbursementId
                     })
-                })
+                }, /invalid data structure/)
             })
         })
     })
@@ -358,7 +370,7 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
 
 describe("ReimbursementModule::find_thread", () => {
     const reimbursementId = 0
-    const reimbursement = makeReimbursement()
+    const reimbursement = makeExtractingReimbursement()
     const nDvpTokens = 1000n
     const configureParentContext = (props?: { redeemer?: UplcData }) => {
         const scb = new ScriptContextBuilder().addReimbursementThread({
@@ -427,91 +439,6 @@ describe("ReimbursementModule::find_thread", () => {
     })
 })
 
-describe("ReimbursementModule::Reimbursement::calc_alpha", () => {
-    it("ReimbursementModule::Reimbursement::calc_alpha #01 (correct ratio division with non-default end_price (typesafe eval))", () => {
-        strictEqual(
-            calc_alpha.eval({
-                self: {
-                    n_remaining_vouchers: 0,
-                    start_price: [100, 1],
-                    end_price: [200_000_000, 1_000_000],
-                    success_fee: {
-                        c0: 0,
-                        steps: []
-                    }
-                },
-                start_price: [200_000_000n, 1_000_000n]
-            }),
-            1.0
-        )
-    })
-
-    it("ReimbursementModule::Reimbursement::calc_alpha #02 (correct ratio division with non-default end_price (evalUnsafe))", () => {
-        const self = contract.ReimbursementModule.Reimbursement.toUplcData({
-            n_remaining_vouchers: 0,
-            start_price: [100, 1],
-            end_price: [200_000_000, 1_000_000],
-            success_fee: {
-                c0: 0,
-                steps: []
-            }
-        })
-
-        const startPrice = new ListData([
-            new IntData(200_000_000),
-            new IntData(1_000_000)
-        ])
-
-        strictEqual(
-            calc_alpha
-                .evalUnsafe({
-                    self: self,
-                    start_price: startPrice
-                })
-                .toString(),
-            "1000000"
-        )
-    })
-
-    it("ReimbursementModule::Reimbursement::calc_alpha #03 (correct ratio division with default start_price (typesafe eval))", () => {
-        strictEqual(
-            calc_alpha.eval({
-                self: {
-                    n_remaining_vouchers: 0,
-                    start_price: [100, 1],
-                    end_price: [200_000_000, 1_000_000],
-                    success_fee: {
-                        c0: 0,
-                        steps: []
-                    }
-                }
-            }),
-            2.0
-        )
-    })
-
-    it("ReimbursementModule::Reimbursement::calc_alpha #04 (correct ratio division with default start_price (evalUnsafe))", () => {
-        const self = contract.ReimbursementModule.Reimbursement.toUplcData({
-            n_remaining_vouchers: 0,
-            start_price: [100, 1],
-            end_price: [200_000_000, 1_000_000],
-            success_fee: {
-                c0: 0,
-                steps: []
-            }
-        })
-
-        strictEqual(
-            calc_alpha
-                .evalUnsafe({
-                    self
-                })
-                .toString(),
-            "2000000"
-        )
-    })
-})
-
 describe("ReimbursementModule::Reimbursement::calc_phi_alpha_ratio", () => {
     describe("whitepaper example", () => {
         const startPrice: RatioType = [100, 1]
@@ -521,7 +448,7 @@ describe("ReimbursementModule::Reimbursement::calc_phi_alpha_ratio", () => {
             steps: [{ c: 0.3, sigma: 1.05 }]
         })
 
-        const reimbursement = makeReimbursement({
+        const reimbursement = makeExtractingReimbursement({
             startPrice,
             endPrice,
             successFee
@@ -546,6 +473,86 @@ describe("ReimbursementModule::Reimbursement::calc_phi_alpha_ratio", () => {
                 }),
                 expected
             )
+        })
+
+        it("ReimbursementModule::Reimbursement::calc_phi_alpha_ratio #03 (throws an error when the reimbursement is in Collecting state)", () => {
+            throws(() => {
+                calc_phi_alpha_ratio.eval({
+                    self: makeCollectingReimbursement(),
+                    start_price: startPrice
+                })
+            }, /can't calculate phi alpha ratio while in Collecting state/)
+        })
+    })
+})
+
+describe("ReimbursementModule::witnessed_by_reimbursement", () => {
+    const reimbursementId = 1
+    const reimbursement = makeExtractingReimbursement()
+
+    const configureContext = (props?: { redeemer?: UplcData, extraInputTokens?: Assets }) => {
+        const scb = new ScriptContextBuilder().addDummyInputs(10).addReimbursementThread({
+            id: reimbursementId,
+            datum: reimbursement,
+            redeemer: props?.redeemer,
+            extraInputTokens: props?.extraInputTokens,
+            nDvpTokens: 0
+        })
+
+        if (!props?.redeemer) {
+            scb.redeemDummyTokenWithDvpPolicy()
+        }
+
+        return scb
+    }
+
+    describe("@ supply_validator", () => {
+        it("ReimbursementModule::witnessed_by_reimbursement #01 (returns true if one of the inputs contains the reimbursement token with the given id)", () => {
+            configureContext()
+                .use(ctx => {
+                    strictEqual(witnessed_by_reimbursement.eval({
+                        $currentScript: "supply_validator",
+                        $scriptContext: ctx,
+                        id: reimbursementId
+                    }), true)
+                })
+        })
+
+        it("ReimbursementModule::witnessed_by_reimbursement #02 (returns false if a reimbursement token is spent with another id)", () => {
+            configureContext()
+                .use(ctx => {
+                    strictEqual(witnessed_by_reimbursement.eval({
+                        $currentScript: "supply_validator",
+                        $scriptContext: ctx,
+                        id: reimbursementId + 1
+                    }), false)
+                })
+        })
+
+        it("ReimbursementModule::witnessed_by_reimbursement #03 (returns false if no reimbursement token is spent)", () => {
+            new ScriptContextBuilder()
+                .addDummyInputs(10)
+                .redeemDummyTokenWithDvpPolicy()
+                .use(ctx => {
+                    strictEqual(witnessed_by_reimbursement.eval({
+                        $currentScript: "supply_validator",
+                        $scriptContext: ctx,
+                        id: reimbursementId
+                    }), false)
+                })
+        })
+
+        it("ReimbursementModule::witnessed_by_reimbursement #04 (throws an error if an input at the reimbursement validator addressdoesn't contain a token)", () => {
+            configureContext({
+                extraInputTokens: makeReimbursementToken(reimbursementId, -1).add(makeDvpTokens(1000n))
+            })
+                .use(ctx => {
+                    throws(() => {witnessed_by_reimbursement.eval({
+                        $currentScript: "supply_validator",
+                        $scriptContext: ctx,
+                        id: reimbursementId
+                    })}, /expected only 1 reimbursement token/)
+                })
         })
     })
 })

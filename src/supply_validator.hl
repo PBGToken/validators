@@ -3,7 +3,7 @@ spending supply_validator
 import { AssetPtr } from AssetPtrModule
 import { Config, signed_by_agent } from ConfigModule
 import { Price } from PriceModule
-import { Reimbursement } from ReimbursementModule
+import { witnessed_by_reimbursement } from ReimbursementModule
 import { tx } from ScriptContext
 import { Supply } from SupplyModule
 import TokenNames
@@ -21,22 +21,20 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> () {
 
     end_price = price.relative_to_benchmark();
     Dalpha = supply0.calc_success_fee_dilution(end_price); // internally bound by 0
-    (reimbursement, _) = Reimbursement::find_output(supply0.period_id(), Dalpha);
+    period_id = supply0.period_id();
+    next_period_id = period_id + 1;
+
     (config0, is_updated) = Config::find();
     tokens_minted = Tokens::get_minted();
 
     assert(D == Dalpha, "incorrect number of tokens minted");
     assert(price.is_not_expired(), "price expired");
     assert(supply1.success_fee.start_time == supply0.success_fee.start_time + supply0.success_fee.period, "new success fee start time not set to correct value");
-    assert(supply1.success_fee.period_id == supply0.success_fee.period_id + 1, "new success fee period id not set to correct value"); // TODO: rename period to cycle_duration, and period_id to cycle_id
+    assert(supply1.success_fee.period_id == next_period_id, "new success fee period id not set to correct value"); // TODO: rename period to cycle_duration, and period_id to cycle_id
     assert(supply1.last_voucher_id == supply0.last_voucher_id, "last voucher id must be persisted");
     assert(supply1.n_vouchers == 0, "new n_vouchers count not set to correct value");
     assert(supply1.n_lovelace == supply0.n_lovelace, "n_lovelace count changed");
     assert(supply1.management_fee_timestamp == supply0.management_fee_timestamp, "management fee timestamp changed");
-    assert(reimbursement.n_remaining_vouchers == supply0.n_vouchers, "n remaining vouchers in reimbursement not set to expected value");
-    assert(reimbursement.start_price == supply0.success_fee.start_price, "reimbursement start price not set to expected value");
-    assert(reimbursement.end_price == end_price, "unexpected reimbursement end price");
-    assert(reimbursement.success_fee == config0.fees.success_fee.fee, "unexpected reimbursement success fee settings");
     if (is_updated) {
         UpdatingSuccessFee{period, _, _} = config0.state.get_proposal();
 
@@ -57,10 +55,9 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> () {
         assert(supply1.success_fee.start_price == end_price, "unexpected new supply start price");
         assert(supply1.success_fee.period == supply0.success_fee.period, "unexpected new supply period")
     };
-    assert(tokens_minted.all((token_name: ByteArray, qty: Int) -> {
-        token_name == TokenNames::dvp_token
-        || (token_name == TokenNames::reimbursement(supply0.success_fee.period_id) && qty == 1)
-    }), "illegal tokens minted");
+    assert(tokens_minted.length == (D > 0).to_int() + 1, "no other tokens can be minted/burned");
+    assert(tokens_minted.get(TokenNames::reimbursement(next_period_id)) == 1, "next reimbursement token not minted");
+    assert(witnessed_by_reimbursement(period_id), "not witnessed by reimbursement validator");
     assert(Vault::nothing_spent(), "something spent from vault or assets validator")
 }
 
@@ -87,7 +84,8 @@ func validate_mint_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: A
     dV = Vault::diff_lovelace(ptrs.asset_input_ptrs);
 
     price_relative_to_benchmark = price.relative_to_benchmark();
-    // validate_minted_vouchers() also asserts no other token types are minted
+
+    // validate_minted_vouchers() also asserts no other token types are minted, and that no vouchers are burned
     (n_vouchers_minted, n_tokens_in_vouchers, last_voucher_id) = validate_minted_vouchers(
         price_relative_to_benchmark, 
         supply0.period_id(),
@@ -112,10 +110,10 @@ func validate_mint_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: A
 func validate_burn_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: AssetPtrs) -> () {
     price = Price::find_ref();
     dV = Vault::diff_lovelace(ptrs.asset_input_ptrs);
+    period_id = supply0.period_id();
 
-    n_vouchers_burned = validate_burned_vouchers(
-        supply0.period_id()
-    );
+    // validate_burned_vouchers() asserts that only dvp tokens and voucher are burned, and nothing is minted
+    n_vouchers_burned = validate_burned_vouchers(period_id);
 
     assert(price.is_not_expired(), "price expired");
     assert(dV >= (price.value * D).floor(), "too much value taken from vault"); // this is all negative
@@ -126,7 +124,8 @@ func validate_burn_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: A
     assert(Vault::counters_are_consistent(
         supply1.n_lovelace - supply0.n_lovelace,
         ptrs.asset_group_output_ptrs
-    ), "counters aren't consistent")
+    ), "counters aren't consistent");
+    assert(witnessed_by_reimbursement(period_id), "token burn not witnessed by reimbursement")
 }
 
 func validate_swap(supply0: Supply, supply1: Supply, ptrs: AssetPtrs) -> () {

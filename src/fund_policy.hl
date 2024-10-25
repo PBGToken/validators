@@ -16,6 +16,7 @@ import {
 import { Metadata } from MetadataModule
 import { Portfolio, PortfolioReduction, witnessed_by_portfolio } from PortfolioModule
 import { Price } from PriceModule
+import { Reimbursement, ReimbursementState } from ReimbursementModule
 import { tx } from ScriptContext
 import { SuccessFee, SuccessFeeStep } from SuccessFeeModule
 import { Supply, SuccessFeeState, witnessed_by_supply } from SupplyModule
@@ -33,15 +34,17 @@ const INITIAL_SUCCESS_FEE: SuccessFee = SuccessFee{
 }
 const INITIAL_CYCLE_PERIOD: Duration = 365*Duration::DAY
 const INITIAL_UPDATE_DELAY: Duration = 2*Duration::WEEK
+const INITIAL_CYCLE_ID: Int = 1
 
 func validate_minted_tokens() -> () {
     tokens = Tokens::get_minted();
     
-    assert(tokens.length == 5, "not precisely 5 tokens minted");
+    assert(tokens.length == 6, "not precisely 6 tokens minted");
     assert(tokens.get(TokenNames::metadata) == 1, "metadata token not minted");
     assert(tokens.get(TokenNames::config) == 1, "config token not minted");
     assert(tokens.get(TokenNames::portfolio) == 1, "portfolio token not minted");
     assert(tokens.get(TokenNames::price) == 1, "price token not minted");
+    assert(tokens.get(TokenNames::reimbursement(INITIAL_CYCLE_ID)) == 1, "reimbursement token not minted");
     assert(tokens.get(TokenNames::supply) == 1, "supply token not minted")
 }
 
@@ -113,6 +116,13 @@ func validate_initial_price() -> () {
     }, "unexpected initial price datum")
 }
 
+func validate_initial_reimbursement() -> () {
+    (reimbursement, _) = Reimbursement::find_output(INITIAL_CYCLE_ID);
+
+    assert(reimbursement.start_price == INITIAL_PRICE, "initial reimbursement start_price not correctly set");
+    assert(reimbursement.state == ReimbursementState::Collecting, "initial reimbursement state not set to Collecting")
+}
+
 func validate_initial_supply() -> () {
     supply = Supply::find_output();
 
@@ -124,7 +134,7 @@ func validate_initial_supply() -> () {
     assert(supply.n_lovelace == 0, "n_lovelace not set to 0");
     assert(supply.management_fee_timestamp > tx.time_range.end, "management fee timestamp lies in the past");
     assert(supply.management_fee_timestamp < tx.time_range.end + Duration::DAY, "management fee timestamp lies too far in the future");
-    assert(supply.success_fee.period_id == 0, "cycle id not set to 0");
+    assert(supply.success_fee.period_id == INITIAL_CYCLE_ID, "cycle id not set to 1");
     assert(supply.success_fee.start_time > tx.time_range.end, "cycle start time lies in the past");
     assert(supply.success_fee.start_time < tx.time_range.end + Duration::DAY, "success fee timestamp lies too far in the future");
     assert(supply.success_fee.period == INITIAL_CYCLE_PERIOD, "cycle period not correctly set");
@@ -137,6 +147,7 @@ func validate_initialization() -> () {
     validate_initial_config();
     validate_initial_portfolio();
     validate_initial_price();
+    validate_initial_reimbursement();
     validate_initial_supply()
 }
 
@@ -165,13 +176,13 @@ func main(args: MixedArgs) -> Bool {
                 //  only in case of no success it is possible that a reimbursement token is minted without DVP tokens, that (rare) case is treated below
                 validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement()
             } else if (tokens.any_key(TokenNames::has_assets_prefix)) {
-                validate_mint_or_burn_asset_groups()
+                validate_mint_or_burn_asset_groups() // doesn't allow minting/burning anything except 1 asset group at a time
             } else if (tokens.all((token_name: ByteArray, qty: Int) -> {
                 qty == -1 && (TokenNames::has_voucher_ref_prefix(token_name) || TokenNames::has_reimbursement_prefix(token_name))
             })) {
                 // there is no risk of this happening before initialization because then burned tokens wouldn't yet exist
-                assert(true, "")
-            } else if (tokens.any_key(TokenNames::has_reimbursement_prefix)) {
+                print("ok")
+            } else if (tokens.any_key(TokenNames::has_reimbursement_prefix) && tokens.get_safe(TokenNames::reimbursement(INITIAL_CYCLE_ID)) == Option[Int]::None) {
                 validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement()
             } else {
                 assert(tx.inputs.any((input: TxInput) -> {input.output_id == SEED_ID}), "UTxO with SEED_ID not spent");
