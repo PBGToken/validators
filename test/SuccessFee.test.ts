@@ -7,10 +7,11 @@ import { makeSuccessFee } from "./data"
 const {
     apply_internal,
     is_valid_internal,
+    calc_alpha,
     "SuccessFee::MAX_SUCCESS_FEE_STEPS": MAX_SUCCESS_FEE_STEPS,
     "SuccessFee::apply": apply,
     "SuccessFee::is_valid": is_valid,
-    calc_alpha
+    "SuccessFee::calc_provisional_fee": calc_provisional_fee
 } = contract.SuccessFeeModule
 
 describe("SuccessFeeModule::apply_internal", () => {
@@ -204,6 +205,40 @@ describe("SuccessFeeModule::is_valid_internal", () => {
     })
 })
 
+describe("SuccessFeeModule::calc_alpha", () => {
+    it("SuccessFeeModule::calc_alpha #01 (correct ratio division (typesafe eval))", () => {
+        strictEqual(
+            calc_alpha.eval({
+                start_price: [200_000_000n, 1_000_000n],
+                end_price: [200_000_000, 1_000_000]
+            }),
+            1.0
+        )
+    })
+
+    it("SuccessFeeModule::calc_alpha #02 (correct ratio division (evalUnsafe))", () => {
+        const startPrice = new ListData([
+            new IntData(200_000_000),
+            new IntData(1_000_000)
+        ])
+
+        const endPrice = new ListData([
+            new IntData(200_000_000),
+            new IntData(1_000_000)
+        ])
+
+        strictEqual(
+            calc_alpha
+                .evalUnsafe({
+                    start_price: startPrice,
+                    end_price: endPrice
+                })
+                .toString(),
+            "1000000"
+        )
+    })
+})
+
 describe("SuccessFeeModule::SuccessFee::MAX_SUCCESS_FEE_STEPS", () => {
     it("equal to 10", () => {
         strictEqual(MAX_SUCCESS_FEE_STEPS.eval({}), 10n)
@@ -237,37 +272,19 @@ describe("SuccessFeeModule::SuccessFee::is_valid", () => {
     })
 })
 
+describe("SuccessFeeModule::SuccessFee::calc_provisional_fee", () => {
+    const self = makeSuccessFee()
 
-describe("SuccessFeeModule::calc_alpha", () => {
-    it("SuccessFeeModule::calc_alpha #01 (correct ratio division (typesafe eval))", () => {
+    it("whitepaper example", () => {
         strictEqual(
-            calc_alpha.eval({
-                start_price: [200_000_000n, 1_000_000n],
-                end_price: [200_000_000, 1_000_000]
+            calc_provisional_fee.eval({
+                self,
+                n_burn: 10_000_000n,
+                alpha: 1.4,
+                n_voucher_tokens: 5_000_000n,
+                delta_vouchers: Math.floor((5_000_000 * 0.035) / 1.166667)
             }),
-            1.0
-        )
-    })
-
-    it("SuccessFeeModule::calc_alpha #02 (correct ratio division (evalUnsafe))", () => {
-        const startPrice = new ListData([
-            new IntData(200_000_000),
-            new IntData(1_000_000)
-        ])
-
-        const endPrice = new ListData([
-            new IntData(200_000_000),
-            new IntData(1_000_000)
-        ])
-
-        strictEqual(
-            calc_alpha
-                .evalUnsafe({
-                    start_price: startPrice,
-                    end_price: endPrice
-                })
-                .toString(),
-            "1000000"
+            524999n
         )
     })
 })

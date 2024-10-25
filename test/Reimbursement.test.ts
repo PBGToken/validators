@@ -2,7 +2,13 @@ import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { IntLike } from "@helios-lang/codec-utils"
 import { Address, AssetClass, Assets } from "@helios-lang/ledger"
-import { ByteArrayData, ConstrData, IntData, ListData, UplcData } from "@helios-lang/uplc"
+import {
+    ByteArrayData,
+    ConstrData,
+    IntData,
+    ListData,
+    UplcData
+} from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { scripts } from "./constants"
 import {
@@ -11,9 +17,14 @@ import {
     castReimbursement,
     makeCollectingReimbursement,
     makeExtractingReimbursement,
-    makeSuccessFee
+    makeSuccessFee,
+    makeVoucher
 } from "./data"
-import { makeConfigToken, makeDvpTokens, makeReimbursementToken } from "./tokens"
+import {
+    makeConfigToken,
+    makeDvpTokens,
+    makeReimbursementToken
+} from "./tokens"
 import { ScriptContextBuilder, withScripts } from "./tx"
 
 const {
@@ -21,6 +32,8 @@ const {
     "Reimbursement::find_output": find_output,
     "Reimbursement::find_thread": find_thread,
     "Reimbursement::calc_phi_alpha_ratio": calc_phi_alpha_ratio,
+    "Reimbursement::calc_success_fee_reimbursement":
+        calc_success_fee_reimbursement,
     witnessed_by_reimbursement
 } = contract.ReimbursementModule
 
@@ -39,7 +52,7 @@ describe("ReimbursementModule::Reimbursement::find_input", () => {
         const scb = new ScriptContextBuilder().addReimbursementInput({
             address: props?.address,
             redeemer: props?.redeemer,
-            datum: props?.datum ??reimbursement,
+            datum: props?.datum ?? reimbursement,
             id: reimbursementId,
             extraTokens: props?.extraTokens,
             nDvpTokens: props?.nDvpTokens ?? nDvpTokens
@@ -147,15 +160,17 @@ describe("ReimbursementModule::Reimbursement::find_input", () => {
 
         it("ReimbursementModule::Reimbursement::find_input #07 (also returns the reimbursement id, data and number of DVP tokens if a reimbursement UTxO is in Collecting state)", () => {
             const reimbursement = makeCollectingReimbursement()
-            configureContext({datum: reimbursement}).use((currentScript, ctx) => {
-                deepEqual(
-                    find_input.eval({
-                        $currentScript: currentScript,
-                        $scriptContext: ctx
-                    }),
-                    [reimbursementId, reimbursement, nDvpTokens]
-                )
-            })
+            configureContext({ datum: reimbursement }).use(
+                (currentScript, ctx) => {
+                    deepEqual(
+                        find_input.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
+                        }),
+                        [reimbursementId, reimbursement, nDvpTokens]
+                    )
+                }
+            )
         })
 
         it("ReimbursementModule::Reimbursement::find_input #08 (throws an error if the reimbursement UTxO isn't at the reimbursement_validator address)", () => {
@@ -197,7 +212,10 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
             .redeemDummyTokenWithDvpPolicy()
 
         if (props?.secondReimbursementOutput) {
-            b.addReimbursementOutput({id: props.secondReimbursementOutput, reimbursement: makeCollectingReimbursement()})
+            b.addReimbursementOutput({
+                id: props.secondReimbursementOutput,
+                reimbursement: makeCollectingReimbursement()
+            })
         }
 
         return b
@@ -220,15 +238,18 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
         })
 
         it("ReimbursementModule::Reimbursement::find_output #02 (returns the reimbursement data and number of DVP tokens even if there is another reimbursement UTxO)", () => {
-            configureContext({ secondReimbursementOutput: 3 }).use((currentScript, ctx) => {
-                deepEqual(
-                    find_output.eval({
-                        $currentScript: currentScript,
-                        $scriptContext: ctx,
-                        id: reimbursementId,
-                    })
-                , [reimbursement, nDvpTokens])
-            })
+            configureContext({ secondReimbursementOutput: 3 }).use(
+                (currentScript, ctx) => {
+                    deepEqual(
+                        find_output.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            id: reimbursementId
+                        }),
+                        [reimbursement, nDvpTokens]
+                    )
+                }
+            )
         })
 
         it("ReimbursementModule::Reimbursement::find_output #03 (returns the reimbursement data and zero DVP tokens if the reimbursement UTxO is returned to the reimbursement_validator address with the reimbursement token but no DVP tokens)", () => {
@@ -250,7 +271,7 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
                     find_output.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
-                        id: reimbursementId + 1,
+                        id: reimbursementId + 1
                     })
                 }, /not found/)
             })
@@ -263,7 +284,7 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
                         find_output.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
-                            id: reimbursementId,
+                            id: reimbursementId
                         })
                     }, /output contains unexpected tokens/)
                 }
@@ -486,18 +507,52 @@ describe("ReimbursementModule::Reimbursement::calc_phi_alpha_ratio", () => {
     })
 })
 
+describe("ReimbursementModule::Reimbursement::calc_success_fee_reimbursement", () => {
+    it("whitepaper example", () => {
+        const startPrice: RatioType = [100, 1]
+        const endPrice: RatioType = [150, 1]
+        const successFee = makeSuccessFee({
+            c0: 0,
+            steps: [{ c: 0.3, sigma: 1.05 }]
+        })
+        const reimbursement = makeExtractingReimbursement({
+            startPrice: startPrice,
+            endPrice: endPrice,
+            successFee
+        })
+
+        const voucher = makeVoucher({ tokens: 10_000_000n, price: [120, 1] })
+
+        strictEqual(
+            calc_success_fee_reimbursement.eval({
+                self: reimbursement,
+                voucher,
+                main_phi_alpha_ratio: calc_phi_alpha_ratio.eval({
+                    self: reimbursement
+                })
+            }),
+            484810n
+        )
+    })
+})
+
 describe("ReimbursementModule::witnessed_by_reimbursement", () => {
     const reimbursementId = 1
     const reimbursement = makeExtractingReimbursement()
 
-    const configureContext = (props?: { redeemer?: UplcData, extraInputTokens?: Assets }) => {
-        const scb = new ScriptContextBuilder().addDummyInputs(10).addReimbursementThread({
-            id: reimbursementId,
-            datum: reimbursement,
-            redeemer: props?.redeemer,
-            extraInputTokens: props?.extraInputTokens,
-            nDvpTokens: 0
-        })
+    const configureContext = (props?: {
+        redeemer?: UplcData
+        extraInputTokens?: Assets
+    }) => {
+        const scb = new ScriptContextBuilder()
+            .addDummyInputs(10)
+            .addReimbursementThread({
+                id: reimbursementId,
+                datum: reimbursement,
+                redeemer: props?.redeemer,
+                extraInputTokens: props?.extraInputTokens,
+                nDvpTokens: 0
+            })
 
         if (!props?.redeemer) {
             scb.redeemDummyTokenWithDvpPolicy()
@@ -508,51 +563,62 @@ describe("ReimbursementModule::witnessed_by_reimbursement", () => {
 
     describe("@ supply_validator", () => {
         it("ReimbursementModule::witnessed_by_reimbursement #01 (returns true if one of the inputs contains the reimbursement token with the given id)", () => {
-            configureContext()
-                .use(ctx => {
-                    strictEqual(witnessed_by_reimbursement.eval({
+            configureContext().use((ctx) => {
+                strictEqual(
+                    witnessed_by_reimbursement.eval({
                         $currentScript: "supply_validator",
                         $scriptContext: ctx,
                         id: reimbursementId
-                    }), true)
-                })
+                    }),
+                    true
+                )
+            })
         })
 
         it("ReimbursementModule::witnessed_by_reimbursement #02 (returns false if a reimbursement token is spent with another id)", () => {
-            configureContext()
-                .use(ctx => {
-                    strictEqual(witnessed_by_reimbursement.eval({
+            configureContext().use((ctx) => {
+                strictEqual(
+                    witnessed_by_reimbursement.eval({
                         $currentScript: "supply_validator",
                         $scriptContext: ctx,
                         id: reimbursementId + 1
-                    }), false)
-                })
+                    }),
+                    false
+                )
+            })
         })
 
         it("ReimbursementModule::witnessed_by_reimbursement #03 (returns false if no reimbursement token is spent)", () => {
             new ScriptContextBuilder()
                 .addDummyInputs(10)
                 .redeemDummyTokenWithDvpPolicy()
-                .use(ctx => {
-                    strictEqual(witnessed_by_reimbursement.eval({
-                        $currentScript: "supply_validator",
-                        $scriptContext: ctx,
-                        id: reimbursementId
-                    }), false)
+                .use((ctx) => {
+                    strictEqual(
+                        witnessed_by_reimbursement.eval({
+                            $currentScript: "supply_validator",
+                            $scriptContext: ctx,
+                            id: reimbursementId
+                        }),
+                        false
+                    )
                 })
         })
 
         it("ReimbursementModule::witnessed_by_reimbursement #04 (throws an error if an input at the reimbursement validator addressdoesn't contain a token)", () => {
             configureContext({
-                extraInputTokens: makeReimbursementToken(reimbursementId, -1).add(makeDvpTokens(1000n))
-            })
-                .use(ctx => {
-                    throws(() => {witnessed_by_reimbursement.eval({
+                extraInputTokens: makeReimbursementToken(
+                    reimbursementId,
+                    -1
+                ).add(makeDvpTokens(1000n))
+            }).use((ctx) => {
+                throws(() => {
+                    witnessed_by_reimbursement.eval({
                         $currentScript: "supply_validator",
                         $scriptContext: ctx,
                         id: reimbursementId
-                    })}, /expected only 1 reimbursement token/)
-                })
+                    })
+                }, /expected only 1 reimbursement token/)
+            })
         })
     })
 })

@@ -278,10 +278,10 @@ describe("assets_validator::main", () => {
 
 describe("assets_validator metrics", () => {
     const program = contract.assets_validator.$hash.context.program
-    
+
     const n = program.toCbor().length
 
-    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {    
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {
         if (n > MAX_SCRIPT_SIZE) {
             throw new Error("program too large")
         }

@@ -90,11 +90,14 @@ describe("fund_policy constants", () => {
     })
 
     it("INITIAL_CYCLE_PERIOD equals 365 days", () => {
-        strictEqual(INITIAL_CYCLE_PERIOD.eval({}), 365n*24n*3600n*1000n)
+        strictEqual(INITIAL_CYCLE_PERIOD.eval({}), 365n * 24n * 3600n * 1000n)
     })
 
     it("INITIAL_UPDATE_DELAY equals 2 weeks", () => {
-        strictEqual(INITIAL_UPDATE_DELAY.eval({}), 2n*7n*24n*3600n*1000n)
+        strictEqual(
+            INITIAL_UPDATE_DELAY.eval({}),
+            2n * 7n * 24n * 3600n * 1000n
+        )
     })
 
     it("INITIAL_CYCLE_ID equals 1", () => {
@@ -110,7 +113,7 @@ describe("fund_policy::validate_minted_tokens", () => {
             .mint({ assets: makePortfolioToken(1) })
             .mint({ assets: makePriceToken(1) })
             .mint({ assets: makeSupplyToken(1) })
-            .mint({ assets: makeReimbursementToken(1, 1)})
+            .mint({ assets: makeReimbursementToken(1, 1) })
     }
 
     it("fund_policy::validate_minted_tokens #01 (succeeds if all five tokens are minted)", () => {
@@ -162,7 +165,11 @@ describe("fund_policy::validate_minted_tokens", () => {
 
     it("fund_policy::validate_minted_tokens #06 (throws an error if the initial reimbursement token has the wrong id)", () => {
         configureContext()
-            .mint({ assets: makeReimbursementToken(1, -1).add(makeReimbursementToken(2, 1)) })
+            .mint({
+                assets: makeReimbursementToken(1, -1).add(
+                    makeReimbursementToken(2, 1)
+                )
+            })
             .use((ctx) => {
                 throws(() => {
                     validate_minted_tokens.eval({ $scriptContext: ctx })
@@ -425,10 +432,10 @@ describe("func_policy::validate_initial_price", () => {
     })
 })
 
-function makeInitialSupply(props?: { 
+function makeInitialSupply(props?: {
     initialTick?: number
     managementFeeTimestmap?: number
-    successFeeStart?: number 
+    successFeeStart?: number
     nTokens?: number
     nVouchers?: number
     lastVoucherId?: number
@@ -454,56 +461,57 @@ function makeInitialSupply(props?: {
 }
 
 describe("fund_policy::validate_initial_reimbursement", () => {
-    
-
-    const configureContext = (props?: {reimbursement?: ReimbursementType, id?: IntLike}) => {
+    const configureContext = (props?: {
+        reimbursement?: ReimbursementType
+        id?: IntLike
+    }) => {
         const reimbursement = makeCollectingReimbursement()
 
         return new ScriptContextBuilder()
-            .addReimbursementOutput({id: props?.id ?? 1, reimbursement: props?.reimbursement ?? reimbursement})
+            .addReimbursementOutput({
+                id: props?.id ?? 1,
+                reimbursement: props?.reimbursement ?? reimbursement
+            })
             .addDummyInputs(10)
     }
 
     it("fund_policy::validate_initial_reimbursement #01 (succeeds if the initial reimbursement with id 1 has the correct datum)", () => {
         configureContext().use((ctx) => {
             strictEqual(
-                validate_initial_reimbursement.eval({ $scriptContext: ctx}),
+                validate_initial_reimbursement.eval({ $scriptContext: ctx }),
                 undefined
             )
         })
     })
 
     it("fund_policy::validate_initial_reimbursement #02 (throws an error if the reimbursement id of the output doesn't correspond)", () => {
-        configureContext({id: 0}).use((ctx) => {
-            throws(
-                () => {
-                    validate_initial_reimbursement.eval({ $scriptContext: ctx})
-                },
-                /not found/
-            )
+        configureContext({ id: 0 }).use((ctx) => {
+            throws(() => {
+                validate_initial_reimbursement.eval({ $scriptContext: ctx })
+            }, /not found/)
         })
     })
 
     it("fund_policy::validate_initial_reimbursement #03 (throws an error if the reimbursement datum contains the wrong start price)", () => {
-        configureContext({reimbursement: makeCollectingReimbursement({startPrice: [1000, 10]})}).use((ctx) => {
-            throws(
-                () => {
-                    validate_initial_reimbursement.eval({ $scriptContext: ctx})
-                },
-                /initial reimbursement start_price not correctly set/
-            )
+        configureContext({
+            reimbursement: makeCollectingReimbursement({
+                startPrice: [1000, 10]
+            })
+        }).use((ctx) => {
+            throws(() => {
+                validate_initial_reimbursement.eval({ $scriptContext: ctx })
+            }, /initial reimbursement start_price not correctly set/)
         })
     })
 
     it("fund_policy::validate_initial_reimbursement #04 (throws an error if the reimbursement datum isn't in Collecting state)", () => {
-        configureContext({reimbursement: makeExtractingReimbursement()}).use((ctx) => {
-            throws(
-                () => {
-                    validate_initial_reimbursement.eval({ $scriptContext: ctx})
-                },
-                /initial reimbursement state not set to Collecting/
-            )
-        })
+        configureContext({ reimbursement: makeExtractingReimbursement() }).use(
+            (ctx) => {
+                throws(() => {
+                    validate_initial_reimbursement.eval({ $scriptContext: ctx })
+                }, /initial reimbursement state not set to Collecting/)
+            }
+        )
     })
 })
 
@@ -514,28 +522,28 @@ describe("fund_policy::validate_initial_supply", () => {
         nVouchers?: number
         lastVoucherId?: number
         token?: Assets
-        nLovelace?: number 
+        nLovelace?: number
         managementFeeTimestamp?: number
         successFeeTimestamp?: number
         successFeePeriodId?: number
         successFeePeriod?: number
         successFeeStartPrice?: [number, number]
     }) => {
-        const supply = makeInitialSupply({ 
-            initialTick: props?.initialTick, 
-            managementFeeTimestmap: props?.managementFeeTimestamp ?? 124, 
+        const supply = makeInitialSupply({
+            initialTick: props?.initialTick,
+            managementFeeTimestmap: props?.managementFeeTimestamp ?? 124,
             successFeeStart: props?.successFeeTimestamp ?? 124,
             nTokens: props?.nTokens ?? 0,
             nVouchers: props?.nVouchers ?? 0,
             lastVoucherId: props?.lastVoucherId ?? 0,
             nLovelace: props?.nLovelace ?? 0,
             successFeePeriodId: props?.successFeePeriodId ?? 1,
-            successFeePeriod: props?.successFeePeriod ?? 365*24*3600*1000,
+            successFeePeriod: props?.successFeePeriod ?? 365 * 24 * 3600 * 1000,
             successFeeStartPrice: props?.successFeeStartPrice ?? [100, 1]
         })
 
         return new ScriptContextBuilder()
-            .setTimeRange({start: 100, end: 123})
+            .setTimeRange({ start: 100, end: 123 })
             .addSupplyOutput({
                 supply,
                 token: props?.token
@@ -568,35 +576,37 @@ describe("fund_policy::validate_initial_supply", () => {
     })
 
     it("fund_policy::validate_initial_supply #04 (throws an error if the validity time range start isn't set)", () => {
-        configureContext().setTimeRange({start:undefined})
-        .use((ctx) => {
-            throws(() => {
-                validate_initial_supply.eval({ $scriptContext: ctx })
-            }, /empty list in headList/)
-        })
+        configureContext()
+            .setTimeRange({ start: undefined })
+            .use((ctx) => {
+                throws(() => {
+                    validate_initial_supply.eval({ $scriptContext: ctx })
+                }, /empty list in headList/)
+            })
     })
 
     it("fund_policy::validate_initial_supply #05 (throws an error if the validity time range end isn't set)", () => {
-        configureContext().setTimeRange({end:undefined})
-        .use((ctx) => {
-            throws(() => {
-                validate_initial_supply.eval({ $scriptContext: ctx })
-            }, /empty list in headList/)
-        })
+        configureContext()
+            .setTimeRange({ end: undefined })
+            .use((ctx) => {
+                throws(() => {
+                    validate_initial_supply.eval({ $scriptContext: ctx })
+                }, /empty list in headList/)
+            })
     })
 
     it("fund_policy::validate_initial_supply #06 (throws an error if the validity time range is too large)", () => {
-        configureContext().setTimeRange({start: 0, end:90_000_000})
-        .use((ctx) => {
-            throws(() => {
-                validate_initial_supply.eval({ $scriptContext: ctx })
-            }, /validity time range is too large/)
-        })
+        configureContext()
+            .setTimeRange({ start: 0, end: 90_000_000 })
+            .use((ctx) => {
+                throws(() => {
+                    validate_initial_supply.eval({ $scriptContext: ctx })
+                }, /validity time range is too large/)
+            })
     })
 
     it("fund_policy::validate_initial_supply #07 (throws an error if the circulating token supply isn't zero)", () => {
-        configureContext({nTokens: 1})
-        .use((ctx) => {
+        configureContext({ nTokens: 1 }).use((ctx) => {
             throws(() => {
                 validate_initial_supply.eval({ $scriptContext: ctx })
             }, /circulating supply not set to 0/)
@@ -604,8 +614,7 @@ describe("fund_policy::validate_initial_supply", () => {
     })
 
     it("fund_policy::validate_initial_supply #08 (throws an error if the circulating token supply isn't zero)", () => {
-        configureContext({nTokens: 1})
-        .use((ctx) => {
+        configureContext({ nTokens: 1 }).use((ctx) => {
             throws(() => {
                 validate_initial_supply.eval({ $scriptContext: ctx })
             }, /circulating supply not set to 0/)
@@ -613,8 +622,7 @@ describe("fund_policy::validate_initial_supply", () => {
     })
 
     it("fund_policy::validate_initial_supply #09 (throws an error if the voucher count isn't zero)", () => {
-        configureContext({nVouchers: 1})
-        .use((ctx) => {
+        configureContext({ nVouchers: 1 }).use((ctx) => {
             throws(() => {
                 validate_initial_supply.eval({ $scriptContext: ctx })
             }, /voucher count not set to 0/)
@@ -622,8 +630,7 @@ describe("fund_policy::validate_initial_supply", () => {
     })
 
     it("fund_policy::validate_initial_supply #10 (throws an error if the last_voucher_id isn't zero)", () => {
-        configureContext({lastVoucherId: 1})
-        .use((ctx) => {
+        configureContext({ lastVoucherId: 1 }).use((ctx) => {
             throws(() => {
                 validate_initial_supply.eval({ $scriptContext: ctx })
             }, /last_voucher_id not set to 0/)
@@ -631,8 +638,7 @@ describe("fund_policy::validate_initial_supply", () => {
     })
 
     it("fund_policy::validate_initial_supply #11 (throws an error if the number of lovelace isn't zero)", () => {
-        configureContext({nLovelace: 1})
-        .use((ctx) => {
+        configureContext({ nLovelace: 1 }).use((ctx) => {
             throws(() => {
                 validate_initial_supply.eval({ $scriptContext: ctx })
             }, /n_lovelace not set to 0/)
@@ -640,26 +646,23 @@ describe("fund_policy::validate_initial_supply", () => {
     })
 
     it("fund policy::validate_initial_supply #12 (throws an error if the management fee timestamp doesn't lie in the future)", () => {
-        configureContext({managementFeeTimestamp: 122})
-        .use((ctx) => {
+        configureContext({ managementFeeTimestamp: 122 }).use((ctx) => {
             throws(() => {
                 validate_initial_supply.eval({ $scriptContext: ctx })
             }, /management fee timestamp lies in the past/)
-        })   
+        })
     })
 
     it("fund policy::validate_initial_supply #13 (throws an error if the management fee timestamp lies too far in the future)", () => {
-        configureContext({managementFeeTimestamp: 90_000_000})
-        .use((ctx) => {
+        configureContext({ managementFeeTimestamp: 90_000_000 }).use((ctx) => {
             throws(() => {
                 validate_initial_supply.eval({ $scriptContext: ctx })
             }, /management fee timestamp lies too far in the future/)
-        })   
+        })
     })
 
     it("fund_policy::validate_initial_supply #14 (throws an error if the success fee cycle period id isn't 1)", () => {
-        configureContext({successFeePeriodId: 0})
-        .use((ctx) => {
+        configureContext({ successFeePeriodId: 0 }).use((ctx) => {
             throws(() => {
                 validate_initial_supply.eval({ $scriptContext: ctx })
             }, /cycle id not set to 1/)
@@ -667,41 +670,38 @@ describe("fund_policy::validate_initial_supply", () => {
     })
 
     it("fund policy::validate_initial_supply #15 (throws an error if the success fee cycle start timestamp doesn't lie in the future)", () => {
-        configureContext({successFeeTimestamp: 122})
-        .use((ctx) => {
+        configureContext({ successFeeTimestamp: 122 }).use((ctx) => {
             throws(() => {
                 validate_initial_supply.eval({ $scriptContext: ctx })
             }, /cycle start time lies in the past/)
-        })   
-    })
-
-    it("fund policy::validate_initial_supply #16 (throws an error if the success fee cycle start timestamp lies too far in the future)", () => {
-        configureContext({successFeeTimestamp: 90_000_000})
-        .use((ctx) => {
-            throws(() => {
-                validate_initial_supply.eval({ $scriptContext: ctx })
-            }, /success fee timestamp lies too far in the future/)
-        })   
-    })
-    
-    it("fund_policy::validate_initial_supply #17 (throws an error if the success fee cycle period isn't set to 1 year)", () => {
-        configureContext({successFeePeriod: 366*24*3600*1000})
-        .use((ctx) => {
-            throws(() => {
-                validate_initial_supply.eval({ $scriptContext: ctx })
-            }, /cycle period not correctly set/)
         })
     })
 
+    it("fund policy::validate_initial_supply #16 (throws an error if the success fee cycle start timestamp lies too far in the future)", () => {
+        configureContext({ successFeeTimestamp: 90_000_000 }).use((ctx) => {
+            throws(() => {
+                validate_initial_supply.eval({ $scriptContext: ctx })
+            }, /success fee timestamp lies too far in the future/)
+        })
+    })
+
+    it("fund_policy::validate_initial_supply #17 (throws an error if the success fee cycle period isn't set to 1 year)", () => {
+        configureContext({ successFeePeriod: 366 * 24 * 3600 * 1000 }).use(
+            (ctx) => {
+                throws(() => {
+                    validate_initial_supply.eval({ $scriptContext: ctx })
+                }, /cycle period not correctly set/)
+            }
+        )
+    })
+
     it("fund_policy::validate_initial_supply #18 (throws an error if the success fee start price isn't set to 100/1)", () => {
-        configureContext({successFeeStartPrice: [1000, 10]})
-        .use((ctx) => {
+        configureContext({ successFeeStartPrice: [1000, 10] }).use((ctx) => {
             throws(() => {
                 validate_initial_supply.eval({ $scriptContext: ctx })
             }, /cycle price not correctly set/)
         })
     })
-
 })
 
 describe("fund_policy::validate_initialization", () => {
@@ -717,8 +717,15 @@ describe("fund_policy::validate_initialization", () => {
         const config = makeInitialConfig({ relMintFee: props?.relMintFee })
         const portfolio = makeInitialPortfolio({ nGroups: props?.nGroups })
         const price = makeInitialPrice({ timestamp: props?.priceTimestamp })
-        const supply = makeInitialSupply({ initialTick: props?.initialTick, managementFeeTimestmap: 124, successFeeStart: 125, successFeePeriodId: 1 })
-        const reimbursement = props?.reimbursement ?? makeCollectingReimbursement({ startPrice: price.value})
+        const supply = makeInitialSupply({
+            initialTick: props?.initialTick,
+            managementFeeTimestmap: 124,
+            successFeeStart: 125,
+            successFeePeriodId: 1
+        })
+        const reimbursement =
+            props?.reimbursement ??
+            makeCollectingReimbursement({ startPrice: price.value })
 
         const metadataToken = makeMetadataToken(1)
         const configToken = makeConfigToken(1)
@@ -734,14 +741,17 @@ describe("fund_policy::validate_initialization", () => {
             .mint({ assets: priceToken })
             .mint({ assets: reimbursementToken })
             .mint({ assets: supplyToken })
-            .setTimeRange({start: 100, end: 123})
+            .setTimeRange({ start: 100, end: 123 })
             .addSupplyOutput({ supply, token: supplyToken })
             .addPriceOutput({ price, token: priceToken })
             .addPortfolioOutput({ portfolio, token: portfolioToken })
             .addSigner(INITIAL_AGENT_PARAM)
             .addConfigOutput({ config, token: configToken })
             .addMetadataOutput({ metadata, token: metadataToken })
-            .addReimbursementOutput({ reimbursement, token: reimbursementToken})
+            .addReimbursementOutput({
+                reimbursement,
+                token: reimbursementToken
+            })
     }
 
     it("fund_policy::validate_initialization #01 (succeeds if all UTxO are correctly initialized and contain the correct tokens)", () => {
@@ -791,11 +801,13 @@ describe("fund_policy::validate_initialization", () => {
     })
 
     it("fund_policy::validate_initialization #07 (throws an error if the reimbursement datum is in the wrong state)", () => {
-        configureContext({ reimbursement: makeExtractingReimbursement() }).use((ctx) => {
-            throws(() => {
-                validate_initialization.eval({ $scriptContext: ctx })
-            }, /initial reimbursement state not set to Collecting/)
-        })
+        configureContext({ reimbursement: makeExtractingReimbursement() }).use(
+            (ctx) => {
+                throws(() => {
+                    validate_initialization.eval({ $scriptContext: ctx })
+                }, /initial reimbursement state not set to Collecting/)
+            }
+        )
     })
 })
 
@@ -1012,8 +1024,14 @@ describe("fund_policy::main", () => {
             const config = makeInitialConfig()
             const portfolio = makeInitialPortfolio()
             const price = makeInitialPrice()
-            const supply = makeInitialSupply({managementFeeTimestmap: 124, successFeeStart: 124, successFeePeriodId: 1 })
-            const reimbursement = makeCollectingReimbursement({startPrice: price.value})
+            const supply = makeInitialSupply({
+                managementFeeTimestmap: 124,
+                successFeeStart: 124,
+                successFeePeriodId: 1
+            })
+            const reimbursement = makeCollectingReimbursement({
+                startPrice: price.value
+            })
 
             const metadataToken = makeMetadataToken(1)
             const configToken = makeConfigToken(1)
@@ -1023,7 +1041,7 @@ describe("fund_policy::main", () => {
             const supplyToken = makeSupplyToken(1)
 
             return new ScriptContextBuilder()
-                .setTimeRange({start: 100, end: 123})
+                .setTimeRange({ start: 100, end: 123 })
                 .mint({ assets: metadataToken, redeemer })
                 .mint({ assets: configToken })
                 .mint({ assets: portfolioToken })
@@ -1033,7 +1051,10 @@ describe("fund_policy::main", () => {
                 .addSupplyOutput({ supply, token: supplyToken })
                 .addPriceOutput({ price, token: priceToken })
                 .addPortfolioOutput({ portfolio, token: portfolioToken })
-                .addReimbursementOutput({ reimbursement, token: reimbursementToken })
+                .addReimbursementOutput({
+                    reimbursement,
+                    token: reimbursementToken
+                })
                 .addSigner(INITIAL_AGENT_PARAM)
                 .addConfigOutput({ config, token: configToken })
                 .addMetadataOutput({ metadata, token: metadataToken })
@@ -1316,10 +1337,10 @@ describe("fund_policy::main", () => {
 
 describe("fund_policy metrics", () => {
     const program = contract.fund_policy.$hash.context.program
-    
+
     const n = program.toCbor().length
 
-    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {    
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {
         if (n > MAX_SCRIPT_SIZE) {
             throw new Error("program too large")
         }
@@ -1331,5 +1352,5 @@ describe("fund_policy metrics", () => {
         it("ir doesn't contain trace", () => {
             strictEqual(!!/__core__trace/.exec(ir), false)
         })
-    }  
+    }
 })

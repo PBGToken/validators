@@ -265,7 +265,7 @@ describe("charge the success fee by diluting the token supply", () => {
                     validate_reward_success.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs
-                    }), 
+                    }),
                     undefined
                 )
             })
@@ -278,7 +278,7 @@ describe("charge the success fee by diluting the token supply", () => {
                         validate_reward_success.eval({
                             $scriptContext: ctx,
                             ...defaultTestArgs
-                        }), 
+                        }),
                         undefined
                     )
                 }
@@ -291,7 +291,7 @@ describe("charge the success fee by diluting the token supply", () => {
                     validate_reward_success.eval({
                         $scriptContext: ctx,
                         ...defaultTestArgs
-                    }), 
+                    }),
                     undefined
                 )
             })
@@ -409,7 +409,11 @@ describe("charge the success fee by diluting the token supply", () => {
 
         it("supply_validator::validate_reward_success #15 (throws an error if we try to mint the current reimbursement token instead of the next)", () => {
             configureContext()
-                .mint({ assets: makeReimbursementToken(periodId+1, -1).add(makeReimbursementToken(periodId, 1)) })
+                .mint({
+                    assets: makeReimbursementToken(periodId + 1, -1).add(
+                        makeReimbursementToken(periodId, 1)
+                    )
+                })
                 .use((ctx) => {
                     throws(() => {
                         validate_reward_success.eval({
@@ -422,7 +426,7 @@ describe("charge the success fee by diluting the token supply", () => {
 
         it("supply_validator::validate_reward_success #16 (throws an error if the next reimbursement token is minted more than once)", () => {
             configureContext()
-                .mint({ assets: makeReimbursementToken(periodId+1, 1) })
+                .mint({ assets: makeReimbursementToken(periodId + 1, 1) })
                 .use((ctx) => {
                     throws(() => {
                         validate_reward_success.eval({
@@ -1241,7 +1245,7 @@ describe("supply_validator::validate_burn_user_tokens", () => {
                     value: new Value(props?.lovelaceFromVault ?? 100_000_000)
                 })
                 .addSupplyInput({ supply: supply0, redeemer: [] })
-                .addReimbursementInput({id: props?.reimbursementId ?? 0})
+                .addReimbursementInput({ id: props?.reimbursementId ?? 0 })
         }
 
         const defaultTestArgs = {
@@ -1378,10 +1382,8 @@ describe("supply_validator::validate_burn_user_tokens", () => {
                 })
         })
 
-
         it("supply_validator::validate_burn_user_tokens #10 (throws an error if the transaction isn't witnessed by spending the correct reimbursement token)", () => {
-            configureContext({reimbursementId: 10})
-            .use((ctx) => {
+            configureContext({ reimbursementId: 10 }).use((ctx) => {
                 throws(() => {
                     validate_burn_user_tokens.eval({
                         $scriptContext: ctx,
@@ -1592,9 +1594,9 @@ describe("supply_validator metrics", () => {
         it("ir doesn't contain appendString", () => {
             if (!!/__core__appendString/.exec(ir)) {
                 console.log(ir)
-                
+
                 throw new Error("optimized ir shouldn't contain appendString")
             }
         })
-    }  
+    }
 })

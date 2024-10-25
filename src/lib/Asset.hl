@@ -15,10 +15,11 @@ struct Asset {
         }
     }
 
-    /**
-     * Returns the value as a number of lovelace
-     */
+    func convert_asset_to_lovelace(self, qty: Int) -> Int {
+        (qty * self.price).floor()
+    }
+
     func calc_value(self) -> Int {
-        (self.count * self.price).floor()
+        self.convert_asset_to_lovelace(self.count)
     }
 }

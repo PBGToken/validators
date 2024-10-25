@@ -1083,9 +1083,12 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
         const assets: AssetType[] = []
         const groupId = 0
 
-        const configureParentContext = (props?: {startTime?: number, endTime?: number}) => {
+        const configureParentContext = (props?: {
+            startTime?: number
+            endTime?: number
+        }) => {
             return new ScriptContextBuilder()
-                .setTimeRange({start: props?.startTime, end: props?.endTime})
+                .setTimeRange({ start: props?.startTime, end: props?.endTime })
                 .addAssetGroupRef({ assets, id: groupId })
                 .redeemDummyTokenWithDvpPolicy()
         }
@@ -1110,42 +1113,48 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
             })
 
             it("AssetGroupModule::sum_total_asset_value #02 (throws an error if the validity time start isn't set)", () => {
-                configureContext({endTime: 1000}).use((currentScript, ctx) => {
-                    throws(() => {
-                        sum_total_asset_value.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx,
-                            group_ptrs: [0],
-                            first_id: 0
-                        })
-                    }, /empty list in headList/)
-                })
+                configureContext({ endTime: 1000 }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            sum_total_asset_value.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                group_ptrs: [0],
+                                first_id: 0
+                            })
+                        }, /empty list in headList/)
+                    }
+                )
             })
 
             it("AssetGroupModule::sum_total_asset_value #03 (throws an error if the validity time range end isn't set)", () => {
-                configureContext({startTime: 1000}).use((currentScript, ctx) => {
-                    throws(() => {
-                        sum_total_asset_value.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx,
-                            group_ptrs: [0],
-                            first_id: 0
-                        })
-                    }, /empty list in headList/)
-                })
+                configureContext({ startTime: 1000 }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            sum_total_asset_value.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                group_ptrs: [0],
+                                first_id: 0
+                            })
+                        }, /empty list in headList/)
+                    }
+                )
             })
 
             it("AssetGroupModule::sum_total_asset_value #04 (throws an error if the validity time range interval is too large)", () => {
-                configureContext({startTime: 1000, endTime: 90_000_000}).use((currentScript, ctx) => {
-                    throws(() => {
-                        sum_total_asset_value.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx,
-                            group_ptrs: [0],
-                            first_id: 0
-                        })
-                    }, /validity time range too large/)
-                })
+                configureContext({ startTime: 1000, endTime: 90_000_000 }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            sum_total_asset_value.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                group_ptrs: [0],
+                                first_id: 0
+                            })
+                        }, /validity time range too large/)
+                    }
+                )
             })
         })
     })
@@ -1156,15 +1165,20 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
             makeAsset({ count: 10000, price: [100, 1], priceTimestamp })
         ]
 
-        const configureParentContext = (props?: {setTimeRangeStart?: boolean}) => {
+        const configureParentContext = (props?: {
+            setTimeRangeStart?: boolean
+        }) => {
             const scb = new ScriptContextBuilder()
                 .addAssetGroupRef({ assets, id: 0 })
                 .redeemDummyTokenWithDvpPolicy()
 
             if (props?.setTimeRangeStart ?? true) {
-                scb.setTimeRange({start: Number.MAX_SAFE_INTEGER, end: Number.MAX_SAFE_INTEGER})
+                scb.setTimeRange({
+                    start: Number.MAX_SAFE_INTEGER,
+                    end: Number.MAX_SAFE_INTEGER
+                })
             }
-            
+
             return scb
         }
 
@@ -1189,17 +1203,19 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
             })
 
             it("AssetGroupModule::sum_total_asset_value #06 (throws an error if the tx validity time range start isn't set)", () => {
-                configureContext({setTimeRangeStart: false}).use((currentScript, ctx) => {
-                    throws(() => {
-                        sum_total_asset_value.eval({
-                            $currentScript: currentScript,
-                            $scriptContext: ctx,
-                            group_ptrs: [0],
-                            first_id: 0
-                        }),
-                        /empty list in headList/
-                    })
-                })
+                configureContext({ setTimeRangeStart: false }).use(
+                    (currentScript, ctx) => {
+                        throws(() => {
+                            sum_total_asset_value.eval({
+                                $currentScript: currentScript,
+                                $scriptContext: ctx,
+                                group_ptrs: [0],
+                                first_id: 0
+                            }),
+                                /empty list in headList/
+                        })
+                    }
+                )
             })
         })
     })
@@ -1224,7 +1240,10 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
 
         const configureParentContext = () => {
             return new ScriptContextBuilder()
-                .setTimeRange({start: Number.MAX_SAFE_INTEGER, end: Number.MAX_SAFE_INTEGER})
+                .setTimeRange({
+                    start: Number.MAX_SAFE_INTEGER,
+                    end: Number.MAX_SAFE_INTEGER
+                })
                 .addAssetGroupRef({ assets: assets0, id: groupId0 })
                 .addDummyRefs(5)
                 .addAssetGroupRef({ assets: assets1, id: groupId1 })
@@ -1270,7 +1289,10 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
 
         const configureParentContext = () => {
             return new ScriptContextBuilder()
-                .setTimeRange({start: Number.MAX_SAFE_INTEGER, end: Number.MAX_SAFE_INTEGER})
+                .setTimeRange({
+                    start: Number.MAX_SAFE_INTEGER,
+                    end: Number.MAX_SAFE_INTEGER
+                })
                 .addAssetGroupRef({ assets: assets0, id: groupId0 })
                 .addAssetGroupRef({ assets: assets1, id: groupId1 })
                 .addAssetGroupRef({ assets: assets2, id: groupId2 })

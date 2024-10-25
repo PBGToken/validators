@@ -1,8 +1,8 @@
 module SupplyModule
 
 import Addresses
-import { Config, SuccessFeeConfig } from ConfigModule
 import { current_script, tx } from ScriptContext
+import { SuccessFee, calc_alpha } from SuccessFeeModule
 import Tokens
 
 struct SuccessFeeState {
@@ -64,20 +64,19 @@ struct Supply {
         )
     }
 
-    func calc_management_fee_dilution(self) -> Int {
-        config = Config::find_ref();
-
-        f = config.fees.management_fee.relative;
+    // we want to be able to call this calculation externally without needing to build a ScriptContext
+    func calc_management_fee_dilution(self, phi: Real) -> Int {
         N = self.n_tokens;
 
-        (N*f/(1.0 - f)).floor()
+        (N*phi/(1.0 - phi)).floor()
     }
 
+    // return value is guarenteed to be >= 0
     // this is a complex calculation that we want to be able to call externally without needing to build a ScriptContext
-    func calc_success_fee_dilution_internal(self, end_price: Ratio, success_fee: SuccessFeeConfig) -> Int {
+    func calc_success_fee_dilution(self, end_price: Ratio, success_fee: SuccessFee) -> Int {
         N = self.n_tokens;
-        alpha = (end_price/self.success_fee.start_price).to_real();
-        phi_alpha = success_fee.fee.apply(alpha);
+        alpha = calc_alpha(self.success_fee.start_price, end_price);
+        phi_alpha = success_fee.apply(alpha);
 
         // guard against the edge case where phi_alpha is very bad
         if (phi_alpha > 0 && phi_alpha < alpha) {
@@ -85,13 +84,6 @@ struct Supply {
         } else {
             0
         }
-    }
-
-    // return value is guarenteed to be >= 0
-    func calc_success_fee_dilution(self, end_price: Ratio) -> Int {
-        (config, _) = Config::find(); // Use Config::find() instead of Config::find_ref() because the config might be spent/changed during success fee dilution
-
-        self.calc_success_fee_dilution_internal(end_price, config.fees.success_fee)
     }
 
     func is_successful(self, price_relative_to_benchmark: Ratio) -> Bool {

@@ -29,6 +29,7 @@ const {
     "MintFeeConfig::deduct": deduct_mint_fee_internal,
     "BurnFeeConfig::apply": apply_burn_fee,
     "BurnFeeConfig::deduct": deduct_burn_fee_internal,
+    make_price_relative_to_benchmark,
     "SuccessFeeConfig::get_benchmark_price": get_benchmark_price_internal,
     "ConfigState::is_idle": is_idle,
     "ConfigState::get_proposal": get_proposal,
@@ -350,6 +351,48 @@ describe("ConfigModule::BurnFeeConfig::deduct", () => {
     })
 })
 
+describe("ConfigModule::make_price_relative_to_benchmark", () => {
+    it("ConfigModule::make_price_relative_to_benchmark #01 (returns the same value as the input value if the benchmark is 1/1)", () => {
+        deepEqual(
+            make_price_relative_to_benchmark.eval({
+                lovelace_price: [100, 1],
+                benchmark_price: [1, 1]
+            }),
+            [100n, 1n]
+        )
+    })
+
+    it("ConfigModule::make_price_relative_to_benchmark #02 (returns a ratio with denominator 0 if the benchmark price denominator is 0)", () => {
+        deepEqual(
+            make_price_relative_to_benchmark.eval({
+                lovelace_price: [100, 1],
+                benchmark_price: [1, 0]
+            }),
+            [100n, 0n]
+        )
+    })
+
+    it("ConfigModule::make_price_relative_to_benchmark #03 (returns the correctly ratio for a more complex multiplication)", () => {
+        deepEqual(
+            make_price_relative_to_benchmark.eval({
+                lovelace_price: [125387, 1236123],
+                benchmark_price: [12665, 1236]
+            }),
+            [125387n * 12665n, 1236123n * 1236n]
+        )
+    })
+
+    it("ConfigModule::make_price_relative_to_benchmark #04 (doesn't move the negative sign in the denominator to the numerator)", () => {
+        deepEqual(
+            make_price_relative_to_benchmark.eval({
+                lovelace_price: [125387, -1236123],
+                benchmark_price: [12665, 1236]
+            }),
+            [125387n * 12665n, -1236123n * 1236n]
+        )
+    })
+})
+
 describe("ConfigModule::SuccessFeeConfig::get_benchmark_price", () => {
     const benchmark = contract.benchmark_delegate.$hash
     const price: RatioType = [100n, 1n]
@@ -366,7 +409,7 @@ describe("ConfigModule::SuccessFeeConfig::get_benchmark_price", () => {
     }
 
     describe("implicit benchmark hash taken from config", () => {
-        it("returns the same value as the input value if the benchmark is ADA itself (i.e. 1/1)", () => {
+        it("ConfigModule::SuccessFeeConfig::get_benchmark_price #01 (returns the same value as the input value if the benchmark is ADA itself (i.e. 1/1))", () => {
             configureContext().use((ctx) => {
                 deepEqual(
                     get_benchmark_price_internal.eval({
@@ -379,7 +422,7 @@ describe("ConfigModule::SuccessFeeConfig::get_benchmark_price", () => {
             })
         })
 
-        it("returns a ratio with  denominator 0 if the benchmark price denominator is 0", () => {
+        it("ConfigModule::SuccessFeeConfig::get_benchmark_price #02 (returns a ratio with denominator 0 if the benchmark price denominator is 0)", () => {
             configureContext({ ratio: [1, 0] }).use((ctx) => {
                 deepEqual(
                     get_benchmark_price_internal.eval({
@@ -394,7 +437,7 @@ describe("ConfigModule::SuccessFeeConfig::get_benchmark_price", () => {
     })
 
     describe("explicit benchmark hash, benchmark is ADA", () => {
-        it("returns the same value as the input value", () => {
+        it("ConfigModule::SuccessFeeConfig::get_benchmark_price #03 (returns the same value as the input value)", () => {
             configureContext().use((ctx) => {
                 deepEqual(
                     get_benchmark_price_internal.eval({
@@ -408,7 +451,7 @@ describe("ConfigModule::SuccessFeeConfig::get_benchmark_price", () => {
             })
         })
 
-        it("throws an error when specifying another explicit benchmark hash than the benchmark delegate that is observing the tx", () => {
+        it("ConfigModule::SuccessFeeConfig::get_benchmark_price #04 (throws an error when specifying another explicit benchmark hash than the benchmark delegate that is observing the tx)", () => {
             configureContext().use((ctx) => {
                 throws(() => {
                     get_benchmark_price_internal.eval({
@@ -424,7 +467,7 @@ describe("ConfigModule::SuccessFeeConfig::get_benchmark_price", () => {
 })
 
 describe("ConfigModule::ConfigState::is_idle", () => {
-    it("returns true if in Idle state", () => {
+    it("ConfigModule::ConfigState::is_idle #01 (returns true if in Idle state)", () => {
         strictEqual(
             is_idle.eval({
                 self: { Idle: {} }
@@ -433,7 +476,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
         )
     })
 
-    it("returns false if in Changing(AddingAssetClass) state", () => {
+    it("ConfigModule::ConfigState::is_idle #02 (returns false if in Changing::AddingAssetClass state)", () => {
         strictEqual(
             is_idle.eval({
                 self: {
@@ -451,7 +494,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
         )
     })
 
-    it("returns false if in Changing(RemovingAssetClass) state", () => {
+    it("ConfigModule::ConfigState::is_idle #03 (returns false if in Changing::RemovingAssetClass state)", () => {
         strictEqual(
             is_idle.eval({
                 self: {
@@ -469,7 +512,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
         )
     })
 
-    it("returns false if in Changing(UpdatingSuccessFee) state", () => {
+    it("ConfigModule::ConfigState::is_idle #04 (returns false if in Changing(UpdatingSuccessFee) state)", () => {
         strictEqual(
             is_idle.eval({
                 self: {
@@ -489,7 +532,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
         )
     })
 
-    it("returns false if in Changing(IncreasingMaxTokenSupply) state", () => {
+    it("ConfigModule::ConfigState::is_idle #05 (returns false if in Changing(IncreasingMaxTokenSupply) state)", () => {
         strictEqual(
             is_idle.eval({
                 self: {
@@ -507,7 +550,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
         )
     })
 
-    it("returns false if in Changing(ChangingAgent) state", () => {
+    it("ConfigModule::ConfigState::is_idle #06 (returns false if in Changing(ChangingAgent) state)", () => {
         strictEqual(
             is_idle.eval({
                 self: {
@@ -525,7 +568,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
         )
     })
 
-    it("returns false if in Changing(ChangingOracle) state", () => {
+    it("ConfigModule::ConfigState::is_idle #07 (returns false if in Changing(ChangingOracle) state)", () => {
         strictEqual(
             is_idle.eval({
                 self: {
@@ -543,7 +586,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
         )
     })
 
-    it("returns false if in Changing(ChangingGovernance) state", () => {
+    it("ConfigModule::ConfigState::is_idle #08 (returns false if in Changing(ChangingGovernance) state)", () => {
         strictEqual(
             is_idle.eval({
                 self: {
@@ -562,7 +605,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
         )
     })
 
-    it("returns false if in Changing(ChangingMintFee) state", () => {
+    it("ConfigModule::ConfigState::is_idle #09 (returns false if in Changing(ChangingMintFee) state)", () => {
         strictEqual(
             is_idle.eval({
                 self: {
@@ -581,7 +624,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
         )
     })
 
-    it("returns false if in Changing(ChangingBurnFee) state", () => {
+    it("ConfigModule::ConfigState::is_idle #10 (returns false if in Changing(ChangingBurnFee) state)", () => {
         strictEqual(
             is_idle.eval({
                 self: {
@@ -600,7 +643,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
         )
     })
 
-    it("returns false if in Changing(ChangingManagementFee) state", () => {
+    it("ConfigModule::ConfigState::is_idle #11 (returns false if in Changing(ChangingManagementFee) state)", () => {
         strictEqual(
             is_idle.eval({
                 self: {
@@ -619,7 +662,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
         )
     })
 
-    it("returns false if in Changing(ChangingMaxPriceAge) state", () => {
+    it("ConfigModule::ConfigState::is_idle #12 (returns false if in Changing(ChangingMaxPriceAge) state)", () => {
         strictEqual(
             is_idle.eval({
                 self: {
@@ -637,7 +680,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
         )
     })
 
-    it("returns false if in Changing(ChangingMetadata) state", () => {
+    it("ConfigModule::ConfigState::is_idle #13 (returns false if in Changing(ChangingMetadata) state)", () => {
         strictEqual(
             is_idle.eval({
                 self: {

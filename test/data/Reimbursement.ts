@@ -21,12 +21,14 @@ export function makeExtractingReimbursement(props?: {
         state: {
             Extracting: {
                 n_remaining_vouchers: BigInt(props?.nRemainingVouchers ?? 0),
-                
+
                 end_price: castRatio.fromUplcData(
                     castRatio.toUplcData(props?.endPrice ?? [200n, 1n])
                 ),
                 success_fee: castSuccessFee.fromUplcData(
-                    castSuccessFee.toUplcData(props?.successFee ?? makeSuccessFee())
+                    castSuccessFee.toUplcData(
+                        props?.successFee ?? makeSuccessFee()
+                    )
                 )
             }
         }

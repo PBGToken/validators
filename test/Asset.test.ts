@@ -4,8 +4,11 @@ import { AssetClass } from "@helios-lang/ledger"
 import contract from "pbg-token-validators-test-context"
 import { makeAsset, equalsAsset } from "./data"
 
-const { "Asset::new": new_asset, "Asset::calc_value": calc_value } =
-    contract.AssetModule
+const {
+    "Asset::new": new_asset,
+    "Asset::convert_asset_to_lovelace": convert_asset_to_lovelace,
+    "Asset::calc_value": calc_value
+} = contract.AssetModule
 
 describe("AssetModule::Asset::new", () => {
     const ac = AssetClass.dummy(1)
@@ -22,6 +25,33 @@ describe("AssetModule::Asset::new", () => {
         })
 
         equalsAsset(actual, expected)
+    })
+})
+
+describe("AssetModule::Asset::convert_asset_to_lovelace", () => {
+    it("rounds down price correctly", () => {
+        strictEqual(
+            convert_asset_to_lovelace.eval({
+                self: makeAsset({
+                    assetClass: AssetClass.dummy(1),
+                    count: 1_000_000_000n,
+                    price: [100, 99]
+                }),
+                qty: 1_000_000_000n
+            }),
+            1010101010n
+        )
+    })
+
+    it("throws an error if price denominator is zero", () => {
+        throws(() => {
+            convert_asset_to_lovelace.eval({
+                self: makeAsset({
+                    price: [100, 0]
+                }),
+                qty: 1n
+            })
+        })
     })
 })
 

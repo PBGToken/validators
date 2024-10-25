@@ -37,7 +37,6 @@ struct AssetGroup {
 
                 group = output.datum.inline.as_strictly[AssetGroup];
 
-                
                 maybe_asset = group.find_asset(asset_class);
 
                 // TODO: a higher performance way of doing this would be to pass next() as the terminating expression to an inner find_or() function

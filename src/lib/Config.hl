@@ -41,6 +41,10 @@ struct ManagementFeeConfig {
     period:   Duration
 }
 
+func make_price_relative_to_benchmark(lovelace_price: Ratio, benchmark_price: Ratio) -> Ratio {
+    lovelace_price*benchmark_price
+}
+
 struct SuccessFeeConfig {
     fee:       SuccessFee
     benchmark: StakingValidatorHash
@@ -53,7 +57,7 @@ struct SuccessFeeConfig {
     ) -> Ratio {
         benchmark_price = tx.redeemers.get(ScriptPurpose::new_rewarding(StakingCredential::new_hash(StakingHash::new_validator(benchmark)))).as[Ratio];
 
-        lovelace_price*benchmark_price
+        make_price_relative_to_benchmark(lovelace_price, benchmark_price)
     }
 }
 

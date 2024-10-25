@@ -40,6 +40,10 @@ func is_valid_internal(sigma: Real, c: Real, next: []SuccessFeeStep) -> Bool {
     }
 }
 
+func calc_alpha(start_price: Ratio, end_price: Ratio) -> Real {
+    (end_price/start_price).to_real()
+}
+
 struct SuccessFee {
     c0:    Real
     steps: []SuccessFeeStep
@@ -54,8 +58,8 @@ struct SuccessFee {
         self.steps.length <= SuccessFee::MAX_SUCCESS_FEE_STEPS
         && is_valid_internal(1.0, self.c0, self.steps)
     }
-}
 
-func calc_alpha(start_price: Ratio, end_price: Ratio) -> Real {
-    (end_price/start_price).to_real()
+    func calc_provisional_fee(self, n_burn: Int, alpha: Real, n_voucher_tokens: Int, delta_vouchers: Int) -> Int {
+        (delta_vouchers + ((n_burn - n_voucher_tokens)*self.apply(alpha)/alpha).floor()).bound_min(0)
+    }
 }

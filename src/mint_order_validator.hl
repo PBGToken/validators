@@ -25,14 +25,12 @@ func main(order: MintOrder, redeemer: Redeemer) -> Bool {
             supply = Supply::find_input();
 
             n_actual = order.returned_tokens();
-            print("actual returned tokens: " + n_actual.show());
-            n_expected = deduct_mint_fee((order.value_lovelace(ptrs) / price.value).floor());
-            print("expected min returned tokens: " + n_expected.show());
+            n_expected = deduct_mint_fee(price.convert_lovelace_to_tokens_round_down(order.value_lovelace(ptrs)));
 
             assert(signed_by_agent(), "not signed by agent");
             assert(price.is_not_expired(order.price_expiry()), "token price too old");
             assert(n_actual >= order.min_tokens, "not enough tokens returned wrt. order");
-            assert(n_actual >= n_expected, "not enough tokens returned wrt. contract price");
+            assert(n_actual >= n_expected, "not enough tokens returned wrt. contract price, expected min " + n_expected.show() + ", got " + n_actual.show());
             if (supply.is_successful(price.relative_to_benchmark())) {
                 voucher_id = order.voucher_id();
                 print("created voucher: " + voucher_id.show());

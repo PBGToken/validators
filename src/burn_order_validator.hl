@@ -6,6 +6,7 @@ import { BurnOrder } from BurnOrderModule
 import { Config, deduct_burn_fee, signed_by_agent } from ConfigModule
 import { Price } from PriceModule
 import { tx } from ScriptContext
+import { SuccessFee, calc_alpha } from SuccessFeeModule
 import { Supply } from SupplyModule
 import TokenNames
 import Tokens
@@ -27,6 +28,8 @@ func calc_provisional_success_fee(
     config = Config::find_ref();
     supply = Supply::find_input();
 
+    success_fee: SuccessFee = config.fees.success_fee.fee;
+
     benchmark_price = price.relative_to_benchmark();
     p0 = supply.success_fee.start_price;
 
@@ -46,10 +49,7 @@ func calc_provisional_success_fee(
         });
 
         voucher = voucher_ref_input.datum.inline.as[Voucher];
-
-        alpha_voucher = (benchmark_price/voucher.price).to_real();
-        phi = config.fees.success_fee.fee.apply(alpha_voucher);
-        delta_voucher = (voucher.tokens*(phi/alpha_voucher)).floor();
+        delta_voucher = voucher.calc_provisional_success_fee_delta(benchmark_price, success_fee);
 
         (
             delta_vouchers + delta_voucher, 
@@ -57,9 +57,8 @@ func calc_provisional_success_fee(
         )
     }, 0, 0);
 
-    alpha = (benchmark_price/p0).to_real();
-    
-    (delta_vouchers + ((n_burn - n_voucher_tokens)*config.fees.success_fee.fee.apply(alpha)/alpha).floor()).bound_min(0)
+    alpha = calc_alpha(p0, benchmark_price);
+    success_fee.calc_provisional_fee(n_burn, alpha, n_voucher_tokens, delta_vouchers)
 }
 
 func main(order: BurnOrder, redeemer: Redeemer) -> Bool {
@@ -77,7 +76,7 @@ func main(order: BurnOrder, redeemer: Redeemer) -> Bool {
             );
 
             n_expected = deduct_burn_fee(n_burn - delta_alpha);
-            n_actual = (order.value_lovelace(ptrs)/price.value).floor();
+            n_actual = price.convert_lovelace_to_tokens_round_down(order.value_lovelace(ptrs));
 
             assert(signed_by_agent(), "not signed by agent");
             assert(price.is_not_expired(order.price_expiry()), "price expired");

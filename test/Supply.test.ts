@@ -14,7 +14,6 @@ const {
     "Supply::find_ref": find_ref,
     "Supply::find_thread": find_thread,
     "Supply::calc_management_fee_dilution": calc_management_fee_dilution,
-    "Supply::calc_success_fee_dilution_internal": calc_success_fee_dilution_internal,
     "Supply::calc_success_fee_dilution": calc_success_fee_dilution,
     "Supply::is_successful": is_successful,
     "Supply::period_end": period_end,
@@ -58,7 +57,9 @@ describe("Supply::find_input", () => {
     })
 
     const downstreamScripts = ["config_validator", "reimbursement_validator"]
-    const upstreamScripts = scripts.filter(s => !downstreamScripts.includes(s))
+    const upstreamScripts = scripts.filter(
+        (s) => !downstreamScripts.includes(s)
+    )
 
     it("nok if nothing is spent from supply address in all scripts except config_validator and reimbursement_validator", () => {
         new ScriptContextBuilder()
@@ -68,15 +69,14 @@ describe("Supply::find_input", () => {
                 address: Address.dummy(false)
             })
             .use((ctx) => {
-                upstreamScripts
-                    .forEach((currentScript) => {
-                        throws(() => {
-                            find_input.eval({
-                                $currentScript: currentScript,
-                                $scriptContext: ctx
-                            })
+                upstreamScripts.forEach((currentScript) => {
+                    throws(() => {
+                        find_input.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx
                         })
                     })
+                })
             })
     })
 
@@ -458,141 +458,34 @@ describe("Supply::calc_management_fee_dilution", () => {
 
         const supply = makeSupply({ nTokens })
 
-        new ScriptContextBuilder()
-            .addSupplyThread({
-                redeemer: [],
-                supply,
-                token: makeSupplyToken(1)
-            })
-            .addConfigRef({
-                config: makeConfig({ relManagementFee: relFee })
-            })
-            .use((ctx) => {
-                strictEqual(
-                    calc_management_fee_dilution.eval({
-                        $currentScript: "supply_validator",
-                        $scriptContext: ctx,
-                        self: supply
-                    }),
-                    100010n
-                )
-            })
+        strictEqual(
+            calc_management_fee_dilution.eval({
+                self: supply,
+                phi: relFee
+            }),
+            100010n
+        )
     })
 
     it("0 if there are no tokens", () => {
         const supply = makeSupply({ nTokens: 0n })
 
-        new ScriptContextBuilder()
-            .addSupplyThread({
-                redeemer: [],
-                supply,
-                token: makeSupplyToken(1)
-            })
-            .addConfigRef({
-                config: makeConfig({ relManagementFee: 0.0001 })
-            })
-            .use((ctx) => {
-                strictEqual(
-                    calc_management_fee_dilution.eval({
-                        $currentScript: "supply_validator",
-                        $scriptContext: ctx,
-                        self: supply
-                    }),
-                    0n
-                )
-            })
-    })
-
-    it("0 if the fee is 0", () => {
-        const supply = makeSupply({ nTokens: 1_000_000_000n })
-
-        new ScriptContextBuilder()
-            .addSupplyThread({
-                redeemer: [],
-                supply,
-                token: makeSupplyToken(1)
-            })
-            .addConfigRef({
-                config: makeConfig({ relManagementFee: 0.0 })
-            })
-            .use((ctx) => {
-                strictEqual(
-                    calc_management_fee_dilution.eval({
-                        $currentScript: "supply_validator",
-                        $scriptContext: ctx,
-                        self: supply
-                    }),
-                    0n
-                )
-            })
-    })
-})
-
-
-describe("Supply::calc_success_fee_dilution_internal", () => {
-    it("Supply::calc_success_fee_dilution_internal #01 (whitepaper example)", () => {
-        const config = makeConfig({
-            successFee: {
-                c0: 0,
-                steps: [{ sigma: 1.05, c: 0.3 }]
-            }
-        })
-
-        const supply = makeSupply({
-            startPrice: [100, 1]
-        })
-
-        // in the whitepaper example this number is 98.901099, which is the correcly rounded number
-        // but the on-chain math rounds down
         strictEqual(
-            calc_success_fee_dilution_internal.eval({
+            calc_management_fee_dilution.eval({
                 self: supply,
-                end_price: [150, 1],
-                success_fee: config.fees.success_fee
-            }),
-            98_901_098n
-        )
-    })
-
-    it("Supply::calc_success_fee_dilution_internal #02 (0 fee gives 0 dilution)", () => {
-        const config = makeConfig({
-            successFee: {
-                c0: 0,
-                steps: []
-            }
-        })
-
-        const supply = makeSupply({
-            startPrice: [100, 1]
-        })
-
-        strictEqual(
-            calc_success_fee_dilution_internal.eval({
-                self: supply,
-                end_price: [150, 1],
-                success_fee: config.fees.success_fee
+                phi: 0.0001
             }),
             0n
         )
     })
 
-    it("Supply::calc_success_fee_dilution_internal #03 (0 success gives 0 dilution)", () => {
-        const config = makeConfig({
-            successFee: {
-                c0: 0,
-                steps: [{ sigma: 1.05, c: 0.3 }]
-            }
-        })
-
-        const supply = makeSupply({
-            startPrice: [100, 1]
-        })
+    it("0 if the fee is 0", () => {
+        const supply = makeSupply({ nTokens: 1_000_000_000n })
 
         strictEqual(
-            calc_success_fee_dilution_internal.eval({
+            calc_management_fee_dilution.eval({
                 self: supply,
-                end_price: [90, 1],
-                success_fee: config.fees.success_fee
+                phi: 0.0
             }),
             0n
         )
@@ -612,28 +505,16 @@ describe("Supply::calc_success_fee_dilution", () => {
             startPrice: [100, 1]
         })
 
-        new ScriptContextBuilder()
-            .addSupplyThread({
-                redeemer: [],
-                supply,
-                token: makeSupplyToken(1)
-            })
-            .addConfigRef({
-                config: config
-            })
-            .use((ctx) => {
-                // in the whitepaper example this number is 98.901099, which is the correcly rounded number
-                // but the on-chain math rounds down
-                strictEqual(
-                    calc_success_fee_dilution.eval({
-                        $currentScript: "supply_validator",
-                        $scriptContext: ctx,
-                        self: supply,
-                        end_price: [150, 1]
-                    }),
-                    98_901_098n
-                )
-            })
+        // in the whitepaper example this number is 98.901099, which is the correcly rounded number
+        // but the on-chain math rounds down
+        strictEqual(
+            calc_success_fee_dilution.eval({
+                self: supply,
+                end_price: [150, 1],
+                success_fee: config.fees.success_fee.fee
+            }),
+            98_901_098n
+        )
     })
 
     it("Supply::calc_success_fee_dilution #02 (0 fee gives 0 dilution)", () => {
@@ -648,26 +529,14 @@ describe("Supply::calc_success_fee_dilution", () => {
             startPrice: [100, 1]
         })
 
-        new ScriptContextBuilder()
-            .addSupplyThread({
-                redeemer: [],
-                supply,
-                token: makeSupplyToken(1)
-            })
-            .addConfigRef({
-                config: config
-            })
-            .use((ctx) => {
-                strictEqual(
-                    calc_success_fee_dilution.eval({
-                        $currentScript: "supply_validator",
-                        $scriptContext: ctx,
-                        self: supply,
-                        end_price: [150, 1]
-                    }),
-                    0n
-                )
-            })
+        strictEqual(
+            calc_success_fee_dilution.eval({
+                self: supply,
+                end_price: [150, 1],
+                success_fee: config.fees.success_fee.fee
+            }),
+            0n
+        )
     })
 
     it("Supply::calc_success_fee_dilution #03 (0 success gives 0 dilution)", () => {
@@ -682,26 +551,14 @@ describe("Supply::calc_success_fee_dilution", () => {
             startPrice: [100, 1]
         })
 
-        new ScriptContextBuilder()
-            .addSupplyThread({
-                redeemer: [],
-                supply,
-                token: makeSupplyToken(1)
-            })
-            .addConfigRef({
-                config: config
-            })
-            .use((ctx) => {
-                strictEqual(
-                    calc_success_fee_dilution.eval({
-                        $currentScript: "supply_validator",
-                        $scriptContext: ctx,
-                        self: supply,
-                        end_price: [90, 1]
-                    }),
-                    0n
-                )
-            })
+        strictEqual(
+            calc_success_fee_dilution.eval({
+                self: supply,
+                end_price: [90, 1],
+                success_fee: config.fees.success_fee.fee
+            }),
+            0n
+        )
     })
 })
 

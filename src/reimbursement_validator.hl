@@ -20,6 +20,7 @@ func validate_burned_vouchers(reim: Reimbursement, period_id: Int, voucher_outpu
     config = Config::find_ref();
     minted_tokens = Tokens::get_minted();
     main_phi_alpha_ratio = reim.calc_phi_alpha_ratio();
+    min_reimbursement = config.fees.success_fee.min_reimbursement;
 
     (n_vouchers_burned, n_tokens_reimbursed, _) = tx.inputs.fold3((n_vouchers_burned: Int, n_tokens_reimbursed: Int, voucher_output_ptrs: []Int, input: TxInput) -> (Int, Int, []Int) {
         if (input.address == Addresses::voucher) {
@@ -29,15 +30,14 @@ func validate_burned_vouchers(reim: Reimbursement, period_id: Int, voucher_outpu
             assert(minted_tokens.get(TokenNames::voucher_ref(id)) == -1, "voucher ref not burned");
 
             voucher = input.datum.inline.as[Voucher];
-            voucher_phi_alpha_ratio = reim.calc_phi_alpha_ratio(voucher.price);
-            expected_reimbursed_tokens = (voucher.tokens*(main_phi_alpha_ratio - voucher_phi_alpha_ratio)).floor().bound_min(0);
+            expected_reimbursed_tokens = reim.calc_success_fee_reimbursement(voucher, main_phi_alpha_ratio);
 
             // though the voucher period id is checked by voucher_validator, voucher period ids and reimbursement ids can be mixed here, as long as all reimbursement period ids are present
             // hence we still need to check the voucher period id here in order to avoid mixing
             assert(voucher.period_id == period_id, "voucher is from other period");
 
             // the reimbursement is only necessary if it is more than a certain amount of tokens
-            if (expected_reimbursed_tokens >= config.fees.success_fee.min_reimbursement) {
+            if (expected_reimbursed_tokens >= min_reimbursement) {
                 return = voucher.find_return(ptr);
 
                 // avoid token dust attack

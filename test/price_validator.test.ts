@@ -19,7 +19,7 @@ const { main } = contract.price_validator
 
 describe("price_validator::main", () => {
     const price = makePrice({ ratio: [1000, 1000], timestamp: 0 })
-    const price0 = makePrice( {ratio : [100, 1], timestamp: 0})
+    const price0 = makePrice({ ratio: [100, 1], timestamp: 0 })
 
     const configureContext = (props?: {
         nGroups?: IntLike
@@ -71,8 +71,9 @@ describe("price_validator::main", () => {
     it("price_validator::main #01 (succeeds if the price matches the ratio of the vault lovelace value and the number of tokens in circulation)", () => {
         configureContext().use((ctx) => {
             strictEqual(
-            main.eval({ $scriptContext: ctx, ...defaultTestArgs })
-            , undefined)
+                main.eval({ $scriptContext: ctx, ...defaultTestArgs }),
+                undefined
+            )
         })
     })
 
@@ -146,30 +147,35 @@ describe("price_validator::main", () => {
     })
 
     it("price_validator::main #08 (throws an error if the number of tokens is zero and the price ratio isn't copied from the previous datum)", () => {
-        configureContext({nTokens: 0}).use((ctx) => {
+        configureContext({ nTokens: 0 }).use((ctx) => {
             throws(() => {
-                main.eval({$scriptContext: ctx, ...defaultTestArgs})
+                main.eval({ $scriptContext: ctx, ...defaultTestArgs })
             }, /price can't change if n_tokens is zero/)
         })
     })
 
     it("price_validator::main #09 (succeeds if the number of tokens is zero and the price doesn't change", () => {
-        configureContext({nTokens: 0, price: makePrice({ratio: price0.ratio, timestamp: price.timestamp})}).use(ctx => {
+        configureContext({
+            nTokens: 0,
+            price: makePrice({
+                ratio: price0.ratio,
+                timestamp: price.timestamp
+            })
+        }).use((ctx) => {
             strictEqual(
-                main.eval({$scriptContext: ctx, ...defaultTestArgs}),
+                main.eval({ $scriptContext: ctx, ...defaultTestArgs }),
                 undefined
             )
         })
-        
     })
 })
 
 describe("price_validator metrics", () => {
     const program = contract.price_validator.$hash.context.program
-    
+
     const n = program.toCbor().length
 
-    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {    
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {
         if (n > MAX_SCRIPT_SIZE) {
             throw new Error("program too large")
         }
@@ -181,5 +187,5 @@ describe("price_validator metrics", () => {
         it("ir doesn't contain trace", () => {
             strictEqual(!!/__core__trace/.exec(ir), false)
         })
-    }  
+    }
 })

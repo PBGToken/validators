@@ -176,11 +176,13 @@ describe("burn_order_validator::main", () => {
         it("burn_order_validator::main #02 (succeeds if the tx signed by the address pubkey)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
-                main.eval({
-                    $scriptContext: ctx,
-                    order: burnOrder,
-                    redeemer
-                }), undefined)
+                    main.eval({
+                        $scriptContext: ctx,
+                        order: burnOrder,
+                        redeemer
+                    }),
+                    undefined
+                )
             })
         })
 
@@ -202,11 +204,13 @@ describe("burn_order_validator::main", () => {
                 dummyInputAddr: returnAddress
             }).use((ctx) => {
                 strictEqual(
-                main.eval({
-                    $scriptContext: ctx,
-                    order: burnOrder,
-                    redeemer
-                }), undefined)
+                    main.eval({
+                        $scriptContext: ctx,
+                        order: burnOrder,
+                        redeemer
+                    }),
+                    undefined
+                )
             })
         })
     })
@@ -310,11 +314,13 @@ describe("burn_order_validator::main", () => {
         it("burn_order_validator::main #05 (succeeds if enough lovelace returned)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
-                main.eval({
-                    $scriptContext: ctx,
-                    order: burnOrder,
-                    redeemer
-                }), undefined)
+                    main.eval({
+                        $scriptContext: ctx,
+                        order: burnOrder,
+                        redeemer
+                    }),
+                    undefined
+                )
             })
         })
 
@@ -446,11 +452,13 @@ describe("burn_order_validator::main", () => {
 
             configureContext({ burnOrder }).use((ctx) => {
                 strictEqual(
-                main.eval({
-                    $scriptContext: ctx,
-                    order: burnOrder,
-                    redeemer
-                }), undefined)
+                    main.eval({
+                        $scriptContext: ctx,
+                        order: burnOrder,
+                        redeemer
+                    }),
+                    undefined
+                )
             })
         })
 
@@ -509,11 +517,13 @@ describe("burn_order_validator::main", () => {
                 })
                 .use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        order: burnOrder,
-                        redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            order: burnOrder,
+                            redeemer
+                        }),
+                        undefined
+                    )
                 })
         })
 
@@ -584,11 +594,13 @@ describe("burn_order_validator::main", () => {
                 }
             }).use((ctx) => {
                 strictEqual(
-                main.eval({
-                    $scriptContext: ctx,
-                    order: burnOrder,
-                    redeemer
-                }), undefined)
+                    main.eval({
+                        $scriptContext: ctx,
+                        order: burnOrder,
+                        redeemer
+                    }),
+                    undefined
+                )
             })
         })
 
@@ -621,10 +633,10 @@ describe("burn_order_validator::main", () => {
 
 describe("burn_order_validator metrics", () => {
     const program = contract.burn_order_validator.$hash.context.program
-    
+
     const n = program.toCbor().length
 
-    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {    
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {
         if (n > MAX_SCRIPT_SIZE) {
             throw new Error("program too large")
         }

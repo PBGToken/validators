@@ -80,13 +80,19 @@ describe("config_validator::main", () => {
         }
         const config = makeConfig({ state })
         const redeemer = new IntData(0)
-        const configureContext = (props?: {startTime?: null | number}) => {
+        const configureContext = (props?: { startTime?: null | number }) => {
             return new ScriptContextBuilder()
-            .setTimeRange({start: props?.startTime === null ? undefined : props?.startTime ?? 100, end: 1000})
-            .addConfigThread({
-                config,
-                redeemer
-            })
+                .setTimeRange({
+                    start:
+                        props?.startTime === null
+                            ? undefined
+                            : (props?.startTime ?? 100),
+                    end: 1000
+                })
+                .addConfigThread({
+                    config,
+                    redeemer
+                })
         }
 
         it("config_validator::main #01 (throws an error for Idle to Idle state change)", () => {
@@ -102,39 +108,45 @@ describe("config_validator::main", () => {
         })
 
         it("config_validator::main #02 (throws an error if the validity time range start isn't set)", () => {
-            configureContext().setTimeRange({start:undefined}).use((ctx) => {
-                throws(() => {
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config,
-                        _: redeemer
-                    })
-                }, /empty list in headList/)
-            })
+            configureContext()
+                .setTimeRange({ start: undefined })
+                .use((ctx) => {
+                    throws(() => {
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config,
+                            _: redeemer
+                        })
+                    }, /empty list in headList/)
+                })
         })
 
         it("config_validator::main #03 (throws an error if the validity time range end isn't set)", () => {
-            configureContext().setTimeRange({end:undefined}).use((ctx) => {
-                throws(() => {
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config,
-                        _: redeemer
-                    })
-                }, /empty list in headList/)
-            })
+            configureContext()
+                .setTimeRange({ end: undefined })
+                .use((ctx) => {
+                    throws(() => {
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config,
+                            _: redeemer
+                        })
+                    }, /empty list in headList/)
+                })
         })
 
         it("config_validator::main #04 (throws an error if the validity time range interval is too large)", () => {
-            configureContext().setTimeRange({start: 0, end: 90_000_000}).use((ctx) => {
-                throws(() => {
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config,
-                        _: redeemer
-                    })
-                }, /validity time range too large/)
-            })
+            configureContext()
+                .setTimeRange({ start: 0, end: 90_000_000 })
+                .use((ctx) => {
+                    throws(() => {
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config,
+                            _: redeemer
+                        })
+                    }, /validity time range too large/)
+                })
         })
     })
 
@@ -155,11 +167,11 @@ describe("config_validator::main", () => {
         const redeemer = new IntData(0)
         const configureContext = () => {
             return new ScriptContextBuilder()
-            .setTimeRange({start: 100, end: 1000})
-            .addConfigThread({
-                config,
-                redeemer
-            })
+                .setTimeRange({ start: 100, end: 1000 })
+                .addConfigThread({
+                    config,
+                    redeemer
+                })
         }
 
         it("config_validator::main #05 (throws an error for Changing to Changing state change)", () => {
@@ -257,8 +269,9 @@ describe("config_validator::main", () => {
                             asset_class: props?.assetClass ?? assetClass
                         }
                     }
-                }).addPortfolioRef({ portfolio })
-                .addDummyInput()
+                })
+                    .addPortfolioRef({ portfolio })
+                    .addDummyInput()
 
                 return scb
             }
@@ -266,11 +279,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #06 (succeeds if the portfolio datum is in Reducing::DoesNotExist state for the asset class being added)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -318,8 +333,9 @@ describe("config_validator::main", () => {
                             asset_class: props?.assetClass ?? assetClass
                         }
                     }
-                }).addPortfolioRef({ portfolio })
-                .addDummyInput()
+                })
+                    .addPortfolioRef({ portfolio })
+                    .addDummyInput()
 
                 return scb
             }
@@ -327,11 +343,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #08 (succeeds if the portfolio datum is in Reducing::Exists state for the asset class being removed)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -399,11 +417,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #11 (succeeds if the new period is in the correct range, the tx is observed by the new benchmark staking validator, the fee is valid, and the year ended)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -506,11 +526,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #18 (succeeds if new max supply is larger than old max supply)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -557,11 +579,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #20 (succeeds if tx is signed by agent)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -611,11 +635,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #23 (succeeds if witnessed by corresponding oracle staking validator)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -655,11 +681,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #25 (succeeds if witnessed by corresponding governance staking validator)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -710,33 +738,39 @@ describe("config_validator::main", () => {
             it("config_validator::main #28 (succeeds if new mint fee parameters lie within the valid ranges)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
             it("config_validator::main #29 (succeeds if the new relative mint fee is zero)", () => {
                 configureContext({ relative: 0 }).use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
             it("config_validator::main #30 (succeeds if both the new relative mint fee and minimum mint fee are zero)", () => {
                 configureContext({ relative: 0, minimum: 0 }).use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -809,33 +843,39 @@ describe("config_validator::main", () => {
             it("config_validator::main #35 (succeeds if new burn fee parameters lie within the valid ranges)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
             it("config_validator::main #36 (succeeds if the new relative burn fee is zero)", () => {
                 configureContext({ relative: 0 }).use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
             it("config_validator::main #37 (succeeds if both the new relative burn fee and minimum burn fee are zero)", () => {
                 configureContext({ relative: 0, minimum: 0 }).use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -908,22 +948,26 @@ describe("config_validator::main", () => {
             it("config_validator::main #42 (succeeds if new management fee parameters lie within the valid ranges)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
             it("config_validator::main #43 (succeeds if the new relative management fee is zero)", () => {
                 configureContext({ relative: 0 }).use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -995,11 +1039,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #48 (succeeds if the new max price age lies in the valid range)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -1046,11 +1092,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #51 (succeeds if the new hash has the correct length)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -1271,22 +1319,25 @@ describe("config_validator::main", () => {
                 return configureParentContext({
                     config0,
                     governance: props?.governance
-                }).addAssetGroupThread({
-                    id: groupId,
-                    inputAssets: assets0,
-                    outputAssets: assets1
                 })
-                .addDummyInput()
+                    .addAssetGroupThread({
+                        id: groupId,
+                        inputAssets: assets0,
+                        outputAssets: assets1
+                    })
+                    .addDummyInput()
             }
 
             it("config_validator::main #58 (succeeds if the tx has only one asset group thread and the added asset class is included in the group output but not in the group input)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -1342,11 +1393,13 @@ describe("config_validator::main", () => {
                     ]
                 }).use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -1390,22 +1443,25 @@ describe("config_validator::main", () => {
                 return configureParentContext({
                     config0,
                     governance: props?.governance
-                }).addAssetGroupThread({
-                    id: groupId,
-                    inputAssets: assets0,
-                    outputAssets: assets1
                 })
-                .addDummyInput()
+                    .addAssetGroupThread({
+                        id: groupId,
+                        inputAssets: assets0,
+                        outputAssets: assets1
+                    })
+                    .addDummyInput()
             }
 
             it("config_validator::main #64 (succeeds if the tx has only one asset group thread and the added asset class is included in the group input but not in the group output)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -1512,11 +1568,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #69 (succeeds if the reimbursement token is minted and the supply UTxO is spent)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -1569,11 +1627,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #72 (succeeds if output config data contains correct max_supply)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -1615,11 +1675,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #74 (succeeds if the output config data contains the correct agent)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -1661,11 +1723,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #76 (succeeds if the output config data contains the correct oracle staking validator hash)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -1714,11 +1778,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #78 (succeeds if the output config data contains the correct governance staking validator hash)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -1781,11 +1847,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #81 (succeeds if the output config data contains the correct mint fee parameters)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -1844,11 +1912,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #84 (succeeds if the output config data contains the correct burn fee parameters)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -1907,11 +1977,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #87 (succeeds if the output config data contains the correct management fee parameters)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -1967,11 +2039,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #90 (succeeds if the output config data contains the correct max price age)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -2012,11 +2086,13 @@ describe("config_validator::main", () => {
             it("config_validator::main #92 (succeeds if metadata UTxO is spent and config remains unchanged)", () => {
                 configureContext().use((ctx) => {
                     strictEqual(
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: config0,
-                        _: redeemer
-                    }), undefined)
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        }),
+                        undefined
+                    )
                 })
             })
 
@@ -2090,26 +2166,26 @@ describe("config_validator::main", () => {
                 const groupId = 0
                 const assets0: AssetType[] = []
 
-                const assets1 = [
-                    makeAsset({ assetClass })
-                ]
+                const assets1 = [makeAsset({ assetClass })]
 
                 configureContext({
                     config0,
                     governance: StakingValidatorHash.dummy(13)
-                }).addAssetGroupThread({
-                    id: groupId,
-                    inputAssets: assets0,
-                    outputAssets: assets1
-                }).use((ctx) => {
-                    throws(() => {
-                        main.eval({
-                            $scriptContext: ctx,
-                            $datum: config0,
-                            _: redeemer
-                        })
-                    }, /invalid datum change/)
                 })
+                    .addAssetGroupThread({
+                        id: groupId,
+                        inputAssets: assets0,
+                        outputAssets: assets1
+                    })
+                    .use((ctx) => {
+                        throws(() => {
+                            main.eval({
+                                $scriptContext: ctx,
+                                $datum: config0,
+                                _: redeemer
+                            })
+                        }, /invalid datum change/)
+                    })
             })
         })
     })
@@ -2117,7 +2193,7 @@ describe("config_validator::main", () => {
 
 describe("config_validator metrics", () => {
     const program = contract.config_validator.$hash.context.program
-    
+
     const n = program.toCbor().length
 
     it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {
@@ -2132,5 +2208,5 @@ describe("config_validator metrics", () => {
         it("ir doesn't contain trace", () => {
             strictEqual(!!/__core__trace/.exec(ir), false)
         })
-    }  
+    }
 })

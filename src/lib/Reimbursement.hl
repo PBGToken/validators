@@ -5,6 +5,7 @@ import { current_script, get_current_input, tx } from ScriptContext
 import { SuccessFee, calc_alpha } from SuccessFeeModule
 import TokenNames
 import Tokens
+import { Voucher } from VoucherModule
 
 enum ReimbursementState {
     Collecting 
@@ -74,6 +75,13 @@ struct Reimbursement {
             },
             else => error("can't calculate phi alpha ratio while in Collecting state")
         }
+    }
+
+    // reuse main_phi_alpha_ratio instead of recalcuting it here because Helios doesn't lift loop invariants out of loops
+    func calc_success_fee_reimbursement(self, voucher: Voucher, main_phi_alpha_ratio: Real) -> Int {
+        voucher_phi_alpha_ratio = self.calc_phi_alpha_ratio(voucher.price);
+
+        (voucher.tokens*(main_phi_alpha_ratio - voucher_phi_alpha_ratio)).floor().bound_min(0)
     }
 }
 

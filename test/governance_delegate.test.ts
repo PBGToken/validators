@@ -58,10 +58,10 @@ describe("governance_delegate::main", () => {
 
 describe("governance_delegate metrics", () => {
     const program = contract.governance_delegate.$hash.context.program
-    
+
     const n = program.toCbor().length
 
-    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {    
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {
         if (n > MAX_SCRIPT_SIZE) {
             throw new Error("program too large")
         }
@@ -73,5 +73,5 @@ describe("governance_delegate metrics", () => {
         it("ir doesn't contain trace", () => {
             strictEqual(!!/__core__trace/.exec(ir), false)
         })
-    }  
+    }
 })

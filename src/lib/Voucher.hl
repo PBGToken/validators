@@ -2,6 +2,7 @@ module VoucherModule
 
 import Addresses
 import { get_current_input, tx } from ScriptContext
+import { SuccessFee, calc_alpha } from SuccessFeeModule
 import TokenNames
 import Tokens
 
@@ -50,6 +51,12 @@ struct Voucher {
         assert(output.datum.inline == self.return_datum, "unexpected voucher return datum");
 
         output
+    }
+
+    func calc_provisional_success_fee_delta(self, benchmark_price: Ratio, success_fee: SuccessFee) -> Int {
+        alpha_voucher = calc_alpha(self.price, benchmark_price);
+        phi = success_fee.apply(alpha_voucher);
+        (self.tokens*(phi/alpha_voucher)).floor()
     }
 }
 

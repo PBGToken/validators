@@ -13,16 +13,14 @@ const { main } = contract.voucher_validator
 
 describe("voucher_validator::main", () => {
     const periodId = 1
-    const configureVoucher = (props?: {
-        periodId?: number
-    }) => {
+    const configureVoucher = (props?: { periodId?: number }) => {
         return makeVoucher({
             periodId: props?.periodId ?? periodId,
             address: Address.dummy(false, 0),
             datum: new IntData(0),
             tokens: 1000
         })
-    } 
+    }
 
     const configureContext = (props?: {
         signingAgent?: PubKeyHash | null
@@ -74,24 +72,28 @@ describe("voucher_validator::main", () => {
     it("succeeds if signed by the agent and the voucher pair is burned", () => {
         configureContext({ nVoucherPairsBurned: 1 }).use((ctx) => {
             strictEqual(
-            main.eval({
-                $scriptContext: ctx,
-                $datum: configureVoucher(),
-                _: new IntData(0)
-            }), undefined)
-        })
-    })
-
-    it("throws an error if a voucher pair is burned but the tx isn't signed by the agent", () => {
-        configureContext({ nVoucherPairsBurned: 1, signingAgent: null }).use((ctx) => {
-            throws(() => {
                 main.eval({
                     $scriptContext: ctx,
                     $datum: configureVoucher(),
                     _: new IntData(0)
-                })
-            }, /not signed by agent/)
+                }),
+                undefined
+            )
         })
+    })
+
+    it("throws an error if a voucher pair is burned but the tx isn't signed by the agent", () => {
+        configureContext({ nVoucherPairsBurned: 1, signingAgent: null }).use(
+            (ctx) => {
+                throws(() => {
+                    main.eval({
+                        $scriptContext: ctx,
+                        $datum: configureVoucher(),
+                        _: new IntData(0)
+                    })
+                }, /not signed by agent/)
+            }
+        )
     })
 
     it("throws an error if only the voucher user token is burned", () => {
@@ -121,11 +123,13 @@ describe("voucher_validator::main", () => {
     it("succeeds if the user token isn't burned but the tx is witnessed by the reimbursement UTxO of the same period is spent", () => {
         configureContext({ spentReimbursementPeriodId: 1 }).use((ctx) => {
             strictEqual(
-            main.eval({
-                $scriptContext: ctx,
-                $datum: configureVoucher(),
-                _: new IntData(0)
-            }), undefined)
+                main.eval({
+                    $scriptContext: ctx,
+                    $datum: configureVoucher(),
+                    _: new IntData(0)
+                }),
+                undefined
+            )
         })
     })
 
@@ -144,7 +148,7 @@ describe("voucher_validator::main", () => {
 
 describe("voucher_validator metrics", () => {
     const program = contract.voucher_validator.$hash.context.program
-    
+
     const n = program.toCbor().length
 
     it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {
@@ -159,5 +163,5 @@ describe("voucher_validator metrics", () => {
         it("ir doesn't contain trace", () => {
             strictEqual(!!/__core__trace/.exec(ir), false)
         })
-    }  
+    }
 })

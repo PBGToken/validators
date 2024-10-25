@@ -55,11 +55,13 @@ describe("mint_order_validator::main", () => {
         it("mint_order_validator::main #01 (succeeds if the tx signed by the address pubkey)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
-                main.eval({
-                    $scriptContext: ctx,
-                    order: mintOrder,
-                    redeemer
-                }), undefined)
+                    main.eval({
+                        $scriptContext: ctx,
+                        order: mintOrder,
+                        redeemer
+                    }),
+                    undefined
+                )
             })
         })
 
@@ -81,11 +83,13 @@ describe("mint_order_validator::main", () => {
                 dummyInputAddr: returnAddress
             }).use((ctx) => {
                 strictEqual(
-                main.eval({
-                    $scriptContext: ctx,
-                    order: mintOrder,
-                    redeemer
-                }), undefined)
+                    main.eval({
+                        $scriptContext: ctx,
+                        order: mintOrder,
+                        redeemer
+                    }),
+                    undefined
+                )
             })
         })
     })
@@ -199,8 +203,13 @@ describe("mint_order_validator::main", () => {
         it("mint_order_validator::main #04 (succeeds if enough tokens are returned)", () => {
             configureContext().use((ctx) => {
                 strictEqual(
-                main.eval({ $scriptContext: ctx, order: mintOrder, redeemer }),
-                undefined)
+                    main.eval({
+                        $scriptContext: ctx,
+                        order: mintOrder,
+                        redeemer
+                    }),
+                    undefined
+                )
             })
         })
 
@@ -353,7 +362,7 @@ describe("mint_order_validator metrics", () => {
 
     const n = program.toCbor().length
 
-    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {    
+    it(`program doesn't exceed ${MAX_SCRIPT_SIZE} bytes (${n})`, () => {
         if (n > MAX_SCRIPT_SIZE) {
             throw new Error("program too large")
         }
@@ -365,5 +374,5 @@ describe("mint_order_validator metrics", () => {
         it("ir doesn't contain trace", () => {
             strictEqual(!!/__core__trace/.exec(ir), false)
         })
-    }  
+    }
 })

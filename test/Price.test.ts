@@ -15,7 +15,15 @@ const {
     "Price::find_ref": find_ref,
     "Price::find_thread": find_thread,
     "Price::is_not_expired": is_not_expired,
-    "Price::relative_to_benchmark": relative_to_benchmark
+    "Price::relative_to_benchmark": relative_to_benchmark,
+    "Price::convert_lovelace_to_tokens_round_down":
+        convert_lovelace_to_tokens_round_down,
+    "Price::convert_lovelace_to_tokens_round_up":
+        convert_lovelace_to_tokens_round_up,
+    "Price::convert_tokens_to_lovelace_round_down":
+        convert_tokens_to_lovelace_round_down,
+    "Price::convert_tokens_to_lovelace_round_up":
+        convert_tokens_to_lovelace_round_up
 } = contract.PriceModule
 
 describe("PriceModule::Price::find", () => {
@@ -607,5 +615,100 @@ describe("PriceModule::Price::relative_to_benchmark", () => {
                     })
                 })
         })
+    })
+})
+
+describe("Price::convert_lovelace_to_tokens_round_down", () => {
+    const price = makePrice({ ratio: [509112312, 3040000] })
+
+    it("converts a large amount lovelace to a smaller amount of tokens", () => {
+        const lovelace = 100_000_000_000n
+        strictEqual(
+            convert_lovelace_to_tokens_round_down.eval({
+                self: price,
+                lovelace
+            }),
+            (lovelace * price.value[1]) / price.value[0]
+        )
+    })
+
+    it("correctly rounds down a negative number of lovelace", () => {
+        const lovelace = -100_000_000_000n
+
+        // this is a good example where something on-chain is difficult to replicate in JS
+        strictEqual(
+            convert_lovelace_to_tokens_round_down.eval({
+                self: price,
+                lovelace
+            }),
+            -597117754n
+        )
+    })
+})
+
+describe("Price::convert_lovelace_to_tokens_round_up", () => {
+    const price = makePrice({ ratio: [509112312, 3040000] })
+
+    // this is a good example where something on-chain is difficult to replicate in JS
+    it("converts a large amount lovelace to a smaller amount of tokens", () => {
+        const lovelace = 100_000_000_000n
+        strictEqual(
+            convert_lovelace_to_tokens_round_up.eval({ self: price, lovelace }),
+            597117754n
+        )
+    })
+
+    it("correctly rounds up a negative number of lovelace", () => {
+        const lovelace = -100_000_000_000n
+
+        strictEqual(
+            convert_lovelace_to_tokens_round_up.eval({ self: price, lovelace }),
+            (lovelace * price.value[1]) / price.value[0]
+        )
+    })
+})
+
+describe("Price::convert_tokens_to_lovelace_round_down", () => {
+    const price = makePrice({ ratio: [509112312, 3040000] })
+
+    it("converts a small amount of tokens to a larger amount of lovelace", () => {
+        const tokens = 597117753n
+        strictEqual(
+            convert_tokens_to_lovelace_round_down.eval({ self: price, tokens }),
+            (tokens * price.value[0]) / price.value[1]
+        )
+    })
+
+    it("correctly rounds down a negative number of tokens", () => {
+        const tokens = -597117753n
+
+        // this is a good example where something on-chain is difficult to replicate in JS
+        strictEqual(
+            convert_tokens_to_lovelace_round_down.eval({ self: price, tokens }),
+            -99999999924n
+        )
+    })
+})
+
+describe("Price::convert_tokens_to_lovelace_round_up", () => {
+    const price = makePrice({ ratio: [509112312, 3040000] })
+
+    it("converts a small amount of tokens to a larger amount of lovelace", () => {
+        const tokens = 597117753n
+
+        // this is a good example where something on-chain is difficult to replicate in JS
+        strictEqual(
+            convert_tokens_to_lovelace_round_up.eval({ self: price, tokens }),
+            99999999924n
+        )
+    })
+
+    it("correctly rounds up a negative number of tokens", () => {
+        const tokens = -597117753n
+
+        strictEqual(
+            convert_tokens_to_lovelace_round_up.eval({ self: price, tokens }),
+            (tokens * price.value[0]) / price.value[1]
+        )
     })
 })

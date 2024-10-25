@@ -16,7 +16,13 @@ import {
 } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { scripts } from "./constants"
-import { RatioType, castVoucher, makePrice, makeVoucher } from "./data"
+import {
+    RatioType,
+    castVoucher,
+    makePrice,
+    makeSuccessFee,
+    makeVoucher
+} from "./data"
 import { ScriptContextBuilder, withScripts } from "./tx"
 import {
     makeConfigToken,
@@ -32,6 +38,8 @@ const {
     "Voucher::find_input": find_input,
     "Voucher::find_output": find_output,
     "Voucher::find_return": find_return,
+    "Voucher::calc_provisional_success_fee_delta":
+        calc_provisional_success_fee_delta,
     validate_minted_vouchers,
     validate_burned_vouchers
 } = contract.VoucherModule
@@ -293,7 +301,6 @@ describe("VoucherModule::Voucher::find_return", () => {
     const defaultTestArgs = {
         self: voucher,
         ptr: 10
-
     }
     it("VoucherModule::Voucher::find_return #01 (returns the output at the given index, matching the address and datum)", () => {
         configureContext().use((ctx) => {
@@ -349,6 +356,26 @@ describe("VoucherModule::Voucher::find_return", () => {
                 })
             }, /unexpected voucher return address/)
         })
+    })
+})
+
+describe("VoucherModule::Voucher::calc_provisional_success_fee_delta", () => {
+    it("whitepaper example", () => {
+        const self = makeVoucher({
+            tokens: 5_000_000n,
+            price: [120, 1]
+        })
+
+        const successFee = makeSuccessFee()
+
+        strictEqual(
+            calc_provisional_success_fee_delta.eval({
+                self,
+                benchmark_price: [140, 1],
+                success_fee: successFee
+            }),
+            BigInt(Math.floor((5_000_000 * 0.035) / 1.166666))
+        )
     })
 })
 

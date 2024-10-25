@@ -74,4 +74,22 @@ struct Price {
 
         config.fees.success_fee.get_benchmark_price(self.value)
     }
+
+    func convert_lovelace_to_tokens_round_down(self, lovelace: Int) -> Int {
+        (lovelace/self.value).floor()
+    }
+
+    // though not used on-chain, this might be useful off-chain
+    func convert_lovelace_to_tokens_round_up(self, lovelace: Int) -> Int {
+        (lovelace/self.value).ceil()
+    }
+
+    func convert_tokens_to_lovelace_round_down(self, tokens: Int) -> Int {
+        (self.value * tokens).floor()
+    }
+
+    // though not used on-chain, this might be useful off-chain
+    func convert_tokens_to_lovelace_round_up(self, tokens: Int) -> Int {
+        (self.value * tokens).ceil()
+    }
 }

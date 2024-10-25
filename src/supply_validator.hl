@@ -17,15 +17,14 @@ struct AssetPtrs {
 }
 
 func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> () {
+    (config0, is_updated) = Config::find();
     price = Price::find_ref();
+    tokens_minted = Tokens::get_minted();
 
     end_price = price.relative_to_benchmark();
-    Dalpha = supply0.calc_success_fee_dilution(end_price); // internally bound by 0
+    Dalpha = supply0.calc_success_fee_dilution(end_price, config0.fees.success_fee.fee); // internally bound by 0
     period_id = supply0.period_id();
     next_period_id = period_id + 1;
-
-    (config0, is_updated) = Config::find();
-    tokens_minted = Tokens::get_minted();
 
     assert(D == Dalpha, "incorrect number of tokens minted");
     assert(price.is_not_expired(), "price expired");
@@ -63,7 +62,7 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> () {
 
 func validate_reward_management(supply0: Supply, supply1: Supply, D: Int) -> () {
     config = Config::find_ref();
-    Dmgmt = supply0.calc_management_fee_dilution();
+    Dmgmt = supply0.calc_management_fee_dilution(config.fees.management_fee.relative);
 
     assert(D <= Dmgmt, "minted too many tokens");
     assert(D >= 0, "can't burn tokens");
@@ -94,7 +93,7 @@ func validate_mint_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: A
     );
 
     assert(price.is_not_expired(), "price expired");
-    assert(dV >= (price.value * D).floor(), "too little value sent to vault");
+    assert(dV >= price.convert_tokens_to_lovelace_round_down(D), "too little value sent to vault");
     assert(supply1.n_tokens <= config.token.max_supply, "exceeding max supply");
     assert(supply1.n_vouchers == supply0.n_vouchers + n_vouchers_minted, "unexpected new voucher count");
     assert(supply1.last_voucher_id == last_voucher_id, "unexpected last voucher id");
@@ -116,7 +115,7 @@ func validate_burn_user_tokens(supply0: Supply, supply1: Supply, D: Int, ptrs: A
     n_vouchers_burned = validate_burned_vouchers(period_id);
 
     assert(price.is_not_expired(), "price expired");
-    assert(dV >= (price.value * D).floor(), "too much value taken from vault"); // this is all negative
+    assert(dV >= price.convert_tokens_to_lovelace_round_down(D), "too much value taken from vault"); // this is all negative
     assert(supply1.n_vouchers == supply0.n_vouchers - n_vouchers_burned, "voucher count not updated correctly");
     assert(supply1.last_voucher_id == supply0.last_voucher_id, "last voucher id changed");
     assert(supply1.management_fee_timestamp == supply0.management_fee_timestamp, "management fee timestamp changed");
