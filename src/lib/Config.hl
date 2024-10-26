@@ -17,8 +17,9 @@ struct MintFeeConfig {
         (n*self.relative).floor().bound_min(self.minimum)
     }
 
+    // bounded by 0 so tiny order fulfillments (i.e. of spam) are still possible if the token price covers the tx fee
     func deduct(self, n: Int) -> Int {
-        n - self.apply(n)
+        (n - self.apply(n)).bound_min(0)
     }
 }
 
@@ -31,8 +32,9 @@ struct BurnFeeConfig {
         (n*self.relative).floor().bound_min(self.minimum)
     }
 
+    // bounded by 0 so tiny order fulfillments (i.e. of spam) are still possible if the token price covers the tx fee
     func deduct(self, n: Int) -> Int {
-        n - self.apply(n)
+        (n - self.apply(n)).bound_min(0)
     }
 }
 

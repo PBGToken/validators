@@ -146,7 +146,7 @@ describe("ConfigModule::MintFeeConfig::deduct", () => {
             minimum: 20_000
         }
 
-        it("deducts the minimum fee if only a small amount of tokens are minted", () => {
+        it("ConfigModule::MintFeeConfig::deduct #01 (deducts the minimum fee if only a small amount of tokens are minted)", () => {
             strictEqual(
                 deduct_mint_fee_internal.eval({
                     self: mintFee,
@@ -156,7 +156,7 @@ describe("ConfigModule::MintFeeConfig::deduct", () => {
             )
         })
 
-        it("deducts the relative fee if large amount of tokens are minted", () => {
+        it("ConfigModule::MintFeeConfig::deduct #02 (deducts the relative fee if large amount of tokens are minted)", () => {
             strictEqual(
                 deduct_mint_fee_internal.eval({
                     self: mintFee,
@@ -166,13 +166,23 @@ describe("ConfigModule::MintFeeConfig::deduct", () => {
             )
         })
 
-        it("deducts the correct relative fee for a very specific order", () => {
+        it("ConfigModule::MintFeeConfig::deduct #03 (deducts the correct relative fee for a very specific order)", () => {
             strictEqual(
                 deduct_mint_fee_internal.eval({
                     self: mintFee,
                     n: Math.floor(200000000 / 140)
                 }),
                 1408571n
+            )
+        })
+
+        it("ConfigModule::MintFeeConfig::deduct #04 (returns zero for a tiny order)", () => {
+            strictEqual(
+                deduct_mint_fee_internal.eval({
+                    self: mintFee,
+                    n: 19_900n
+                }),
+                0n
             )
         })
     })
@@ -183,7 +193,7 @@ describe("ConfigModule::MintFeeConfig::deduct", () => {
             minimum: 20_000
         }
 
-        it("deducts the minimum fee", () => {
+        it("ConfigModule::MintFeeConfig::deduct #05 (deducts the minimum fee)", () => {
             strictEqual(
                 deduct_mint_fee_internal.eval({
                     self: mintFee,
@@ -200,7 +210,7 @@ describe("ConfigModule::MintFeeConfig::deduct", () => {
             minimum: 0
         }
 
-        it("deducts nothing", () => {
+        it("ConfigModule::MintFeeConfig::deduct #06 (deducts nothing)", () => {
             strictEqual(
                 deduct_mint_fee_internal.eval({
                     self: mintFee,
@@ -295,7 +305,7 @@ describe("ConfigModule::BurnFeeConfig::deduct", () => {
             minimum: 20_000
         }
 
-        it("deducts the minimum fee if only a small amount of tokens are burned", () => {
+        it("ConfigModule::BurnFeeConfig::deduct #01 (deducts the minimum fee if only a small amount of tokens are burned)", () => {
             strictEqual(
                 deduct_burn_fee_internal.eval({
                     self: burnFee,
@@ -305,13 +315,23 @@ describe("ConfigModule::BurnFeeConfig::deduct", () => {
             )
         })
 
-        it("deducts the relative fee if large amount of tokens are burned", () => {
+        it("ConfigModule::BurnFeeConfig::deduct #02 (deducts the relative fee if large amount of tokens are burned)", () => {
             strictEqual(
                 deduct_burn_fee_internal.eval({
                     self: burnFee,
                     n: 20_000_000
                 }),
                 19_900_000n
+            )
+        })
+
+        it("ConfigModule::BurnFeeConfig::deduct #03 (returns 0 for a tiny order)", () => {
+            strictEqual(
+                deduct_burn_fee_internal.eval({
+                    self: burnFee,
+                    n: 19_900n
+                }),
+                0n
             )
         })
     })
@@ -322,7 +342,7 @@ describe("ConfigModule::BurnFeeConfig::deduct", () => {
             minimum: 20_000
         }
 
-        it("deducts minimum", () => {
+        it("ConfigModule::BurnFeeConfig::deduct #04 (deducts minimum)", () => {
             strictEqual(
                 deduct_burn_fee_internal.eval({
                     self: burnFee,
@@ -339,7 +359,7 @@ describe("ConfigModule::BurnFeeConfig::deduct", () => {
             minimum: 0
         }
 
-        it("deducts nothing", () => {
+        it("ConfigModule::BurnFeeConfig::deduct #05 (deducts nothing)", () => {
             strictEqual(
                 deduct_burn_fee_internal.eval({
                     self: burnFee,
