@@ -11,7 +11,7 @@ import {
     makeAssetPtr,
     makeBurnOrder
 } from "./data"
-import { makeDvpTokens } from "./tokens"
+import { makeDvpTokens, makeVoucherPair, makeVoucherUserToken } from "./tokens"
 import { ScriptContextBuilder, withScripts } from "./tx"
 import { IntLike } from "@helios-lang/codec-utils"
 
@@ -20,7 +20,6 @@ const {
     "BurnOrder::diff": diff,
     "BurnOrder::value": get_value,
     "BurnOrder::value_lovelace": value_lovelace,
-    "BurnOrder::burned_tokens": burned_tokens,
     "BurnOrder::price_expiry": price_expiry,
     "BurnOrder::returned_enough": returned_enough
 } = contract.BurnOrderModule
@@ -312,7 +311,7 @@ describe("BurnOrderModule::BurnOrder::value", () => {
                 "burn_order_validator"
             ])
 
-            it("returns the negative input lovelace if zero is returned", () => {
+            it("BurnOrderModule::BurnOrder::value #01 (returns the negative input lovelace if zero is returned)", () => {
                 configureContext().use((currentScript, ctx) => {
                     const value = get_value.eval({
                         $currentScript: currentScript,
@@ -350,7 +349,7 @@ describe("BurnOrderModule::BurnOrder::value", () => {
                 "burn_order_validator"
             ])
 
-            it("returns the negative input lovelace (i.e. without the DVP tokens)", () => {
+            it("BurnOrderModule::BurnOrder::value #02 (returns the negative input lovelace (i.e. without the DVP tokens))", () => {
                 configureContext().use((currentScript, ctx) => {
                     const value = get_value.eval({
                         $currentScript: currentScript,
@@ -360,6 +359,84 @@ describe("BurnOrderModule::BurnOrder::value", () => {
 
                     strictEqual(value.lovelace, -lovelace)
                     deepEqual(value.assets.assets, [])
+                })
+            })
+        })
+    })
+
+    describe("the order input contains lovelace, some DVP tokens and two voucher pairs", () => {
+        const lovelace = 2_000_000n
+        const inputValue = new Value(
+            lovelace,
+            makeDvpTokens(1000).add(makeVoucherPair(1).add(makeVoucherPair(2)))
+        )
+
+        const configureParentContext = () => {
+            return new ScriptContextBuilder()
+                .addBurnOrderInput({
+                    value: inputValue,
+                    datum: burnOrder,
+                    redeemer
+                })
+                .addBurnOrderReturn({
+                    address,
+                    datum,
+                    value: new Value(0)
+                })
+        }
+
+        describe("@ burn_order_validator", () => {
+            const configureContext = withScripts(configureParentContext, [
+                "burn_order_validator"
+            ])
+
+            it("BurnOrderModule::BurnOrder::value #03 (returns the negative input lovelace (i.e. without the DVP tokens and vouchers))", () => {
+                configureContext().use((currentScript, ctx) => {
+                    const value = get_value.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx,
+                        self: burnOrder
+                    })
+
+                    strictEqual(value.lovelace, -lovelace)
+                    deepEqual(value.assets.assets, [])
+                })
+            })
+        })
+    })
+
+    describe("the order input contains lovelace and some DVP tokens and the output contains a voucher pair", () => {
+        const lovelace = 2_000_000n
+        const inputValue = new Value(lovelace, makeDvpTokens(1000))
+
+        const configureParentContext = () => {
+            return new ScriptContextBuilder()
+                .addBurnOrderInput({
+                    value: inputValue,
+                    datum: burnOrder,
+                    redeemer
+                })
+                .addBurnOrderReturn({
+                    address,
+                    datum,
+                    value: new Value(0, makeVoucherPair(2))
+                })
+        }
+
+        describe("@ burn_order_validator", () => {
+            const configureContext = withScripts(configureParentContext, [
+                "burn_order_validator"
+            ])
+
+            it("BurnOrderModule::BurnOrder::value #04 (throws an error because nothing from the policy can be returned)", () => {
+                configureContext().use((currentScript, ctx) => {
+                    throws(() => {
+                        get_value.eval({
+                            $currentScript: currentScript,
+                            $scriptContext: ctx,
+                            self: burnOrder
+                        })
+                    }, /can't return new dvp policy related tokens/)
                 })
             })
         })
@@ -509,75 +586,6 @@ describe("BurnOrderModule::BurnOrder::value_lovelace", () => {
                             ptrs
                         }),
                         9_000_000n
-                    )
-                })
-        })
-    })
-})
-
-describe("BurnOrderModule::BurnOrder::burned_tokens", () => {
-    const address = Address.dummy(false)
-    const datum = new IntData(0)
-    const burnOrder = makeBurnOrder({
-        address,
-        datum
-    })
-    const returnValue = new Value(
-        2_000_000,
-        Assets.fromAssetClasses([[AssetClass.dummy(), 10000]])
-    )
-
-    describe("the order input contains only lovelace", () => {
-        const inputValue = new Value(10_000_000, makeDvpTokens(0))
-
-        it("throws an error because no DVP tokens are included in the order input", () => {
-            new ScriptContextBuilder()
-                .addBurnOrderInput({
-                    value: inputValue,
-                    datum: burnOrder,
-                    redeemer: { Fulfill: { ptrs: [] } }
-                })
-                .addBurnOrderReturn({
-                    address,
-                    datum,
-                    value: returnValue
-                })
-                .use((ctx) => {
-                    throws(() => {
-                        burned_tokens.eval({
-                            $currentScript: "burn_order_validator",
-                            $scriptContext: ctx,
-                            self: burnOrder
-                        })
-                    })
-                })
-        })
-    })
-
-    describe("the order input contains lovelace and some DVP tokens", () => {
-        const nDvpTokens = 1000n
-        const inputValue = new Value(10_000_000, makeDvpTokens(nDvpTokens))
-
-        it("returns the number of DVP tokens included in the order input", () => {
-            new ScriptContextBuilder()
-                .addBurnOrderInput({
-                    value: inputValue,
-                    datum: burnOrder,
-                    redeemer: { Fulfill: { ptrs: [] } }
-                })
-                .addBurnOrderReturn({
-                    address,
-                    datum,
-                    value: returnValue
-                })
-                .use((ctx) => {
-                    strictEqual(
-                        burned_tokens.eval({
-                            $currentScript: "burn_order_validator",
-                            $scriptContext: ctx,
-                            self: burnOrder
-                        }),
-                        nDvpTokens
                     )
                 })
         })

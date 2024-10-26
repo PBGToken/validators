@@ -67,11 +67,12 @@ func main(order: BurnOrder, redeemer: Redeemer) -> Bool {
         Fulfill{ptrs} => {
             price = Price::find_ref();
 
-            n_burn = order.burned_tokens();
+            diff = order.diff();
+            n_burn = diff.get(Tokens::dvp_token); // positive quantities are from the input side, negative quantities (loss for the dvp agent) doesn't make any sense
 
             delta_alpha = calc_provisional_success_fee(
                 price,
-                order.diff(),
+                diff,
                 n_burn
             );
 

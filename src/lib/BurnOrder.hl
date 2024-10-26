@@ -60,13 +60,16 @@ struct BurnOrder {
         d = self.diff();
 
         // prevent token dust attack with vouchers (other token dust attack prevention is in self.returned_enough())
+        // we do this here instead of in self.find_return() because we don't want to check tokens that were also included on the input side (so we want to perform this check on the net tokens returned)
         assert(d.to_map().all((mph: MintingPolicyHash, tokens: Map[ByteArray]Int) -> {
             if (mph == Tokens::policy) {
-                tokens.length <= 2
+                tokens.all((_, qty: Int) -> {
+                    qty >= 0
+                })
             } else {
                 true
             }
-        }), "can only return 1 voucher and dvp tokens when fulfilling a burn order");
+        }), "can't return new dvp policy related tokens");
 
         (-1) * d.delete_policy(Tokens::policy)
     }
@@ -78,10 +81,6 @@ struct BurnOrder {
             ptrs, 
             self.price_expiry()
         )
-    }
-
-    func burned_tokens(self) -> Int {
-        self.diff().get(Tokens::dvp_token)
     }
 
     // only used for checks resulting in booleans, so tx.time_range.end doesn't need to bounded by tx.time_range.start + Duration::DAY
