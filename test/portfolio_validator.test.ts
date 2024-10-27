@@ -2278,6 +2278,7 @@ describe("portfolio_validator::main", () => {
         const configureContext = (props: {
             portfolio1: PortfolioType
             action: PortfolioActionType
+            signingAgent?: PubKeyHash
         }) => {
             return new ScriptContextBuilder()
                 .addConfigRef({ config })
@@ -2286,7 +2287,7 @@ describe("portfolio_validator::main", () => {
                     inputPortfolio: portfolio0,
                     outputPortfolio: props.portfolio1
                 })
-                .addSigner(agent)
+                .addSigner(props.signingAgent ?? agent)
                 .addSupplyRef({ supply })
                 .addAssetGroupRef({ id: 1, assets: [] })
         }
@@ -2317,7 +2318,10 @@ describe("portfolio_validator::main", () => {
             const portfolio1 = configurePortfolio1()
 
             configureContext({ portfolio1, action }).use((ctx) => {
-                main.eval({ $scriptContext: ctx, _: portfolio0, action })
+                strictEqual(
+                    main.eval({ $scriptContext: ctx, _: portfolio0, action }),
+                    undefined
+                )
             })
         })
 
@@ -2327,7 +2331,7 @@ describe("portfolio_validator::main", () => {
             configureContext({ portfolio1, action }).use((ctx) => {
                 throws(() => {
                     main.eval({ $scriptContext: ctx, _: portfolio0, action })
-                })
+                }, /start tick of reduction not equal to supply tick/)
             })
         })
 
@@ -2337,7 +2341,21 @@ describe("portfolio_validator::main", () => {
             configureContext({ portfolio1, action }).use((ctx) => {
                 throws(() => {
                     main.eval({ $scriptContext: ctx, _: portfolio0, action })
-                })
+                }, /n_groups changed/)
+            })
+        })
+
+        it("portfolio_validator::main #04 (throws an error if not signed by the correct agent)", () => {
+            const portfolio1 = configurePortfolio1()
+
+            configureContext({
+                portfolio1,
+                action,
+                signingAgent: PubKeyHash.dummy(443)
+            }).use((ctx) => {
+                throws(() => {
+                    main.eval({ $scriptContext: ctx, _: portfolio0, action })
+                }, /not signed by agent/)
             })
         })
     })
@@ -2364,6 +2382,7 @@ describe("portfolio_validator::main", () => {
         const configureContext = (props: {
             portfolio1: PortfolioType
             action: PortfolioActionType
+            signingAgent?: PubKeyHash
         }) => {
             return new ScriptContextBuilder()
                 .addConfigRef({ config })
@@ -2372,7 +2391,7 @@ describe("portfolio_validator::main", () => {
                     inputPortfolio: portfolio0,
                     outputPortfolio: props.portfolio1
                 })
-                .addSigner(agent)
+                .addSigner(props.signingAgent ?? agent)
                 .addSupplyRef({ supply })
                 .addAssetGroupRef({ id: 2, assets: [] })
         }
@@ -2399,31 +2418,48 @@ describe("portfolio_validator::main", () => {
             })
         }
 
-        it("portfolio_validator::main #04 (succeeds if the action ptrs correctly points the referenced asset group)", () => {
+        it("portfolio_validator::main #05 (succeeds if the action ptrs correctly points the referenced asset group)", () => {
             const portfolio1 = configurePortfolio1()
 
             configureContext({ portfolio1, action }).use((ctx) => {
-                main.eval({ $scriptContext: ctx, _: portfolio0, action })
+                strictEqual(
+                    main.eval({ $scriptContext: ctx, _: portfolio0, action }),
+                    undefined
+                )
             })
         })
 
-        it("portfolio_validator::main #05 (throws an error if the portfolio output reducing tick is wrong)", () => {
+        it("portfolio_validator::main #06 (throws an error if the portfolio output reducing tick is wrong)", () => {
             const portfolio1 = configurePortfolio1({ startTick: 1 })
 
             configureContext({ portfolio1, action }).use((ctx) => {
                 throws(() => {
                     main.eval({ $scriptContext: ctx, _: portfolio0, action })
-                })
+                }, /reduction tick changed/)
             })
         })
 
-        it("portfolio_validator::main #06 (throws an error if n_groups in the portfolio output is different from the input)", () => {
+        it("portfolio_validator::main #07 (throws an error if n_groups in the portfolio output is different from the input)", () => {
             const portfolio1 = configurePortfolio1({ nGroups: 2 })
 
             configureContext({ portfolio1, action }).use((ctx) => {
                 throws(() => {
                     main.eval({ $scriptContext: ctx, _: portfolio0, action })
-                })
+                }, /n_groups changed/)
+            })
+        })
+
+        it("portfolio_validator::main #08 (throws an error if not signed by the correct agent)", () => {
+            const portfolio1 = configurePortfolio1()
+
+            configureContext({
+                portfolio1,
+                action,
+                signingAgent: PubKeyHash.dummy(445)
+            }).use((ctx) => {
+                throws(() => {
+                    main.eval({ $scriptContext: ctx, _: portfolio0, action })
+                }, /not signed by agent/)
             })
         })
     })
@@ -2443,15 +2479,17 @@ describe("portfolio_validator::main", () => {
                 }
             }
         })
-        const agent = PubKeyHash.dummy(444)
-        const config = makeConfig({ agent })
-        const supply = makeSupply({ tick: 0 })
 
         const configureContext = (props: {
             portfolio1: PortfolioType
             action: PortfolioActionType
             spendConfig?: boolean
+            signingAgent?: PubKeyHash
         }) => {
+            const agent = PubKeyHash.dummy(444)
+            const config = makeConfig({ agent })
+            const supply = makeSupply({ tick: 0 })
+
             return new ScriptContextBuilder()
                 .addConfigRef({ config })
                 .addPortfolioThread({
@@ -2459,7 +2497,7 @@ describe("portfolio_validator::main", () => {
                     inputPortfolio: portfolio0,
                     outputPortfolio: props.portfolio1
                 })
-                .addSigner(agent)
+                .addSigner(props?.signingAgent ?? agent)
                 .addSupplyRef({ supply })
         }
 
@@ -2474,21 +2512,38 @@ describe("portfolio_validator::main", () => {
 
         const action: PortfolioActionType = { Reset: {} }
 
-        it("portfolio_validator::main #07 (succeeds for the Reset action)", () => {
+        it("portfolio_validator::main #09 (succeeds for the Reset action)", () => {
             const portfolio1 = configurePortfolio1()
 
             configureContext({ portfolio1, action }).use((ctx) => {
-                main.eval({ $scriptContext: ctx, _: portfolio0, action })
+                strictEqual(
+                    main.eval({ $scriptContext: ctx, _: portfolio0, action }),
+                    undefined
+                )
             })
         })
 
-        it("portfolio_validator::main #08 (throws an error if n_groups in the portfolio output is different from the input)", () => {
+        it("portfolio_validator::main #10 (throws an error if n_groups in the portfolio output is different from the input)", () => {
             const portfolio1 = configurePortfolio1({ nGroups: 2 })
 
             configureContext({ portfolio1, action }).use((ctx) => {
                 throws(() => {
                     main.eval({ $scriptContext: ctx, _: portfolio0, action })
-                })
+                }, /n_groups changed/)
+            })
+        })
+
+        it("portfolio_validator::main #11 (throws an error if not signed by the correct agent)", () => {
+            const portfolio1 = configurePortfolio1()
+
+            configureContext({
+                portfolio1,
+                action,
+                signingAgent: PubKeyHash.dummy(445)
+            }).use((ctx) => {
+                throws(() => {
+                    main.eval({ $scriptContext: ctx, _: portfolio0, action })
+                }, /not signed by agent/)
             })
         })
     })
@@ -2527,29 +2582,32 @@ describe("portfolio_validator::main", () => {
                 })
         }
 
-        it("portfolio_validator::main #09 (succeeds if an asset group output exists with the expected output asset token)", () => {
+        it("portfolio_validator::main #12 (succeeds if an asset group output exists with the expected output asset token)", () => {
             configureContext().use((ctx) => {
-                main.eval({ $scriptContext: ctx, _: portfolio0, action })
+                strictEqual(
+                    main.eval({ $scriptContext: ctx, _: portfolio0, action }),
+                    undefined
+                )
             })
         })
 
-        it("portfolio_validator::main #10 (throws an error if more than one token is minted)", () => {
+        it("portfolio_validator::main #13 (throws an error if more than one token is minted)", () => {
             configureContext({ nMinted: 2 }).use((ctx) => {
                 throws(() => {
                     main.eval({ $scriptContext: ctx, _: portfolio0, action })
-                })
+                }, /not exactly 1 asset group token minted or burned/)
             })
         })
 
-        it("portfolio_validator::main #11 (throws an error if the minted token isn't an asset group token)", () => {
+        it("portfolio_validator::main #14 (throws an error if the minted token isn't an asset group token)", () => {
             configureContext({ mintedToken: makeConfigToken() }).use((ctx) => {
                 throws(() => {
                     main.eval({ $scriptContext: ctx, _: portfolio0, action })
-                })
+                }, /empty list in headList/)
             })
         })
 
-        it("portfolio_validator::main #12 (throws an error if not signed by correct agent)", () => {
+        it("portfolio_validator::main #15 (throws an error if not signed by correct agent)", () => {
             configureContext({ signingAgent: PubKeyHash.dummy(100) }).use(
                 (ctx) => {
                     throws(() => {
@@ -2558,7 +2616,7 @@ describe("portfolio_validator::main", () => {
                             _: portfolio0,
                             action
                         })
-                    })
+                    }, /not signed by agent/)
                 }
             )
         })
@@ -2599,29 +2657,32 @@ describe("portfolio_validator::main", () => {
                 })
         }
 
-        it("portfolio_validator::main #13 (succeeds if an asset group input exists with the expected burned asset token)", () => {
+        it("portfolio_validator::main #16 (succeeds if an asset group input exists with the expected burned asset token)", () => {
             configureContext().use((ctx) => {
-                main.eval({ $scriptContext: ctx, _: portfolio0, action })
+                strictEqual(
+                    main.eval({ $scriptContext: ctx, _: portfolio0, action }),
+                    undefined
+                )
             })
         })
 
-        it("portfolio_validator::main #14 (throws an error if more than one token is burned)", () => {
+        it("portfolio_validator::main #17 (throws an error if more than one token is burned)", () => {
             configureContext({ nBurned: 2 }).use((ctx) => {
                 throws(() => {
                     main.eval({ $scriptContext: ctx, _: portfolio0, action })
-                })
+                }, /not exactly 1 asset group token minted or burned/)
             })
         })
 
-        it("portfolio_validator::main #15 (throws an error if the burned token isn't an asset group token)", () => {
+        it("portfolio_validator::main #18 (throws an error if the burned token isn't an asset group token)", () => {
             configureContext({ burnedToken: makeConfigToken() }).use((ctx) => {
                 throws(() => {
                     main.eval({ $scriptContext: ctx, _: portfolio0, action })
-                })
+                }, /empty list in headList/)
             })
         })
 
-        it("portfolio_validator::main #16 (throws an error if not signed by correct agent)", () => {
+        it("portfolio_validator::main #19 (throws an error if not signed by correct agent)", () => {
             configureContext({ signingAgent: PubKeyHash.dummy(100) }).use(
                 (ctx) => {
                     throws(() => {
@@ -2630,7 +2691,7 @@ describe("portfolio_validator::main", () => {
                             _: portfolio0,
                             action
                         })
-                    })
+                    }, /not signed by agent/)
                 }
             )
         })

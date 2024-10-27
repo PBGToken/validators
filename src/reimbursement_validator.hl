@@ -138,7 +138,7 @@ func validate_continue_collecting(id: Int, start_price0: Ratio) -> () {
     }
 }
 
-func main(_: Reimbursement, voucher_output_ptrs: []Int) -> Bool {
+func main(_: Reimbursement, voucher_output_ptrs: []Int) -> () {
     tokens_minted = Tokens::get_minted();
     (id, reim0, n0) = Reimbursement::find_input();
     
@@ -171,6 +171,5 @@ func main(_: Reimbursement, voucher_output_ptrs: []Int) -> Bool {
                 }
             }
         }
-    };
-    true
+    }
 } 

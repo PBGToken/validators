@@ -47,9 +47,9 @@ func validate_reward_success(supply0: Supply, supply1: Supply, D: Int) -> () {
         config0.state.switch{
             Changing{_, proposal} => proposal.switch{
                 UpdatingSuccessFee => error("config must be spent"), // config must be spent
-                else => print("ok")
+                else => ()
             },
-            else => print("ok") // TODO: helios syntax highlighting should allow writing switch expressions with void return values without the else cases
+            else => () // TODO: helios syntax highlighting should allow writing switch expressions with void return values without the else cases
         };
         assert(supply1.success_fee.start_price == end_price, "unexpected new supply start price");
         assert(supply1.success_fee.period == supply0.success_fee.period, "unexpected new supply period")
@@ -142,7 +142,7 @@ func validate_swap(supply0: Supply, supply1: Supply, ptrs: AssetPtrs) -> () {
     ), "counters aren't consistent")
 }
 
-func main(_: Supply, ptrs: AssetPtrs) -> Bool {
+func main(_: Supply, ptrs: AssetPtrs) -> () {
     // supply0 is taken from Supply::find_thread() instead of from the current datum because this function performs more validity checks
     (supply0, supply1) = Supply::find_thread();
     tokens_minted = Tokens::get_minted();
@@ -166,6 +166,5 @@ func main(_: Supply, ptrs: AssetPtrs) -> Bool {
         validate_burn_user_tokens(supply0, supply1, D, ptrs)
     } else {
         validate_swap(supply0, supply1, ptrs)
-    };
-    true
+    }
 }

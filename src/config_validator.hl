@@ -27,7 +27,7 @@ const UPDATE_DELAY_UPPER_LIMIT = 366*Duration::DAY
 const MAX_SUPPLY_UPPER_LIMIT = (1_000_000_000_000_000_000_000/INITIAL_PRICE).ceil() // 1000 Trillion ADA
 const MIN_REIMBURSEMENT_UPPER_LIMIT = (100_000_000/INITIAL_PRICE).ceil() // equivalent value of 100 ADA (i.e. 1 token at initial price)
 
-func main(_: Config, _) -> Bool {
+func main(_: Config, _) -> () {
     (config0: Config, config1: Config) = Config::find_thread();
     
     old_state = config0.state;
@@ -238,6 +238,5 @@ func main(_: Config, _) -> Bool {
             }
         },
         else => error("illegal state change")
-    };
-    true
+    }
 }

@@ -15,7 +15,7 @@ enum Redeemer {
     }
 }
 
-func main(order: MintOrder, redeemer: Redeemer) -> Bool {
+func main(order: MintOrder, redeemer: Redeemer) -> () {
     redeemer.switch{
         Cancel => {
             assert(tx.is_approved_by(order.return_address.credential), "not approved by owner")
@@ -41,6 +41,5 @@ func main(order: MintOrder, redeemer: Redeemer) -> Bool {
                 assert(voucher.tokens == n_expected, "unexpected number of tokens in voucher")
             }
         }
-    };
-    true
+    }
 }

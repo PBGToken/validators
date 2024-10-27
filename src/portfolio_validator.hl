@@ -187,7 +187,7 @@ func validate_update_prices(portfolio0: Portfolio) -> () {
                 assert(asset1.price_timestamp < tx.time_range.end, "asset price timestamp lies too far in the future") // we can't used `< tx.time_range.start` because for some on-demand price feeds the price stamp might lie after tx.time_range.start
             })
         } else {
-            print("ok")
+            ()
         }
     })
 }
@@ -250,7 +250,7 @@ func validate_reset_reduction(portfolio0: Portfolio) -> () {
     assert(AssetGroup::nothing_spent(), "spent an asset group")
 }
 
-func main(_: Portfolio, action: Action) -> Bool {
+func main(_: Portfolio, action: Action) -> () {
     // the config UTxO must be spent for the AddAssetClass and RemoveAssetClass actions, 
     //  but it doesn't matter for the other actions
     (config0, config_is_spent) = Config::find(); 
@@ -292,6 +292,5 @@ func main(_: Portfolio, action: Action) -> Bool {
                 }
             }
         }
-    };
-    true
+    }
 }

@@ -61,7 +61,7 @@ func calc_provisional_success_fee(
     success_fee.calc_provisional_fee(n_burn, alpha, n_voucher_tokens, delta_vouchers)
 }
 
-func main(order: BurnOrder, redeemer: Redeemer) -> Bool {
+func main(order: BurnOrder, redeemer: Redeemer) -> () {
     redeemer.switch{
         Cancel => assert(tx.is_approved_by(order.return_address.credential), "cancelation not approved by owner"),
         Fulfill{ptrs} => {
@@ -84,6 +84,5 @@ func main(order: BurnOrder, redeemer: Redeemer) -> Bool {
             assert(n_actual >= n_expected, "not enough value returned (as required by contract), expected the equivalent of at least " + n_expected.show() + " tokens, got the equivalent of " + n_actual.show() + " tokens");
             assert(order.returned_enough(ptrs), "not enough value returned (as requested by user)")
         }
-    };
-    true
+    }
 }

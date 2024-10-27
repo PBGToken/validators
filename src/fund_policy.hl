@@ -163,7 +163,7 @@ func validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement() -> () {
     assert(witnessed_by_supply(), "mint/burn of other tokens not witnessed by supply spending")
 }
 
-func main(args: MixedArgs) -> Bool {
+func main(args: MixedArgs) -> () {
     args.switch{
         Spending => {
             validate_vault_spending()
@@ -181,7 +181,7 @@ func main(args: MixedArgs) -> Bool {
                 qty == -1 && (TokenNames::has_voucher_ref_prefix(token_name) || TokenNames::has_reimbursement_prefix(token_name))
             })) {
                 // there is no risk of this happening before initialization because then burned tokens wouldn't yet exist
-                print("ok")
+                ()
             } else if (tokens.any_key(TokenNames::has_reimbursement_prefix) && tokens.get_safe(TokenNames::reimbursement(INITIAL_CYCLE_ID)) == Option[Int]::None) {
                 validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement()
             } else {
@@ -189,6 +189,5 @@ func main(args: MixedArgs) -> Bool {
                 validate_initialization()
             }
         }
-    };
-    true  
+    } 
 }

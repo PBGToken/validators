@@ -5,7 +5,7 @@ import { Portfolio, PortfolioReductionMode } from PortfolioModule
 import { Price } from PriceModule
 import { Supply } from SupplyModule
 
-func main(price0: Price, _) -> Bool {
+func main(price0: Price, _) -> () {
     portfolio = Portfolio::find_ref();
     supply = Supply::find_ref();
     price1 = Price::find_output();
@@ -21,7 +21,5 @@ func main(price0: Price, _) -> Bool {
     } else {
         assert(price1.value.top == V, "price numerator not equal to total asset value"); // must compare bottom and top separately, to avoid unboundedness
         assert(price1.value.bottom == supply.n_tokens, "price denominator not equal to token circulating supply")
-    };
-    
-    true 
+    }
 }

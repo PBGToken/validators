@@ -5,7 +5,6 @@ import {
     Address,
     AssetClass,
     Assets,
-    PubKey,
     PubKeyHash,
     Value
 } from "@helios-lang/ledger"
