@@ -1560,7 +1560,7 @@ describe("config_validator::main", () => {
                     })
                     .mint({
                         assets: makeReimbursementToken(
-                            props?.reimbursementTokenId ?? prevPeriodId
+                            props?.reimbursementTokenId ?? (prevPeriodId + 1)
                         )
                     })
             }
@@ -1579,7 +1579,7 @@ describe("config_validator::main", () => {
             })
 
             it("config_validator::main #70 (throws an error if the wrong reimbursement token is minted)", () => {
-                configureContext({ reimbursementTokenId: 1 }).use((ctx) => {
+                configureContext({ reimbursementTokenId: 10 }).use((ctx) => {
                     throws(() => {
                         main.eval({
                             $scriptContext: ctx,

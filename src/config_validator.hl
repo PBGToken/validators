@@ -136,7 +136,7 @@ func main(_: Config, _) -> () {
                     // reimbursement token minting assures the supply_validator witnesses the tx, 
                     //  which, because the config UTxO is being spent, in turn assures the period is copied into the correct field in the supply datum
 
-                    assert(tx.minted.get_safe(Tokens::reimbursement(supply.period_id())) == 1, "not exactly one reimbursement token minted");
+                    assert(tx.minted.get_safe(Tokens::reimbursement(supply.period_id() + 1)) == 1, "not exactly one reimbursement token minted with the next period id");
                     assert(config1 == config0.copy(
                         fees: config0.fees.copy(
                             success_fee: config0.fees.success_fee.copy(   
