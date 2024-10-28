@@ -1,6 +1,7 @@
 module VoucherModule
 
 import Addresses
+import { Cip68Extra } from MetadataModule
 import { get_current_input, tx } from ScriptContext
 import { SuccessFee, calc_alpha } from SuccessFeeModule
 import TokenNames
@@ -17,33 +18,6 @@ struct Voucher {
     image: String "image"
     url: String "url"
 
-    func get_current() -> (Int, Voucher) {
-        input = get_current_input();
-
-        id = Tokens::parse_voucher_ref(input);
-
-        (id, input.datum.inline.as[Voucher])
-    }
-
-    func find_input(id: Int) -> Voucher {
-        input = tx.inputs.find((input: TxInput) -> {
-            input.address == Addresses::voucher
-            && Tokens::contains_voucher_ref(input, id)
-        });
-
-        input.datum.inline.as[Voucher]
-    }
-
-    func find_output(id: Int) -> Voucher {
-        output = tx.outputs.find((output: TxOutput) -> {
-            output.address == Addresses::voucher
-            && Tokens::contains_only_voucher_ref(output, id)
-        });
-
-        // TODO: also check the length of the serialized data, because Cip68 allows adding additional fields
-        output.datum.inline.as_strictly[Voucher]
-    }
-
     func find_return(self, ptr: Int) -> TxOutput {
         output = tx.outputs.get(ptr);
 
@@ -59,6 +33,58 @@ struct Voucher {
         (self.tokens*(phi/alpha_voucher)).floor()
     }
 }
+
+enum VoucherWrapper {
+    Cip68 {
+        voucher: Voucher
+        version: Int
+        extra: Cip68Extra
+    }
+
+    func get_voucher(self) -> Voucher {
+        self.switch{
+            Cip68{v, _, _} => v
+        }
+    }
+}
+
+func extract_voucher_from_datum(datum: TxOutputDatum) -> Voucher {
+    wrapper = datum.inline.as[VoucherWrapper];
+    
+    wrapper.get_voucher()
+}
+
+func get_current_voucher() -> (Int, Voucher) {
+    input = get_current_input();
+
+    id = Tokens::parse_voucher_ref(input);
+
+    voucher = extract_voucher_from_datum(input.datum);
+
+    (id, voucher)
+}
+
+func find_input_voucher(id: Int) -> Voucher {
+    input = tx.inputs.find((input: TxInput) -> {
+        input.address == Addresses::voucher
+        && Tokens::contains_voucher_ref(input, id)
+    });
+
+    extract_voucher_from_datum(input.datum)
+}
+
+func find_output_voucher(id: Int) -> Voucher {
+    output = tx.outputs.find((output: TxOutput) -> {
+        output.address == Addresses::voucher
+        && Tokens::contains_only_voucher_ref(output, id)
+    });
+
+    wrapper = output.datum.inline.as_strictly[VoucherWrapper];
+
+    wrapper.get_voucher()
+}
+
+
 
 /**
  * Returns the total number of tokens mentioned in the vouchers
@@ -102,7 +128,8 @@ func validate_minted_vouchers(price: Ratio, period_id: Int, last_voucher_id: Int
 
                 assert(Tokens::contains_only_voucher_ref(output, id), "voucher doesn't have expected id");
 
-                voucher = output.datum.inline.as_strictly[Voucher];
+                wrapper = output.datum.inline.as_strictly[VoucherWrapper];
+                voucher = wrapper.get_voucher();
 
                 // return_address and return_datum are checked by the mint_order_validator
                 assert(
@@ -144,7 +171,7 @@ func validate_burned_vouchers(period_id: Int) -> Int {
                 Some{id} => {
                     assert(tokens_minted.get(TokenNames::voucher_nft(id)) == -1, "not exactly one nft burned");
 
-                    voucher = Voucher::find_input(id);
+                    voucher = find_input_voucher(id);
 
                     assert(voucher.period_id == period_id, "Voucher from other period");
 

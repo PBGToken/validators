@@ -10,7 +10,7 @@ import { SuccessFee, calc_alpha } from SuccessFeeModule
 import { Supply } from SupplyModule
 import TokenNames
 import Tokens
-import { Voucher } from VoucherModule
+import { extract_voucher_from_datum } from VoucherModule
 
 enum Redeemer {
     Cancel
@@ -48,7 +48,7 @@ func calc_provisional_success_fee(
             && input.value.get_safe(voucher_ref_token) == 1
         });
 
-        voucher = voucher_ref_input.datum.inline.as[Voucher];
+        voucher = extract_voucher_from_datum(voucher_ref_input.datum);
         delta_voucher = voucher.calc_provisional_success_fee_delta(benchmark_price, success_fee);
 
         (

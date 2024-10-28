@@ -34,9 +34,9 @@ import {
 import { IntLike, encodeUtf8 } from "@helios-lang/codec-utils"
 
 const {
-    "Voucher::get_current": get_current,
-    "Voucher::find_input": find_input,
-    "Voucher::find_output": find_output,
+    get_current_voucher,
+    find_input_voucher,
+    find_output_voucher,
     "Voucher::find_return": find_return,
     "Voucher::calc_provisional_success_fee_delta":
         calc_provisional_success_fee_delta,
@@ -44,7 +44,7 @@ const {
     validate_burned_vouchers
 } = contract.VoucherModule
 
-describe("VoucherModule::Voucher::get_current", () => {
+describe("VoucherModule::get_current_voucher", () => {
     const voucher = makeVoucher()
     const voucherId = 123n
 
@@ -60,9 +60,9 @@ describe("VoucherModule::Voucher::get_current", () => {
     describe("@ all validators", () => {
         const configureContext = withScripts(configureParentContext, scripts)
 
-        it("VoucherModule::Voucher::get_current #01 (returns the voucher id and voucher data if the current input is a voucher UTxO)", () => {
+        it("VoucherModule::get_current_voucher #01 (returns the voucher id and voucher data if the current input is a voucher UTxO)", () => {
             configureContext().use((currentScript, ctx) => {
-                const [actualVoucherId, actualVoucher] = get_current.eval({
+                const [actualVoucherId, actualVoucher] = get_current_voucher.eval({
                     $currentScript: currentScript,
                     $scriptContext: ctx
                 })
@@ -86,22 +86,22 @@ describe("VoucherModule::Voucher::get_current", () => {
             })
         })
 
-        it("VoucherModule::Voucher::get_current #02 (throws an error if the current input doesn't contain a voucher token)", () => {
+        it("VoucherModule::get_current_voucher #02 (throws an error if the current input doesn't contain a voucher token)", () => {
             configureContext({ token: makeConfigToken() }).use(
                 (currentScript, ctx) => {
                     throws(() => {
-                        get_current.eval({
+                        get_current_voucher.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx
                         })
-                    })
+                    }, /empty list in headList/)
                 }
             )
         })
     })
 })
 
-describe("VoucherModule::Voucher::find_input", () => {
+describe("VoucherModule::find_input_voucher", () => {
     const voucher = makeVoucher()
     const voucherId = 123n
 
@@ -118,10 +118,10 @@ describe("VoucherModule::Voucher::find_input", () => {
     describe("@ all validators", () => {
         const configureContext = withScripts(configureParentContext, scripts)
 
-        it("VoucherModule::Voucher::find_input #01 (returns the voucher data if the voucher UTxO with the given id is spent)", () => {
+        it("VoucherModule::find_input_voucher #01 (returns the voucher data if the voucher UTxO with the given id is spent)", () => {
             configureContext().use((currentScript, ctx) => {
                 deepEqual(
-                    find_input.eval({
+                    find_input_voucher.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
                         id: voucherId
@@ -131,35 +131,35 @@ describe("VoucherModule::Voucher::find_input", () => {
             })
         })
 
-        it("VoucherModule::Voucher::find_input #02 (throws an error if no voucher input is found with the given id)", () => {
+        it("VoucherModule::find_input_voucher #02 (throws an error if no voucher input is found with the given id)", () => {
             configureContext().use((currentScript, ctx) => {
                 throws(() => {
-                    find_input.eval({
+                    find_input_voucher.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
                         id: 124
                     })
-                })
+                }, /not found/)
             })
         })
 
-        it("VoucherModule::Voucher::find_input #03 (throws an error if the voucher UTxO with the given id isn't at the voucher_validator address)", () => {
+        it("VoucherModule::find_input_voucher #03 (throws an error if the voucher UTxO with the given id isn't at the voucher_validator address)", () => {
             configureContext({ address: Address.dummy(false) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
-                        find_input.eval({
+                        find_input_voucher.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
                             id: voucherId
                         })
-                    })
+                    }, /not found/)
                 }
             )
         })
     })
 })
 
-describe("VoucherModule::Voucher::find_output", () => {
+describe("VoucherModule::find_output_voucher", () => {
     const voucher = makeVoucher()
     const voucherId = 123n
     const configureParentContext = (props?: {
@@ -179,10 +179,10 @@ describe("VoucherModule::Voucher::find_output", () => {
     describe("@ all validators", () => {
         const configureContext = withScripts(configureParentContext, scripts)
 
-        it("VoucherModule::Voucher::find_output #01 (returns the voucher data if a voucher output is found with the given id)", () => {
+        it("VoucherModule::find_output_voucher #01 (returns the voucher data if a voucher output is found with the given id)", () => {
             configureContext().use((currentScript, ctx) => {
                 deepEqual(
-                    find_output.eval({
+                    find_output_voucher.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
                         id: voucherId
@@ -192,64 +192,66 @@ describe("VoucherModule::Voucher::find_output", () => {
             })
         })
 
-        it("VoucherModule::Voucher::find_output #02 (throws an error if no voucher output is found with the given id)", () => {
+        it("VoucherModule::find_output_voucher #02 (throws an error if no voucher output is found with the given id)", () => {
             configureContext().use((currentScript, ctx) => {
                 throws(() => {
-                    find_output.eval({
+                    find_output_voucher.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
                         id: 124
                     })
-                })
+                }, /not found/)
             })
         })
 
-        it("VoucherModule::Voucher::find_output #03 (throws an error if the voucher output with the given id isn't at the voucher_validator address)", () => {
+        it("VoucherModule::find_output_voucher #03 (throws an error if the voucher output with the given id isn't at the voucher_validator address)", () => {
             configureContext({ address: Address.dummy(false) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
-                        find_output.eval({
+                        find_output_voucher.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
                             id: voucherId
                         })
-                    })
+                    }, /not found/)
                 }
             )
         })
 
-        it("VoucherModule::Voucher::find_output #04 (throws an error if the return_address data isn't Address)", () => {
+        it("VoucherModule::find_output_voucher #04 (throws an error if the return_address data isn't Address)", () => {
             const datum = MapData.expect(castVoucher.toUplcData(voucher))
             datum.items[0][1] = new IntData(0)
+            const wrapped = new ConstrData(0, [datum, new IntData(1), new ConstrData(0, [])])
 
-            configureContext({ datum }).use((currentScript, ctx) => {
+            configureContext({ datum: wrapped }).use((currentScript, ctx) => {
                 throws(() => {
-                    find_output.eval({
+                    find_output_voucher.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
                         id: voucherId
                     })
-                })
+                }, /invalid data structure/)
             })
         })
 
-        it('VoucherModule::Voucher::find_output #05 (throws an error if the return_address key isn\'t "owner")', () => {
+        it('VoucherModule::find_output_voucher #05 (throws an error if the return_address key isn\'t "owner")', () => {
             const datum = MapData.expect(castVoucher.toUplcData(voucher))
             datum.items[0][0] = new ByteArrayData(encodeUtf8("@owner"))
+            const wrapped = new ConstrData(0, [datum, new IntData(1), new ConstrData(0, [])])
 
-            configureContext({ datum }).use((currentScript, ctx) => {
+            configureContext({ datum: wrapped }).use((currentScript, ctx) => {
                 throws(() => {
-                    find_output.eval({
+                    find_output_voucher.eval({
                         $currentScript: currentScript,
                         $scriptContext: ctx,
                         id: voucherId
                     })
-                })
+                }, /invalid data structure/)
             })
         })
 
         // TODO: make Cast.fromUplcData less strict, so that additional fields are ignored
-        //it("VoucherModule::Voucher::find_output #06 (succeeds and returns the voucher data if an additional field is included)", () => {
+        //it("VoucherModule::find_output_voucher #06 (succeeds and returns the voucher data if an additional field is included)", () => {
         //    const datum = ConstrData.expect(castVoucher.toUplcData(voucher))
         //    const cip68Fields = MapData.expect(datum.fields[0])
         //    cip68Fields.items.push([

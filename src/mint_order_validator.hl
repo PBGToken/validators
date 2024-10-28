@@ -6,7 +6,7 @@ import { MintOrder } from MintOrderModule
 import { Price } from PriceModule
 import { tx } from ScriptContext
 import { Supply } from SupplyModule
-import { Voucher } from VoucherModule
+import { find_output_voucher } from VoucherModule
 
 enum Redeemer {
     Cancel
@@ -34,7 +34,7 @@ func main(order: MintOrder, redeemer: Redeemer) -> () {
             if (supply.is_successful(price.relative_to_benchmark())) {
                 voucher_id = order.voucher_id();
                 print("created voucher: " + voucher_id.show());
-                voucher = Voucher::find_output(voucher_id);
+                voucher = find_output_voucher(voucher_id);
 
                 assert(voucher.return_address == order.return_address, "wrong voucher return address");
                 assert(voucher.return_datum == order.return_datum, "wrong voucher datum");

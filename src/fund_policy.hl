@@ -49,7 +49,7 @@ func validate_minted_tokens() -> () {
 }
 
 func validate_initial_metadata() -> () {
-    metadata = Metadata::find_output();
+    metadata = Metadata::find_output().get_content();
 
     assert(metadata.name == "PBG Token", "wrong metadata name");
     assert(metadata.description == "The first DVP", "wrong metadata description");

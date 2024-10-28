@@ -14,11 +14,19 @@ export function makeMetadata(props?: {
     logo?: string
 }): MetadataStrictType {
     return {
-        name: props?.name ?? "test_dvp",
-        description: props?.description ?? "for test only",
-        decimals: BigInt(props?.decimals ?? 6),
-        ticker: props?.ticker ?? "tDVP",
-        url: props?.url ?? "https://www.example.com",
-        logo: props?.logo ?? "https://www.example.com/logo.png"
+        Cip68: {
+            metadata: {
+                name: props?.name ?? "test_dvp",
+                description: props?.description ?? "for test only",
+                decimals: BigInt(props?.decimals ?? 6),
+                ticker: props?.ticker ?? "tDVP",
+                url: props?.url ?? "https://www.example.com",
+                logo: props?.logo ?? "https://www.example.com/logo.png"
+            },
+            version: 1n,
+            extra: {
+                Unused: {}
+            }
+        }
     }
 }

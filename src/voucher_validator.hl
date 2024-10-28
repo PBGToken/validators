@@ -3,10 +3,10 @@ spending voucher_validator
 import { signed_by_agent } from ConfigModule
 import { tx } from ScriptContext
 import Tokens
-import { Voucher } from VoucherModule
+import { Voucher, get_current_voucher } from VoucherModule
 
 func main(_: Voucher, _) -> () {
-    (id, voucher) = Voucher::get_current();
+    (id, voucher) = get_current_voucher();
 
     if (tx.minted.get_safe(Tokens::voucher_user_nft(id)) == -1) {
         assert(signed_by_agent(), "not signed by agent");

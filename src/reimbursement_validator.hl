@@ -9,7 +9,7 @@ import { SuccessFee } from SuccessFeeModule
 import { Supply } from SupplyModule
 import TokenNames
 import Tokens
-import { Voucher } from VoucherModule
+import { extract_voucher_from_datum } from VoucherModule
 
 /**
  * Counts the number of vouchers burned, and the token amount sent to the vouchers
@@ -29,7 +29,7 @@ func validate_burned_vouchers(reim: Reimbursement, period_id: Int, voucher_outpu
 
             assert(minted_tokens.get(TokenNames::voucher_ref(id)) == -1, "voucher ref not burned");
 
-            voucher = input.datum.inline.as[Voucher];
+            voucher = extract_voucher_from_datum(input.datum);
             expected_reimbursed_tokens = reim.calc_success_fee_reimbursement(voucher, main_phi_alpha_ratio);
 
             // though the voucher period id is checked by voucher_validator, voucher period ids and reimbursement ids can be mixed here, as long as all reimbursement period ids are present

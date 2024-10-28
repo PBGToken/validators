@@ -63,7 +63,9 @@ import {
     makePrice,
     makeExtractingReimbursement,
     makeSupply,
-    makeVoucher
+    makeVoucher,
+    wrapVoucher,
+    castVoucherWrapper
 } from "../data"
 import {
     makeAssetsToken,
@@ -1000,13 +1002,15 @@ export class ScriptContextBuilder {
             )
         }
 
+        const datum = wrapVoucher(voucher)
+
         this.tx.inputs.push(
             new TxInput(
                 id,
                 new TxOutput(
                     address,
                     new Value(2_000_000, token),
-                    TxOutputDatum.Inline(castVoucher.toUplcData(voucher))
+                    TxOutputDatum.Inline(castVoucherWrapper.toUplcData(datum))
                 )
             )
         )
@@ -1025,12 +1029,14 @@ export class ScriptContextBuilder {
         const token = props?.token ?? makeVoucherRefToken(props?.id ?? 0)
         const voucher = props?.voucher ?? makeVoucher()
 
+        const datum = wrapVoucher(voucher)
+
         return this.addOutput(
             new TxOutput(
                 address,
                 new Value(2_000_000, token),
                 TxOutputDatum.Inline(
-                    props?.datum ?? castVoucher.toUplcData(voucher)
+                    props?.datum ?? castVoucherWrapper.toUplcData(datum)
                 )
             )
         )

@@ -4,13 +4,25 @@ import Addresses
 import { tx } from ScriptContext
 import Tokens
 
-struct Metadata {
+struct MetadataContent {
     name:        String "name"
     description: String "description"
     decimals:    Int    "decimals"
     ticker:      String "ticker"
     url:         String "url"
     logo:        String "logo"
+}
+
+enum Cip68Extra {
+    Unused
+}
+
+enum Metadata {
+    Cip68 {
+        metadata: MetadataContent
+        version: Int
+        extra: Cip68Extra
+    }
 
     func find_input() -> Metadata {
         input = tx.inputs.find((input: TxInput) -> {
@@ -29,7 +41,6 @@ struct Metadata {
 
         assert(Tokens::contains_only_metadata(output), "doesn't contain only the metadata token");
 
-        // TODO: check length of serialized data
         output.datum.inline.as[Metadata]
     }
 
@@ -38,5 +49,11 @@ struct Metadata {
             Metadata::find_input(),
             Metadata::find_output()
         )
+    }
+
+    func get_content(self) -> MetadataContent {
+        self.switch{
+            Cip68{m, _, _} => m
+        }
     }
 }

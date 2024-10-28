@@ -6,7 +6,9 @@ import contract from "pbg-token-validators-test-context"
 import { RatioType } from "./Price"
 
 export const castVoucher = contract.VoucherModule.Voucher
+export const castVoucherWrapper = contract.VoucherModule.VoucherWrapper
 export type VoucherType = PermissiveType<typeof castVoucher>
+export type VoucherWrapperType = PermissiveType<typeof castVoucherWrapper>
 type VoucherStrictType = StrictType<typeof castVoucher>
 
 export function makeVoucher(props?: {
@@ -29,5 +31,17 @@ export function makeVoucher(props?: {
             "Part of the end-of-year success fee will be reimbursement",
         image: "https://www.example.com/image.png",
         url: "https://www.example.com/"
+    }
+}
+
+export function wrapVoucher(voucher: VoucherType): VoucherWrapperType {
+    return {
+        Cip68: {
+            voucher,
+            version: 1,
+            extra: {
+                Unused: {}
+            }
+        }
     }
 }
