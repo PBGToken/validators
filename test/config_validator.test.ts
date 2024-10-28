@@ -1560,7 +1560,7 @@ describe("config_validator::main", () => {
                     })
                     .mint({
                         assets: makeReimbursementToken(
-                            props?.reimbursementTokenId ?? (prevPeriodId + 1)
+                            props?.reimbursementTokenId ?? prevPeriodId + 1
                         )
                     })
             }

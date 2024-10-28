@@ -5,7 +5,7 @@ import { Address, PubKeyHash } from "@helios-lang/ledger"
 import { IntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
-import { makeConfig, makeVoucher, VoucherType } from "./data"
+import { makeConfig, makeVoucher, VoucherType, wrapVoucher } from "./data"
 import { makeVoucherPair, makeVoucherUserToken } from "./tokens"
 import { ScriptContextBuilder } from "./tx"
 
@@ -69,13 +69,17 @@ describe("voucher_validator::main", () => {
         return scb
     }
 
+    const defaulTestArgs = {
+        $datum: wrapVoucher(configureVoucher()),
+        _: new IntData(0)
+    }
+
     it("succeeds if signed by the agent and the voucher pair is burned", () => {
         configureContext({ nVoucherPairsBurned: 1 }).use((ctx) => {
             strictEqual(
                 main.eval({
-                    $scriptContext: ctx,
-                    $datum: configureVoucher(),
-                    _: new IntData(0)
+                    ...defaulTestArgs,
+                    $scriptContext: ctx
                 }),
                 undefined
             )
@@ -87,9 +91,8 @@ describe("voucher_validator::main", () => {
             (ctx) => {
                 throws(() => {
                     main.eval({
-                        $scriptContext: ctx,
-                        $datum: configureVoucher(),
-                        _: new IntData(0)
+                        ...defaulTestArgs,
+                        $scriptContext: ctx
                     })
                 }, /not signed by agent/)
             }
@@ -100,9 +103,8 @@ describe("voucher_validator::main", () => {
         configureContext({ nVoucherUserTokensBurned: 1 }).use((ctx) => {
             throws(() => {
                 main.eval({
-                    $scriptContext: ctx,
-                    $datum: configureVoucher(),
-                    _: new IntData(0)
+                    ...defaulTestArgs,
+                    $scriptContext: ctx
                 })
             }, /voucher ref token not burned/)
         })
@@ -112,9 +114,8 @@ describe("voucher_validator::main", () => {
         configureContext({ burnedVoucherId: 2 }).use((ctx) => {
             throws(() => {
                 main.eval({
-                    $scriptContext: ctx,
-                    $datum: configureVoucher(),
-                    _: new IntData(0)
+                    ...defaulTestArgs,
+                    $scriptContext: ctx
                 })
             }, /not witnessed by reimbursement validator/)
         })
@@ -124,9 +125,8 @@ describe("voucher_validator::main", () => {
         configureContext({ spentReimbursementPeriodId: 1 }).use((ctx) => {
             strictEqual(
                 main.eval({
-                    $scriptContext: ctx,
-                    $datum: configureVoucher(),
-                    _: new IntData(0)
+                    ...defaulTestArgs,
+                    $scriptContext: ctx
                 }),
                 undefined
             )
@@ -137,9 +137,8 @@ describe("voucher_validator::main", () => {
         configureContext({ spentReimbursementPeriodId: 2 }).use((ctx) => {
             throws(() => {
                 main.eval({
-                    $scriptContext: ctx,
-                    $datum: configureVoucher(),
-                    _: new IntData(0)
+                    ...defaulTestArgs,
+                    $scriptContext: ctx
                 })
             }, /not witnessed by reimbursement validator/)
         })

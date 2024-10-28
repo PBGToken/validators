@@ -62,10 +62,11 @@ describe("VoucherModule::get_current_voucher", () => {
 
         it("VoucherModule::get_current_voucher #01 (returns the voucher id and voucher data if the current input is a voucher UTxO)", () => {
             configureContext().use((currentScript, ctx) => {
-                const [actualVoucherId, actualVoucher] = get_current_voucher.eval({
-                    $currentScript: currentScript,
-                    $scriptContext: ctx
-                })
+                const [actualVoucherId, actualVoucher] =
+                    get_current_voucher.eval({
+                        $currentScript: currentScript,
+                        $scriptContext: ctx
+                    })
 
                 strictEqual(actualVoucherId, voucherId)
                 strictEqual(
@@ -221,7 +222,11 @@ describe("VoucherModule::find_output_voucher", () => {
         it("VoucherModule::find_output_voucher #04 (throws an error if the return_address data isn't Address)", () => {
             const datum = MapData.expect(castVoucher.toUplcData(voucher))
             datum.items[0][1] = new IntData(0)
-            const wrapped = new ConstrData(0, [datum, new IntData(1), new ConstrData(0, [])])
+            const wrapped = new ConstrData(0, [
+                datum,
+                new IntData(1),
+                new ConstrData(0, [])
+            ])
 
             configureContext({ datum: wrapped }).use((currentScript, ctx) => {
                 throws(() => {
@@ -237,7 +242,11 @@ describe("VoucherModule::find_output_voucher", () => {
         it('VoucherModule::find_output_voucher #05 (throws an error if the return_address key isn\'t "owner")', () => {
             const datum = MapData.expect(castVoucher.toUplcData(voucher))
             datum.items[0][0] = new ByteArrayData(encodeUtf8("@owner"))
-            const wrapped = new ConstrData(0, [datum, new IntData(1), new ConstrData(0, [])])
+            const wrapped = new ConstrData(0, [
+                datum,
+                new IntData(1),
+                new ConstrData(0, [])
+            ])
 
             configureContext({ datum: wrapped }).use((currentScript, ctx) => {
                 throws(() => {
