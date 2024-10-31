@@ -8,11 +8,19 @@ import {
 } from "../constants"
 import { policy } from "../constants/policy"
 
-
 export const config = new AssetClass(policy, encodeUtf8(`${PREFIX} config`))
-export const dvpToken = new AssetClass(policy, cip68_333_prefix.concat(encodeUtf8(PREFIX)))
-export const metadata = new AssetClass(policy, cip68_100_prefix.concat(encodeUtf8(PREFIX)))
-export const portfolio = new AssetClass(policy, encodeUtf8(`${PREFIX} portfolio`))
+export const dvpToken = new AssetClass(
+    policy,
+    cip68_333_prefix.concat(encodeUtf8(PREFIX))
+)
+export const metadata = new AssetClass(
+    policy,
+    cip68_100_prefix.concat(encodeUtf8(PREFIX))
+)
+export const portfolio = new AssetClass(
+    policy,
+    encodeUtf8(`${PREFIX} portfolio`)
+)
 export const price = new AssetClass(policy, encodeUtf8(`${PREFIX} price`))
 export const supply = new AssetClass(policy, encodeUtf8(`${PREFIX} supply`))
 
