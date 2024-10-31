@@ -40,6 +40,8 @@ const INITIAL_DESCRIPTION: String = "The first DVP"
 const INITIAL_TICKER: String = "PBG"
 const INITIAL_URL: String = "https://pbg.io"
 const INITIAL_LOGO: String = "https://token.pbg.io/logo.png"
+const INITIAL_MIN_MINT_FEE: Int = 30_000 // 0.03 tokens, equivalent to 3 ADA
+const INITIAL_MIN_BURN_FEE: Int = 30_000 // 0.03 tokens, equivalent to 3 ADA
 
 func validate_minted_tokens() -> () {
     tokens = Tokens::get_minted();
@@ -74,11 +76,11 @@ func validate_initial_config() -> () {
         fees: FeesConfig{
             mint_fee: MintFeeConfig{
                 relative: 0.005, // 0.5%
-                minimum:  20_000 // 0.02 tokens, equivalent to 2 ADA
+                minimum:  INITIAL_MIN_MINT_FEE
             },
             burn_fee: BurnFeeConfig{
                 relative: 0.005, // 0.5%
-                minimum:  20_000 // 0.02 tokens, equivalent to 2 ADA
+                minimum:  INITIAL_MIN_BURN_FEE
             },
             management_fee: ManagementFeeConfig{
                 relative: 0.0001, // 0.01% daily, 3.65% annually

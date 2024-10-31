@@ -254,11 +254,11 @@ function makeInitialConfig(props?: {
         agent: INITIAL_AGENT_PARAM,
         mintFee: {
             relative: props?.relMintFee ?? 0.005,
-            minimum: 20_000
+            minimum: 30_000
         },
         burnFee: {
             relative: 0.005,
-            minimum: 20_000
+            minimum: 30_000
         },
         managementFeePeriod: 24 * 60 * 60 * 1000,
         relManagementFee: 0.0001,
