@@ -5,7 +5,8 @@ import contract from "pbg-token-validators-test-context"
 import {
     cip68_100_prefix,
     cip68_222_prefix,
-    cip68_333_prefix
+    cip68_333_prefix,
+    PREFIX
 } from "./constants"
 
 const {
@@ -36,47 +37,47 @@ const {
 
 describe("TokenNames constants", () => {
     it("metadata", () => {
-        deepEqual(metadata.eval({}), cip68_100_prefix)
+        deepEqual(metadata.eval({}), cip68_100_prefix.concat(encodeUtf8(PREFIX)))
     })
 
     it("dvp_token", () => {
-        deepEqual(dvp_token.eval({}), cip68_333_prefix)
+        deepEqual(dvp_token.eval({}), cip68_333_prefix.concat(encodeUtf8(PREFIX)))
     })
 
     it("assets_prefix", () => {
         // Note the final space
-        deepEqual(assets_prefix.eval({}), encodeUtf8("assets "))
+        deepEqual(assets_prefix.eval({}), encodeUtf8(`${PREFIX} assets `))
     })
 
     it("config", () => {
-        deepEqual(config.eval({}), encodeUtf8("config"))
+        deepEqual(config.eval({}), encodeUtf8(`${PREFIX} config`))
     })
 
     it("portfolio", () => {
-        deepEqual(portfolio.eval({}), encodeUtf8("portfolio"))
+        deepEqual(portfolio.eval({}), encodeUtf8(`${PREFIX} portfolio`))
     })
 
     it("price", () => {
-        deepEqual(price.eval({}), encodeUtf8("price"))
+        deepEqual(price.eval({}), encodeUtf8(`${PREFIX} price`))
     })
 
     it("reimbursement_prefix", () => {
         // Note the final space
-        deepEqual(reimbursement_prefix.eval({}), encodeUtf8("reimbursement "))
+        deepEqual(reimbursement_prefix.eval({}), encodeUtf8(`${PREFIX} reimbursement `))
     })
 
     it("supply", () => {
-        deepEqual(supply.eval({}), encodeUtf8("supply"))
+        deepEqual(supply.eval({}), encodeUtf8(`${PREFIX} supply`))
     })
 
     it("voucher_infix", () => {
-        deepEqual(voucher_infix.eval({}), encodeUtf8("voucher "))
+        deepEqual(voucher_infix.eval({}), encodeUtf8(`${PREFIX} voucher `))
     })
 
     it("voucher_ref_prefix", () => {
         deepEqual(
             voucher_ref_prefix.eval({}),
-            cip68_100_prefix.concat(encodeUtf8("voucher "))
+            cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher `))
         )
     })
 
@@ -85,13 +86,13 @@ describe("TokenNames constants", () => {
 
         throws(() => {
             decodeUtf8(p)
-        })
+        }, /The encoded data was not valid for encoding utf-8/)
     })
 
     it("voucher_nft_prefix", () => {
         deepEqual(
             voucher_nft_prefix.eval({}),
-            cip68_222_prefix.concat(encodeUtf8("voucher "))
+            cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher `))
         )
     })
 
@@ -110,7 +111,7 @@ describe("TokenNames::assets", () => {
             assets.eval({
                 group_id: -1
             }),
-            encodeUtf8("assets -1")
+            encodeUtf8(`${PREFIX} assets -1`)
         )
     })
 
@@ -119,7 +120,7 @@ describe("TokenNames::assets", () => {
             assets.eval({
                 group_id: 0
             }),
-            encodeUtf8("assets 0")
+            encodeUtf8(`${PREFIX} assets 0`)
         )
     })
 
@@ -128,7 +129,7 @@ describe("TokenNames::assets", () => {
             assets.eval({
                 group_id: 1
             }),
-            encodeUtf8("assets 1")
+            encodeUtf8(`${PREFIX} assets 1`)
         )
     })
 
@@ -137,7 +138,7 @@ describe("TokenNames::assets", () => {
             assets.eval({
                 group_id: 10
             }),
-            encodeUtf8("assets 10")
+            encodeUtf8(`${PREFIX} assets 10`)
         )
     })
 })
@@ -146,8 +147,8 @@ describe("TokenNames::parse_series", () => {
     it('"assets -1"', () => {
         strictEqual(
             parse_series.eval({
-                prefix: encodeUtf8("assets "),
-                token_name: encodeUtf8("assets -1")
+                prefix: encodeUtf8(`${PREFIX} assets `),
+                token_name: encodeUtf8(`${PREFIX} assets -1`)
             }),
             -1n
         )
@@ -156,8 +157,8 @@ describe("TokenNames::parse_series", () => {
     it('"assets 0"', () => {
         strictEqual(
             parse_series.eval({
-                prefix: encodeUtf8("assets "),
-                token_name: encodeUtf8("assets 0")
+                prefix: encodeUtf8(`${PREFIX} assets `),
+                token_name: encodeUtf8(`${PREFIX} assets 0`)
             }),
             0n
         )
@@ -166,8 +167,8 @@ describe("TokenNames::parse_series", () => {
     it('"assets 1"', () => {
         strictEqual(
             parse_series.eval({
-                prefix: encodeUtf8("assets "),
-                token_name: encodeUtf8("assets 1")
+                prefix: encodeUtf8(`${PREFIX} assets `),
+                token_name: encodeUtf8(`${PREFIX} assets 1`)
             }),
             1n
         )
@@ -176,8 +177,8 @@ describe("TokenNames::parse_series", () => {
     it('"assets 10"', () => {
         strictEqual(
             parse_series.eval({
-                prefix: encodeUtf8("assets "),
-                token_name: encodeUtf8("assets 10")
+                prefix: encodeUtf8(`${PREFIX} assets `),
+                token_name: encodeUtf8(`${PREFIX} assets 10`)
             }),
             10n
         )
@@ -186,8 +187,8 @@ describe("TokenNames::parse_series", () => {
     it('"assets 9999"', () => {
         strictEqual(
             parse_series.eval({
-                prefix: encodeUtf8("assets "),
-                token_name: encodeUtf8("assets 9999")
+                prefix: encodeUtf8(`${PREFIX} assets `),
+                token_name: encodeUtf8(`${PREFIX} assets 9999`)
             }),
             9999n
         )
@@ -196,8 +197,8 @@ describe("TokenNames::parse_series", () => {
     it("different prefix", () => {
         strictEqual(
             parse_series.eval({
-                prefix: encodeUtf8("voucher "),
-                token_name: encodeUtf8("assets 10")
+                prefix: encodeUtf8(`${PREFIX} voucher `),
+                token_name: encodeUtf8(`${PREFIX} assets 10`)
             }),
             null
         )
@@ -206,37 +207,37 @@ describe("TokenNames::parse_series", () => {
     it("prefix missing separator", () => {
         throws(() => {
             parse_series.eval({
-                prefix: encodeUtf8("assets"),
-                token_name: encodeUtf8("assets 10")
+                prefix: encodeUtf8(`${PREFIX} assets`),
+                token_name: encodeUtf8(`${PREFIX} assets 10`)
             })
-        })
+        }, /not a digit/)
     })
 
     it("id with trailing space", () => {
         throws(() => {
             parse_series.eval({
-                prefix: encodeUtf8("assets"),
-                token_name: encodeUtf8("assets 10 ")
+                prefix: encodeUtf8(`${PREFIX} assets`),
+                token_name: encodeUtf8(`${PREFIX} assets 10 `)
             })
-        })
+        }, /not a digit/)
     })
 
     it("id with leading 0s", () => {
         throws(() => {
             parse_series.eval({
-                prefix: encodeUtf8("assets"),
-                token_name: encodeUtf8("assets 010")
+                prefix: encodeUtf8(`${PREFIX} assets `),
+                token_name: encodeUtf8(`${PREFIX} assets 010`)
             })
-        })
+        }, /zero padded integer can't be parsed/)
     })
 
     it("id with trailing non-digit", () => {
         throws(() => {
             parse_series.eval({
-                prefix: encodeUtf8("assets"),
-                token_name: encodeUtf8("assets 100a")
+                prefix: encodeUtf8(`${PREFIX} assets`),
+                token_name: encodeUtf8(`${PREFIX} assets 100a`)
             })
-        })
+        }, /not a digit/)
     })
 })
 
@@ -244,7 +245,7 @@ describe("TokenNames::parse_assets", () => {
     it('"assets -1"', () => {
         strictEqual(
             parse_assets.eval({
-                token_name: encodeUtf8("assets -1")
+                token_name: encodeUtf8(`${PREFIX} assets -1`)
             }),
             -1n
         )
@@ -253,7 +254,7 @@ describe("TokenNames::parse_assets", () => {
     it('"assets 0"', () => {
         strictEqual(
             parse_assets.eval({
-                token_name: encodeUtf8("assets 0")
+                token_name: encodeUtf8(`${PREFIX} assets 0`)
             }),
             0n
         )
@@ -262,7 +263,7 @@ describe("TokenNames::parse_assets", () => {
     it('"assets 1"', () => {
         strictEqual(
             parse_assets.eval({
-                token_name: encodeUtf8("assets 1")
+                token_name: encodeUtf8(`${PREFIX} assets 1`)
             }),
             1n
         )
@@ -271,7 +272,7 @@ describe("TokenNames::parse_assets", () => {
     it('"assets 10"', () => {
         strictEqual(
             parse_assets.eval({
-                token_name: encodeUtf8("assets 10")
+                token_name: encodeUtf8(`${PREFIX} assets 10`)
             }),
             10n
         )
@@ -280,7 +281,7 @@ describe("TokenNames::parse_assets", () => {
     it('"assets 9999"', () => {
         strictEqual(
             parse_assets.eval({
-                token_name: encodeUtf8("assets 9999")
+                token_name: encodeUtf8(`${PREFIX} assets 9999`)
             }),
             9999n
         )
@@ -289,7 +290,7 @@ describe("TokenNames::parse_assets", () => {
     it("different prefix", () => {
         strictEqual(
             parse_assets.eval({
-                token_name: encodeUtf8("voucher 10")
+                token_name: encodeUtf8(`${PREFIX} voucher 10`)
             }),
             null
         )
@@ -298,33 +299,49 @@ describe("TokenNames::parse_assets", () => {
     it("id with leading space", () => {
         throws(() => {
             parse_assets.eval({
-                token_name: encodeUtf8("assets  10")
+                token_name: encodeUtf8(`${PREFIX} assets  10`)
             })
-        })
+        }, /not a digit/)
     })
 
     it("id with trailing space", () => {
         throws(() => {
             parse_assets.eval({
-                token_name: encodeUtf8("assets 10 ")
+                token_name: encodeUtf8(`${PREFIX} assets 10 `)
             })
-        })
+        }, /not a digit/)
     })
 
     it("id with leading 0s", () => {
         throws(() => {
             parse_assets.eval({
-                token_name: encodeUtf8("assets 010")
+                token_name: encodeUtf8(`${PREFIX} assets 010`)
             })
-        })
+        }, /zero padded integer can't be parsed/)
     })
 
     it("id with trailing non-digit", () => {
         throws(() => {
             parse_assets.eval({
-                token_name: encodeUtf8("assets 100a")
+                token_name: encodeUtf8(`${PREFIX} assets 100a`)
             })
-        })
+        }, /not a digit/)
+    })
+
+    it('returns null with missing prefix', () => {
+        strictEqual(
+            parse_assets.eval({
+                token_name: encodeUtf8(`assets 1`)
+            })
+        , null)
+    })
+
+    it('returns null with wrong prefix', () => {
+        strictEqual(
+            parse_assets.eval({
+                token_name: encodeUtf8(`bPBG assets 1`)
+            })
+        , null)
     })
 })
 
@@ -332,7 +349,7 @@ describe("TokenNames::has_assets_prefix", () => {
     it('true for "assets 1"', () => {
         strictEqual(
             has_assets_prefix.eval({
-                token_name: encodeUtf8("assets 1")
+                token_name: encodeUtf8(`${PREFIX} assets 1`)
             }),
             true
         )
@@ -341,7 +358,7 @@ describe("TokenNames::has_assets_prefix", () => {
     it('false for "voucher 1"', () => {
         strictEqual(
             has_assets_prefix.eval({
-                token_name: encodeUtf8("voucher 1")
+                token_name: encodeUtf8(`${PREFIX} voucher 1`)
             }),
             false
         )
@@ -352,7 +369,7 @@ describe("TokenNames::parse_reimbursement", () => {
     it('"reimbursement -1"', () => {
         strictEqual(
             parse_reimbursement.eval({
-                token_name: encodeUtf8("reimbursement -1")
+                token_name: encodeUtf8(`${PREFIX} reimbursement -1`)
             }),
             -1n
         )
@@ -361,7 +378,7 @@ describe("TokenNames::parse_reimbursement", () => {
     it('"reimbursement 0"', () => {
         strictEqual(
             parse_reimbursement.eval({
-                token_name: encodeUtf8("reimbursement 0")
+                token_name: encodeUtf8(`${PREFIX} reimbursement 0`)
             }),
             0n
         )
@@ -370,7 +387,7 @@ describe("TokenNames::parse_reimbursement", () => {
     it('"reimbursement 1"', () => {
         strictEqual(
             parse_reimbursement.eval({
-                token_name: encodeUtf8("reimbursement 1")
+                token_name: encodeUtf8(`${PREFIX} reimbursement 1`)
             }),
             1n
         )
@@ -379,7 +396,7 @@ describe("TokenNames::parse_reimbursement", () => {
     it('"reimbursement 10"', () => {
         strictEqual(
             parse_reimbursement.eval({
-                token_name: encodeUtf8("reimbursement 10")
+                token_name: encodeUtf8(`${PREFIX} reimbursement 10`)
             }),
             10n
         )
@@ -388,7 +405,7 @@ describe("TokenNames::parse_reimbursement", () => {
     it('"reimbursement 9999"', () => {
         strictEqual(
             parse_reimbursement.eval({
-                token_name: encodeUtf8("reimbursement 9999")
+                token_name: encodeUtf8(`${PREFIX} reimbursement 9999`)
             }),
             9999n
         )
@@ -397,7 +414,7 @@ describe("TokenNames::parse_reimbursement", () => {
     it("different prefix", () => {
         strictEqual(
             parse_reimbursement.eval({
-                token_name: encodeUtf8("voucher 10")
+                token_name: encodeUtf8(`${PREFIX} voucher 10`)
             }),
             null
         )
@@ -406,33 +423,33 @@ describe("TokenNames::parse_reimbursement", () => {
     it("id with leading space", () => {
         throws(() => {
             parse_reimbursement.eval({
-                token_name: encodeUtf8("reimbursement  10")
+                token_name: encodeUtf8(`${PREFIX} reimbursement  10`)
             })
-        })
+        }, /not a digit/)
     })
 
     it("id with trailing space", () => {
         throws(() => {
             parse_reimbursement.eval({
-                token_name: encodeUtf8("reimbursement 10 ")
+                token_name: encodeUtf8(`${PREFIX} reimbursement 10 `)
             })
-        })
+        }, /not a digit/)
     })
 
     it("id with leading 0s", () => {
         throws(() => {
             parse_reimbursement.eval({
-                token_name: encodeUtf8("reimbursement 010")
+                token_name: encodeUtf8(`${PREFIX} reimbursement 010`)
             })
-        })
+        }, /zero padded integer can't be parsed/)
     })
 
     it("id with trailing non-digit", () => {
         throws(() => {
             parse_reimbursement.eval({
-                token_name: encodeUtf8("reimbursement 100a")
+                token_name: encodeUtf8(`${PREFIX} reimbursement 100a`)
             })
-        })
+        }, /not a digit/)
     })
 })
 
@@ -442,7 +459,7 @@ describe("TokenNames::reimbursement", () => {
             reimbursement.eval({
                 id: -1
             }),
-            encodeUtf8("reimbursement -1")
+            encodeUtf8(`${PREFIX} reimbursement -1`)
         )
     })
 
@@ -451,7 +468,7 @@ describe("TokenNames::reimbursement", () => {
             reimbursement.eval({
                 id: 0
             }),
-            encodeUtf8("reimbursement 0")
+            encodeUtf8(`${PREFIX} reimbursement 0`)
         )
     })
 
@@ -460,7 +477,7 @@ describe("TokenNames::reimbursement", () => {
             reimbursement.eval({
                 id: 1
             }),
-            encodeUtf8("reimbursement 1")
+            encodeUtf8(`${PREFIX} reimbursement 1`)
         )
     })
 
@@ -469,7 +486,7 @@ describe("TokenNames::reimbursement", () => {
             reimbursement.eval({
                 id: 10
             }),
-            encodeUtf8("reimbursement 10")
+            encodeUtf8(`${PREFIX} reimbursement 10`)
         )
     })
 
@@ -478,7 +495,7 @@ describe("TokenNames::reimbursement", () => {
             reimbursement.eval({
                 id: 9999
             }),
-            encodeUtf8("reimbursement 9999")
+            encodeUtf8(`${PREFIX} reimbursement 9999`)
         )
     })
 })
@@ -487,7 +504,7 @@ describe("TokenNames::parse_voucher_ref", () => {
     it('"voucher -1"', () => {
         strictEqual(
             parse_voucher_ref.eval({
-                token_name: cip68_100_prefix.concat(encodeUtf8("voucher -1"))
+                token_name: cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher -1`))
             }),
             -1n
         )
@@ -496,7 +513,7 @@ describe("TokenNames::parse_voucher_ref", () => {
     it('"voucher 0"', () => {
         strictEqual(
             parse_voucher_ref.eval({
-                token_name: cip68_100_prefix.concat(encodeUtf8("voucher 0"))
+                token_name: cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher 0`))
             }),
             0n
         )
@@ -505,7 +522,7 @@ describe("TokenNames::parse_voucher_ref", () => {
     it('"voucher 1"', () => {
         strictEqual(
             parse_voucher_ref.eval({
-                token_name: cip68_100_prefix.concat(encodeUtf8("voucher 1"))
+                token_name: cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher 1`))
             }),
             1n
         )
@@ -514,7 +531,7 @@ describe("TokenNames::parse_voucher_ref", () => {
     it('"voucher 10"', () => {
         strictEqual(
             parse_voucher_ref.eval({
-                token_name: cip68_100_prefix.concat(encodeUtf8("voucher 10"))
+                token_name: cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher 10`))
             }),
             10n
         )
@@ -523,7 +540,7 @@ describe("TokenNames::parse_voucher_ref", () => {
     it('"voucher 9999"', () => {
         strictEqual(
             parse_voucher_ref.eval({
-                token_name: cip68_100_prefix.concat(encodeUtf8("voucher 9999"))
+                token_name: cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher 9999`))
             }),
             9999n
         )
@@ -532,7 +549,7 @@ describe("TokenNames::parse_voucher_ref", () => {
     it("missing cip67 prefix", () => {
         strictEqual(
             parse_voucher_ref.eval({
-                token_name: encodeUtf8("voucher -1")
+                token_name: encodeUtf8(`${PREFIX} voucher -1`)
             }),
             null
         )
@@ -541,33 +558,33 @@ describe("TokenNames::parse_voucher_ref", () => {
     it("id with leading space", () => {
         throws(() => {
             parse_voucher_ref.eval({
-                token_name: cip68_100_prefix.concat(encodeUtf8("voucher  10"))
+                token_name: cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher  10`))
             })
-        })
+        }, /not a digit/)
     })
 
     it("id with trailing space", () => {
         throws(() => {
             parse_voucher_ref.eval({
-                token_name: cip68_100_prefix.concat(encodeUtf8("voucher 10 "))
+                token_name: cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher 10 `))
             })
-        })
+        }, /not a digit/)
     })
 
     it("id with leading 0s", () => {
         throws(() => {
             parse_voucher_ref.eval({
-                token_name: cip68_100_prefix.concat(encodeUtf8("voucher 010"))
+                token_name: cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher 010`))
             })
-        })
+        }, /zero padded integer can't be parsed/)
     })
 
     it("id with trailing non-digit", () => {
         throws(() => {
             parse_voucher_ref.eval({
-                token_name: cip68_100_prefix.concat(encodeUtf8("voucher 100a"))
+                token_name: cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher 100a`))
             })
-        })
+        }, /not a digit/)
     })
 })
 
@@ -575,7 +592,7 @@ describe("TokenNames::parse_voucher_nft", () => {
     it('"voucher -1"', () => {
         strictEqual(
             parse_voucher_nft.eval({
-                token_name: cip68_222_prefix.concat(encodeUtf8("voucher -1"))
+                token_name: cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher -1`))
             }),
             -1n
         )
@@ -584,7 +601,7 @@ describe("TokenNames::parse_voucher_nft", () => {
     it('"voucher 0"', () => {
         strictEqual(
             parse_voucher_nft.eval({
-                token_name: cip68_222_prefix.concat(encodeUtf8("voucher 0"))
+                token_name: cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher 0`))
             }),
             0n
         )
@@ -593,7 +610,7 @@ describe("TokenNames::parse_voucher_nft", () => {
     it('"voucher 1"', () => {
         strictEqual(
             parse_voucher_nft.eval({
-                token_name: cip68_222_prefix.concat(encodeUtf8("voucher 1"))
+                token_name: cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher 1`))
             }),
             1n
         )
@@ -602,7 +619,7 @@ describe("TokenNames::parse_voucher_nft", () => {
     it('"voucher 10"', () => {
         strictEqual(
             parse_voucher_nft.eval({
-                token_name: cip68_222_prefix.concat(encodeUtf8("voucher 10"))
+                token_name: cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher 10`))
             }),
             10n
         )
@@ -611,7 +628,7 @@ describe("TokenNames::parse_voucher_nft", () => {
     it('"voucher 9999"', () => {
         strictEqual(
             parse_voucher_nft.eval({
-                token_name: cip68_222_prefix.concat(encodeUtf8("voucher 9999"))
+                token_name: cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher 9999`))
             }),
             9999n
         )
@@ -620,7 +637,7 @@ describe("TokenNames::parse_voucher_nft", () => {
     it("missing cip67 prefix", () => {
         strictEqual(
             parse_voucher_nft.eval({
-                token_name: encodeUtf8("voucher -1")
+                token_name: encodeUtf8(`${PREFIX} voucher -1`)
             }),
             null
         )
@@ -629,33 +646,33 @@ describe("TokenNames::parse_voucher_nft", () => {
     it("id with leading space", () => {
         throws(() => {
             parse_voucher_nft.eval({
-                token_name: cip68_222_prefix.concat(encodeUtf8("voucher  10"))
+                token_name: cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher  10`))
             })
-        })
+        }, /not a digit/)
     })
 
     it("id with trailing space", () => {
         throws(() => {
             parse_voucher_nft.eval({
-                token_name: cip68_222_prefix.concat(encodeUtf8("voucher 10 "))
+                token_name: cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher 10 `))
             })
-        })
+        }, /not a digit/)
     })
 
     it("id with leading 0s", () => {
         throws(() => {
             parse_voucher_nft.eval({
-                token_name: cip68_222_prefix.concat(encodeUtf8("voucher 010"))
+                token_name: cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher 010`))
             })
-        })
+        }, /zero padded integer can't be parsed/)
     })
 
     it("id with trailing non-digit", () => {
         throws(() => {
             parse_voucher_nft.eval({
-                token_name: cip68_222_prefix.concat(encodeUtf8("voucher 100a"))
+                token_name: cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher 100a`))
             })
-        })
+        }, /not a digit/)
     })
 })
 
@@ -663,7 +680,7 @@ describe("TokenNames::has_voucher_ref_prefix", () => {
     it('false for "voucher 1"', () => {
         strictEqual(
             has_voucher_ref_prefix.eval({
-                token_name: encodeUtf8("voucher 1")
+                token_name: encodeUtf8(`${PREFIX} voucher 1`)
             }),
             false
         )
@@ -672,7 +689,7 @@ describe("TokenNames::has_voucher_ref_prefix", () => {
     it('false for "(222)voucher 1"', () => {
         strictEqual(
             has_voucher_ref_prefix.eval({
-                token_name: cip68_222_prefix.concat(encodeUtf8("voucher 1"))
+                token_name: cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher 1`))
             }),
             false
         )
@@ -681,7 +698,7 @@ describe("TokenNames::has_voucher_ref_prefix", () => {
     it('true for "(100)voucher 1"', () => {
         strictEqual(
             has_voucher_ref_prefix.eval({
-                token_name: cip68_100_prefix.concat(encodeUtf8("voucher 1"))
+                token_name: cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher 1`))
             }),
             true
         )
@@ -692,7 +709,7 @@ describe("TokenNames::has_voucher_nft_prefix", () => {
     it('false for "voucher 1"', () => {
         strictEqual(
             has_voucher_nft_prefix.eval({
-                token_name: encodeUtf8("voucher 1")
+                token_name: encodeUtf8(`${PREFIX} voucher 1`)
             }),
             false
         )
@@ -701,7 +718,7 @@ describe("TokenNames::has_voucher_nft_prefix", () => {
     it('true for "(222)voucher 1"', () => {
         strictEqual(
             has_voucher_nft_prefix.eval({
-                token_name: cip68_222_prefix.concat(encodeUtf8("voucher 1"))
+                token_name: cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher 1`))
             }),
             true
         )
@@ -710,7 +727,7 @@ describe("TokenNames::has_voucher_nft_prefix", () => {
     it('false for "(100)voucher 1"', () => {
         strictEqual(
             has_voucher_nft_prefix.eval({
-                token_name: cip68_100_prefix.concat(encodeUtf8("voucher 1"))
+                token_name: cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher 1`))
             }),
             false
         )
@@ -723,7 +740,7 @@ describe("TokenNames::voucher_ref", () => {
             voucher_ref.eval({
                 id: -1
             }),
-            cip68_100_prefix.concat(encodeUtf8("voucher -1"))
+            cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher -1`))
         )
     })
 
@@ -732,7 +749,7 @@ describe("TokenNames::voucher_ref", () => {
             voucher_ref.eval({
                 id: 0
             }),
-            cip68_100_prefix.concat(encodeUtf8("voucher 0"))
+            cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher 0`))
         )
     })
 
@@ -741,7 +758,7 @@ describe("TokenNames::voucher_ref", () => {
             voucher_ref.eval({
                 id: 1
             }),
-            cip68_100_prefix.concat(encodeUtf8("voucher 1"))
+            cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher 1`))
         )
     })
 
@@ -750,7 +767,7 @@ describe("TokenNames::voucher_ref", () => {
             voucher_ref.eval({
                 id: 10
             }),
-            cip68_100_prefix.concat(encodeUtf8("voucher 10"))
+            cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher 10`))
         )
     })
 
@@ -759,7 +776,7 @@ describe("TokenNames::voucher_ref", () => {
             voucher_ref.eval({
                 id: 9999
             }),
-            cip68_100_prefix.concat(encodeUtf8("voucher 9999"))
+            cip68_100_prefix.concat(encodeUtf8(`${PREFIX} voucher 9999`))
         )
     })
 })
@@ -770,7 +787,7 @@ describe("TokenNames::voucher_nft", () => {
             voucher_nft.eval({
                 id: -1
             }),
-            cip68_222_prefix.concat(encodeUtf8("voucher -1"))
+            cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher -1`))
         )
     })
 
@@ -779,7 +796,7 @@ describe("TokenNames::voucher_nft", () => {
             voucher_nft.eval({
                 id: 0
             }),
-            cip68_222_prefix.concat(encodeUtf8("voucher 0"))
+            cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher 0`))
         )
     })
 
@@ -788,7 +805,7 @@ describe("TokenNames::voucher_nft", () => {
             voucher_nft.eval({
                 id: 1
             }),
-            cip68_222_prefix.concat(encodeUtf8("voucher 1"))
+            cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher 1`))
         )
     })
 
@@ -797,7 +814,7 @@ describe("TokenNames::voucher_nft", () => {
             voucher_nft.eval({
                 id: 10
             }),
-            cip68_222_prefix.concat(encodeUtf8("voucher 10"))
+            cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher 10`))
         )
     })
 
@@ -806,7 +823,7 @@ describe("TokenNames::voucher_nft", () => {
             voucher_nft.eval({
                 id: 9999
             }),
-            cip68_222_prefix.concat(encodeUtf8("voucher 9999"))
+            cip68_222_prefix.concat(encodeUtf8(`${PREFIX} voucher 9999`))
         )
     })
 })

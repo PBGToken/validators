@@ -35,6 +35,11 @@ const INITIAL_SUCCESS_FEE: SuccessFee = SuccessFee{
 const INITIAL_CYCLE_PERIOD: Duration = 365*Duration::DAY
 const INITIAL_UPDATE_DELAY: Duration = 2*Duration::WEEK
 const INITIAL_CYCLE_ID: Int = 1
+const INITIAL_NAME: String = "PBG Token"
+const INITIAL_DESCRIPTION: String = "The first DVP"
+const INITIAL_TICKER: String = "PBG"
+const INITIAL_URL: String = "https://pbg.io"
+const INITIAL_LOGO: String = "https://token.pbg.io/logo.png"
 
 func validate_minted_tokens() -> () {
     tokens = Tokens::get_minted();
@@ -51,12 +56,12 @@ func validate_minted_tokens() -> () {
 func validate_initial_metadata() -> () {
     metadata = Metadata::find_output().get_content();
 
-    assert(metadata.name == "PBG Token", "wrong metadata name");
-    assert(metadata.description == "The first DVP", "wrong metadata description");
-    assert(metadata.ticker == "PBG", "wrong metadata ticker");
-    assert(metadata.url == "https://pbg.io", "wrong metadata url");
+    assert(metadata.name == INITIAL_NAME, "wrong metadata name");
+    assert(metadata.description == INITIAL_DESCRIPTION, "wrong metadata description");
+    assert(metadata.ticker == INITIAL_TICKER, "wrong metadata ticker");
+    assert(metadata.url == INITIAL_URL, "wrong metadata url");
     assert(metadata.decimals == 6, "wrong metadata decimals");
-    assert(metadata.logo == "https://token.pbg.io/logo.png", "wrong metadata logo uri")
+    assert(metadata.logo == INITIAL_LOGO, "wrong metadata logo uri")
 }
 
 func validate_initial_config() -> () {

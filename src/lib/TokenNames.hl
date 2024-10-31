@@ -2,10 +2,16 @@ module TokenNames
 
 import Cip67
 
-const metadata  = Cip67::reference_token_label
-const dvp_token = Cip67::fungible_token_label
+// for better integration with explorers an optional PREFIX can be added
+const PREFIX_STRING = "PBG"
 
-const assets_prefix: ByteArray = "assets ".encode_utf8()
+const dvp_prefix = PREFIX_STRING.encode_utf8()
+const dvp_prefix_with_space = (if (PREFIX_STRING == "") {""} else {PREFIX_STRING + " "}).encode_utf8()
+
+const metadata  = Cip67::reference_token_label + dvp_prefix
+const dvp_token = Cip67::fungible_token_label + dvp_prefix
+
+const assets_prefix: ByteArray = dvp_prefix_with_space + "assets ".encode_utf8()
 
 func assets(group_id: Int) -> ByteArray {
     assets_prefix + group_id.show().encode_utf8()
@@ -30,11 +36,11 @@ func has_assets_prefix(token_name: ByteArray) -> Bool {
     token_name.starts_with(assets_prefix)
 }
 
-const config: ByteArray = "config".encode_utf8()
-const portfolio: ByteArray = "portfolio".encode_utf8()
-const price: ByteArray = "price".encode_utf8()
+const config: ByteArray = dvp_prefix_with_space + "config".encode_utf8()
+const portfolio: ByteArray = dvp_prefix_with_space + "portfolio".encode_utf8()
+const price: ByteArray = dvp_prefix_with_space + "price".encode_utf8()
 
-const reimbursement_prefix: ByteArray = "reimbursement ".encode_utf8()
+const reimbursement_prefix: ByteArray = dvp_prefix_with_space + "reimbursement ".encode_utf8()
 
 func has_reimbursement_prefix(token_name: ByteArray) -> Bool {
     token_name.starts_with(reimbursement_prefix)
@@ -48,9 +54,9 @@ func reimbursement(id: Int) -> ByteArray {
     reimbursement_prefix + id.show().encode_utf8()
 }
 
-const supply: ByteArray = "supply".encode_utf8()
+const supply: ByteArray = dvp_prefix_with_space + "supply".encode_utf8()
 
-const voucher_infix: ByteArray = "voucher ".encode_utf8()
+const voucher_infix: ByteArray = dvp_prefix_with_space + "voucher ".encode_utf8()
 const voucher_ref_prefix: ByteArray = Cip67::reference_token_label + voucher_infix
 const voucher_nft_prefix: ByteArray = Cip67::user_token_label + voucher_infix
 
