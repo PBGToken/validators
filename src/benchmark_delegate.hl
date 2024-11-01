@@ -1,10 +1,19 @@
 staking benchmark_delegate
 
+import  { get_staking_purpose } from ScriptContext
+
 /**
  * The input price is a number of lovelace per benchmark asset
  * If ADA is the benchmark, the top and the bottom of the benchmark price need to be equal
  */
-func main(benchmark_price: Ratio) -> Bool {
-    benchmark_price.bottom > 0
-    && benchmark_price.top == benchmark_price.bottom
+func main(benchmark_price: Ratio) -> () {
+    get_staking_purpose().switch{
+        Rewarding => {
+            assert(benchmark_price.bottom > 0, "bottom of price ratio must be positive");
+            assert(benchmark_price.top == benchmark_price.bottom, "top not equal to bottom")
+        },
+        Certifying => {
+            error("can't use benchmark delegate in DCert action")
+        }
+    }
 }

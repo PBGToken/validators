@@ -8,6 +8,7 @@ import {
     ScriptContextV2,
     ScriptPurpose,
     StakingAddress,
+    StakingCredential,
     StakingValidatorHash,
     TimeRange,
     TxInfo,
@@ -19,7 +20,7 @@ import {
     Value
 } from "@helios-lang/ledger"
 import { None, expectSome } from "@helios-lang/type-utils"
-import { ByteArrayData, IntData, UplcData } from "@helios-lang/uplc"
+import { ByteArrayData, IntData, ListData, UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { Addresses, policy } from "../constants"
 import {
@@ -1072,11 +1073,21 @@ export class ScriptContextBuilder {
     observeBenchmark(props?: {
         hash?: StakingValidatorHash
         redeemer?: RatioType
+        isMainPurpose?: boolean
     }): ScriptContextBuilder {
         const hash = props?.hash ?? contract.benchmark_delegate.$hash
         const redeemer = props?.redeemer ?? [1n, 1n]
 
-        return this.reward({ hash, redeemer: castRatio.toUplcData(redeemer) })
+        this.reward({ hash, redeemer: castRatio.toUplcData(redeemer) })
+
+        if (props?.isMainPurpose) {
+            this.purpose = ScriptPurpose.Rewarding(
+                TxRedeemer.Rewarding(0, new ListData([new IntData(redeemer[0]), new IntData(redeemer[1])])),
+                StakingCredential.new(hash)
+            )
+        }
+
+        return this
     }
 
     observeOracle(props?: {
