@@ -1,7 +1,7 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { PubKeyHash } from "@helios-lang/ledger"
-import { IntData } from "@helios-lang/uplc"
+import { makeDummyPubKeyHash, PubKeyHash } from "@helios-lang/ledger"
+import { makeIntData } from "@helios-lang/uplc"
 import contract, {
     ORACLE_KEY_1,
     ORACLE_KEY_2,
@@ -13,7 +13,7 @@ import { ScriptContextBuilder } from "./tx"
 const { main } = contract.oracle_delegate
 
 describe("oracle_delegate::main", () => {
-    const redeemer = new IntData(0)
+    const redeemer = makeIntData(0)
     const configureContext = (props?: {
         oracleKey2?: PubKeyHash
         oracleKey3?: PubKeyHash
@@ -31,15 +31,15 @@ describe("oracle_delegate::main", () => {
     })
 
     it("oracle_delegate::main #02 (succeeds if signed by majority)", () => {
-        configureContext({ oracleKey3: PubKeyHash.dummy() }).use((ctx) => {
+        configureContext({ oracleKey3: makeDummyPubKeyHash() }).use((ctx) => {
             main.eval({ $scriptContext: ctx, _: redeemer })
         })
     })
 
     it("oracle_delegate::main #03 (throws an error if only signed by one key)", () => {
         configureContext({
-            oracleKey2: PubKeyHash.dummy(),
-            oracleKey3: PubKeyHash.dummy()
+            oracleKey2: makeDummyPubKeyHash(),
+            oracleKey3: makeDummyPubKeyHash()
         }).use((ctx) => {
             throws(() => {
                 main.eval({ $scriptContext: ctx, _: redeemer })

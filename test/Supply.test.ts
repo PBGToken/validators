@@ -1,7 +1,7 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { Address, Assets, Value } from "@helios-lang/ledger"
-import { IntData, ListData, UplcData } from "@helios-lang/uplc"
+import { type ShelleyAddress, type Assets, makeValue, makeDummyAddress } from "@helios-lang/ledger"
+import { expectListData, makeIntData, makeListData, type UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { indirectPolicyScripts, scripts } from "./constants"
 import { castSupply, makeConfig, makeSupply } from "./data"
@@ -66,7 +66,7 @@ describe("Supply::find_input", () => {
             .addSupplyInput({
                 supply,
                 redeemer: [],
-                address: Address.dummy(false)
+                address: makeDummyAddress(false)
             })
             .use((ctx) => {
                 upstreamScripts.forEach((currentScript) => {
@@ -85,7 +85,7 @@ describe("Supply::find_input", () => {
             .addSupplyInput({
                 redeemer: [],
                 supply,
-                address: Address.dummy(false)
+                address: makeDummyAddress(false)
             })
             .use((ctx) => {
                 downstreamScripts.forEach((currentScript) => {
@@ -188,7 +188,7 @@ describe("Supply::find_output", () => {
 
     const configureParentContext = (props?: {
         inputToken?: Assets
-        outputAddress?: Address
+        outputAddress?: ShelleyAddress
         outputDatum?: UplcData
         outputToken?: Assets
     }) => {
@@ -218,7 +218,7 @@ describe("Supply::find_output", () => {
         })
 
         it("throws an error if the supply token isn't returned to the supply_validator address", () => {
-            configureContext({ outputAddress: Address.dummy(false) }).use(
+            configureContext({ outputAddress: makeDummyAddress(false) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
                         find_output.eval({
@@ -259,8 +259,8 @@ describe("Supply::find_output", () => {
         })
 
         it("throws an error if the first field in the listData isn't iData", () => {
-            const datum = ListData.expect(castSupply.toUplcData(supply))
-            datum.items[0] = new ListData([])
+            const datum = expectListData(castSupply.toUplcData(supply))
+            datum.items[0] = makeListData([])
 
             configureContext({
                 outputDatum: datum
@@ -275,9 +275,9 @@ describe("Supply::find_output", () => {
         })
 
         it("throws an error if the start_price denominator in the SuccessFeeState data is zero", () => {
-            const datum = ListData.expect(castSupply.toUplcData(supply))
-            ListData.expect(ListData.expect(datum.items[6]).items[3]).items[1] =
-                new IntData(0)
+            const datum = expectListData(castSupply.toUplcData(supply))
+            expectListData(expectListData(datum.items[6]).items[3]).items[1] =
+                makeIntData(0)
 
             configureContext({
                 outputDatum: datum
@@ -292,9 +292,9 @@ describe("Supply::find_output", () => {
         })
 
         it("throws an error if the SuccessFeeState listData contains an extra field", () => {
-            const datum = ListData.expect(castSupply.toUplcData(supply))
-            ListData.expect(ListData.expect(datum.items[6])).items.push(
-                new IntData(0)
+            const datum = expectListData(castSupply.toUplcData(supply))
+            expectListData(expectListData(datum.items[6])).items.push(
+                makeIntData(0)
             )
 
             configureContext({
@@ -373,7 +373,7 @@ describe("Supply::find_ref", () => {
         new ScriptContextBuilder()
             .addSupplyRef({
                 supply,
-                address: Address.dummy(false)
+                address: makeDummyAddress(false)
             })
             .redeemDummyTokenWithDvpPolicy()
             .use((ctx) => {
@@ -649,10 +649,10 @@ describe("witnessed_by_supply", () => {
     it(`false when not spending supply utxo (and current input contains a policy token)`, () => {
         new ScriptContextBuilder()
             .takeFromVault({
-                redeemer: new IntData(0),
-                value: new Value(2_000_000n)
+                redeemer: makeIntData(0),
+                value: makeValue(2_000_000n)
             })
-            .sendToVault({ value: new Value(2_000_000n) })
+            .sendToVault({ value: makeValue(2_000_000n) })
             .redeemDummyTokenWithDvpPolicy()
             .use((ctx) => {
                 scripts.forEach((currentScript) => {
@@ -670,10 +670,10 @@ describe("witnessed_by_supply", () => {
     it("fails when not spending supply utxo and current input doesn't contain a policy token (for scripts with no direct access to policy)", () => {
         new ScriptContextBuilder()
             .takeFromVault({
-                redeemer: new IntData(0),
-                value: new Value(2_000_000n)
+                redeemer: makeIntData(0),
+                value: makeValue(2_000_000n)
             })
-            .sendToVault({ value: new Value(2_000_000n) })
+            .sendToVault({ value: makeValue(2_000_000n) })
             .use((ctx) => {
                 indirectPolicyScripts.forEach((currentScript) => {
                     throws(() => {

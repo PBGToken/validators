@@ -1,6 +1,6 @@
 import { IntLike } from "@helios-lang/codec-utils"
-import { PermissiveType, StrictType } from "@helios-lang/contract-utils"
-import { AssetClass, TimeLike, toTime } from "@helios-lang/ledger"
+import { type PermissiveType, type StrictType } from "@helios-lang/contract-utils"
+import { AssetClass, makeDummyAssetClass, TimeLike, toTime } from "@helios-lang/ledger"
 import { strictEqual } from "node:assert"
 import contract from "pbg-token-validators-test-context"
 
@@ -15,7 +15,7 @@ export function makeAsset(props?: {
     priceTimestamp?: TimeLike
 }): AssetStrictType {
     return {
-        asset_class: props?.assetClass ?? AssetClass.dummy(),
+        asset_class: props?.assetClass ?? makeDummyAssetClass(),
         count: BigInt(props?.count ?? 0n),
         price: props?.price
             ? [BigInt(props?.price[0]), BigInt(props?.price[1])]

@@ -1,6 +1,6 @@
-import { ContractContextBuilder } from "@helios-lang/contract-utils"
-import { PubKeyHash, TxOutputId } from "@helios-lang/ledger"
-import { IntData, ListData } from "@helios-lang/uplc"
+import { makeContractContextBuilder } from "@helios-lang/contract-utils"
+import { makeDummyPubKeyHash, makeDummyTxOutputId } from "@helios-lang/ledger"
+import { makeIntData, makeListData } from "@helios-lang/uplc"
 import {
     assets_validator,
     benchmark_delegate,
@@ -18,16 +18,16 @@ import {
     voucher_validator
 } from "pbg-token-validators"
 
-export const SEED_ID = TxOutputId.dummy(999999) // something very large in order not to conflict with auto-generated ids in ScriptContextBuilder
-export const INITIAL_AGENT = PubKeyHash.dummy()
-export const GOV_KEY_1 = PubKeyHash.dummy(456)
-export const GOV_KEY_2 = PubKeyHash.dummy(457)
-export const GOV_KEY_3 = PubKeyHash.dummy(458)
-export const ORACLE_KEY_1 = PubKeyHash.dummy(459)
-export const ORACLE_KEY_2 = PubKeyHash.dummy(460)
-export const ORACLE_KEY_3 = PubKeyHash.dummy(461)
+export const SEED_ID = makeDummyTxOutputId(999999) // something very large in order not to conflict with auto-generated ids in ScriptContextBuilder
+export const INITIAL_AGENT = makeDummyPubKeyHash()
+export const GOV_KEY_1 = makeDummyPubKeyHash(456)
+export const GOV_KEY_2 = makeDummyPubKeyHash(457)
+export const GOV_KEY_3 = makeDummyPubKeyHash(458)
+export const ORACLE_KEY_1 = makeDummyPubKeyHash(459)
+export const ORACLE_KEY_2 = makeDummyPubKeyHash(460)
+export const ORACLE_KEY_3 = makeDummyPubKeyHash(461)
 
-const context = ContractContextBuilder.new()
+const context = makeContractContextBuilder()
     .with(assets_validator)
     .with(benchmark_delegate)
     .with(burn_order_validator)
@@ -48,15 +48,15 @@ const context = ContractContextBuilder.new()
         parameters: {
             "fund_policy::SEED_ID": SEED_ID.toUplcData(),
             "fund_policy::INITIAL_AGENT": INITIAL_AGENT.toUplcData(),
-            "fund_policy::INITIAL_CYCLE_PERIOD": new IntData(
+            "fund_policy::INITIAL_CYCLE_PERIOD": makeIntData(
                 365 * 24 * 3600 * 1000
             ),
-            "governance_delegate::GOV_KEYS": new ListData([
+            "governance_delegate::GOV_KEYS": makeListData([
                 GOV_KEY_1.toUplcData(),
                 GOV_KEY_2.toUplcData(),
                 GOV_KEY_3.toUplcData()
             ]),
-            "oracle_delegate::ORACLE_KEYS": new ListData([
+            "oracle_delegate::ORACLE_KEYS": makeListData([
                 ORACLE_KEY_1.toUplcData(),
                 ORACLE_KEY_2.toUplcData(),
                 ORACLE_KEY_3.toUplcData()

@@ -9,8 +9,8 @@
         "build:types": "npx tsc --noEmit false --emitDeclarationOnly --outDir ./dist"
     },
     "devDependencies": {
-        "@helios-lang/compiler": "^0.17.0-57",
-        "@helios-lang/contract-utils": "^0.2.31",
+        "@helios-lang/compiler": "^0.17.8",
+        "@helios-lang/contract-utils": "^0.3.2",
         "@helios-lang/esbuild-plugin": "^0.1.10",
         "esbuild": "^0.23.1",
         "pbg-token-validators": "file:../../",

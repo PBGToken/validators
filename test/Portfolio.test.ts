@@ -1,11 +1,12 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { Address, AssetClass, Assets, Value } from "@helios-lang/ledger"
+import { type ShelleyAddress, type Assets, makeAssets, makeDummyAddress, makeDummyAssetClass, makeValue } from "@helios-lang/ledger"
 import {
-    ByteArrayData,
-    ConstrData,
-    ListData,
-    UplcData
+    expectConstrData,
+    expectListData,
+    makeByteArrayData,
+    makeConstrData,
+    type UplcData
 } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import {
@@ -72,7 +73,7 @@ describe("PortfolioModule::PortfolioReduction::is_idle", () => {
                 start_tick: 0,
                 mode: {
                     Exists: {
-                        asset_class: AssetClass.dummy(),
+                        asset_class: makeDummyAssetClass(),
                         found: false
                     }
                 }
@@ -89,7 +90,7 @@ describe("PortfolioModule::PortfolioReduction::is_idle", () => {
                 start_tick: 0,
                 mode: {
                     DoesNotExist: {
-                        asset_class: AssetClass.dummy()
+                        asset_class: makeDummyAssetClass()
                     }
                 }
             }
@@ -125,7 +126,7 @@ describe("PortfolioModule::Portfolio::find_input", () => {
         it("PortfolioModule::Portfolio::find_input #02 (throws an error if the portfolio UTxO isn't at the portfolio_validator address)", () => {
             new ScriptContextBuilder()
                 .addPortfolioInput({
-                    address: Address.dummy(false),
+                    address: makeDummyAddress(false),
                     portfolio
                 })
                 .redeemDummyTokenWithDvpPolicy()
@@ -145,7 +146,7 @@ describe("PortfolioModule::Portfolio::find_input", () => {
             new ScriptContextBuilder()
                 .addPortfolioInput({
                     portfolio,
-                    token: Assets.fromAssetClasses([[AssetClass.dummy(), 1]])
+                    token: makeAssets([[makeDummyAssetClass(), 1]])
                 })
                 .redeemDummyTokenWithDvpPolicy()
                 .use((ctx) => {
@@ -205,7 +206,7 @@ describe("PortfolioModule::Portfolio::find_output", () => {
     const portfolio = makePortfolio()
 
     const configureParentContext = (props?: {
-        address?: Address
+        address?: ShelleyAddress
         datum?: UplcData
         token?: Assets
     }) => {
@@ -235,7 +236,7 @@ describe("PortfolioModule::Portfolio::find_output", () => {
         })
 
         it("PortfolioModule::Portfolio::find_output #02 (throws an error if the portfolio UTxO isn't returned to the portfolio_validator address)", () => {
-            configureContext({ address: Address.dummy(false) }).use(
+            configureContext({ address: makeDummyAddress(false) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
                         find_output.eval({
@@ -261,8 +262,8 @@ describe("PortfolioModule::Portfolio::find_output", () => {
         })
 
         it("PortfolioModule::Portfolio::find_output #04 (throws an error when the first datum field entry isn't iData)", () => {
-            const datum = ListData.expect(castPortfolio.toUplcData(portfolio))
-            datum.items[0] = new ByteArrayData([])
+            const datum = expectListData(castPortfolio.toUplcData(portfolio))
+            datum.items[0] = makeByteArrayData([])
 
             configureContext({ datum }).use((currentScript, ctx) => {
                 throws(() => {
@@ -275,8 +276,8 @@ describe("PortfolioModule::Portfolio::find_output", () => {
         })
 
         it("PortfolioModule::Portfolio::find_output #05 (throws an error if the datum listData contains an additional entry)", () => {
-            const datum = ListData.expect(castPortfolio.toUplcData(portfolio))
-            datum.items.push(new ByteArrayData([]))
+            const datum = expectListData(castPortfolio.toUplcData(portfolio))
+            datum.items.push(makeByteArrayData([]))
 
             configureContext({ datum }).use((currentScript, ctx) => {
                 throws(() => {
@@ -289,10 +290,10 @@ describe("PortfolioModule::Portfolio::find_output", () => {
         })
 
         it("PortfolioModule::Portfolio::find_output #06 (throws an error if the datum reduction field has the wrong constr tag)", () => {
-            const datum = ListData.expect(castPortfolio.toUplcData(portfolio))
-            datum.items[1] = new ConstrData(
+            const datum = expectListData(castPortfolio.toUplcData(portfolio))
+            datum.items[1] = makeConstrData(
                 2,
-                ConstrData.expect(datum.items[1]).fields
+                expectConstrData(datum.items[1]).fields
             )
 
             configureContext({ datum }).use((currentScript, ctx) => {
@@ -313,7 +314,7 @@ describe("PortfolioModule::Portfolio::find_ref", () => {
     describe("for the config_validator", () => {
         it("PortfolioModule::Portfolio::find_ref #01 (returns the portfolio data even if the referenced portfolio UTxO isn't at the portfolio_validator address)", () => {
             new ScriptContextBuilder()
-                .addPortfolioRef({ address: Address.dummy(false), portfolio })
+                .addPortfolioRef({ address: makeDummyAddress(false), portfolio })
                 .redeemDummyTokenWithDvpPolicy()
                 .use((ctx) => {
                     deepEqual(
@@ -369,7 +370,7 @@ describe("PortfolioModule::Portfolio::find_ref", () => {
 
         it("PortfolioModule::Portfolio::find_ref #04 (throws an error if the referenced portfolio UTxO isn't at the portfolio_validator address)", () => {
             new ScriptContextBuilder()
-                .addPortfolioRef({ address: Address.dummy(false), portfolio })
+                .addPortfolioRef({ address: makeDummyAddress(false), portfolio })
                 .redeemDummyTokenWithDvpPolicy()
                 .use((ctx) => {
                     allExceptConfigValidator.forEach((currentScript) => {
@@ -513,7 +514,7 @@ describe("PortfolioModule::Portfolio::get_reduction_result", () => {
     describe("in Reducing(Exists) state", () => {
         const mode: PortfolioReductionModeType = {
             Exists: {
-                asset_class: AssetClass.dummy(1),
+                asset_class: makeDummyAssetClass(1),
                 found: false
             }
         }
@@ -602,7 +603,7 @@ describe("PortfolioModule::Portfolio::get_reduction_result", () => {
     describe("in Reducing(DoesNotExist) state", () => {
         const mode: PortfolioReductionModeType = {
             DoesNotExist: {
-                asset_class: AssetClass.dummy(1)
+                asset_class: makeDummyAssetClass(1)
             }
         }
 
@@ -691,7 +692,7 @@ describe("PortfolioModule::Portfolio::get_reduction_result", () => {
 describe("PortfolioModule::sum_lovelace", () => {
     describe("value contains only lovelace", () => {
         const lovelace = 2_000_000n
-        const v = new Value(lovelace)
+        const v = makeValue(lovelace)
 
         describe("for all validators", () => {
             it("PortfolioModule::sum_lovelace #01 (returns the lovelace quantity given a dummy asset pointer)", () => {
@@ -743,17 +744,17 @@ describe("PortfolioModule::sum_lovelace", () => {
         const groupId = 0
         const lovelace = 2_000_000n
 
-        const assetClass0 = AssetClass.dummy(0)
+        const assetClass0 = makeDummyAssetClass(0)
         const price0: RatioType = [200_000, 1]
         const priceTimestamp0 = 100
 
-        const assetClass1 = AssetClass.dummy(1)
+        const assetClass1 = makeDummyAssetClass(1)
         const price1: RatioType = [300_000, 2]
         const priceTimestamp1 = 120
 
-        const v = new Value(
+        const v = makeValue(
             lovelace,
-            Assets.fromAssetClasses([
+            makeAssets([
                 [assetClass0, 10],
                 [assetClass1, 100]
             ])
@@ -960,7 +961,7 @@ describe("PortfolioModule::witnessed_by_portfolio", () => {
 
         it("PortfolioModule::witnessed_by_portfolio #02 (returns true if the portfolio UTxO is spent, but not from the portfolio_validator address)", () => {
             new ScriptContextBuilder()
-                .addPortfolioInput({ address: Address.dummy(false) })
+                .addPortfolioInput({ address: makeDummyAddress(false) })
                 .redeemDummyTokenWithDvpPolicy()
                 .use((ctx) => {
                     strictEqual(
@@ -1011,7 +1012,7 @@ describe("PortfolioModule::witnessed_by_portfolio", () => {
 
         it("PortfolioModule::witnessed_by_portfolio #05 (returns false if the portfolio UTxO is spent, but not from the portfolio_validator address)", () => {
             new ScriptContextBuilder()
-                .addPortfolioInput({ address: Address.dummy(false) })
+                .addPortfolioInput({ address: makeDummyAddress(false) })
                 .redeemDummyTokenWithDvpPolicy()
                 .use((ctx) => {
                     otherScripts.forEach((currentScript) => {

@@ -1,8 +1,8 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { IntLike } from "@helios-lang/codec-utils"
-import { Address, PubKeyHash } from "@helios-lang/ledger"
-import { IntData } from "@helios-lang/uplc"
+import { makeDummyAddress, type PubKeyHash, makeDummyPubKeyHash } from "@helios-lang/ledger"
+import { makeIntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
 import { makeConfig, makeVoucher, VoucherType, wrapVoucher } from "./data"
@@ -16,8 +16,8 @@ describe("voucher_validator::main", () => {
     const configureVoucher = (props?: { periodId?: number }) => {
         return makeVoucher({
             periodId: props?.periodId ?? periodId,
-            address: Address.dummy(false, 0),
-            datum: new IntData(0),
+            address: makeDummyAddress(false, 0),
+            datum: makeIntData(0),
             tokens: 1000
         })
     }
@@ -35,10 +35,10 @@ describe("voucher_validator::main", () => {
         const scb = new ScriptContextBuilder().addVoucherInput({
             id: voucherId,
             voucher,
-            redeemer: new IntData(0)
+            redeemer: makeIntData(0)
         })
 
-        const agent = props?.signingAgent ?? PubKeyHash.dummy()
+        const agent = props?.signingAgent ?? makeDummyPubKeyHash()
         const config = makeConfig({ agent })
         scb.addConfigRef({ config })
 
@@ -71,7 +71,7 @@ describe("voucher_validator::main", () => {
 
     const defaulTestArgs = {
         $datum: wrapVoucher(configureVoucher()),
-        _: new IntData(0)
+        _: makeIntData(0)
     }
 
     it("succeeds if signed by the agent and the voucher pair is burned", () => {

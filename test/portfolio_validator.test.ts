@@ -1,13 +1,16 @@
-import { strict, strictEqual, throws } from "node:assert"
+import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { IntLike } from "@helios-lang/codec-utils"
+import { type IntLike } from "@helios-lang/codec-utils"
 import {
-    Address,
-    AssetClass,
-    Assets,
-    PubKeyHash,
-    StakingValidatorHash,
-    TimeLike
+    type ShelleyAddress,
+    type Assets,
+    makeDummyAddress,
+    makeDummyAssetClass,
+    makeDummyPubKeyHash,
+    makeDummyStakingValidatorHash,
+    type PubKeyHash,
+    type StakingValidatorHash,
+    type TimeLike
 } from "@helios-lang/ledger"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
@@ -220,7 +223,7 @@ describe("portfolio_validator::validate_remove_asset_group", () => {
                     start_tick: 0,
                     mode: {
                         Exists: {
-                            asset_class: AssetClass.dummy(),
+                            asset_class: makeDummyAssetClass(),
                             found: false
                         }
                     }
@@ -251,7 +254,7 @@ describe("portfolio_validator::validate_remove_asset_group", () => {
                     start_tick: 0,
                     mode: {
                         Exists: {
-                            asset_class: AssetClass.dummy(),
+                            asset_class: makeDummyAssetClass(),
                             found: false
                         }
                     }
@@ -343,9 +346,9 @@ describe("portfolio_validator::validate_remove_asset_group", () => {
 describe("portfolio_validator::validate_start_reduction", () => {
     const oldestPriceTimestamp = 10
     const groupPtrs = [1, 2]
-    const assetClass0 = AssetClass.dummy(0)
-    const assetClass1 = AssetClass.dummy(1)
-    const assetClass2 = AssetClass.dummy(2)
+    const assetClass0 = makeDummyAssetClass(0)
+    const assetClass1 = makeDummyAssetClass(1)
+    const assetClass2 = makeDummyAssetClass(2)
 
     const configureContext = () => {
         const supply = makeSupply({ tick: 0, nLovelace: 30_000_000 })
@@ -472,7 +475,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
             kp1: 0,
             mode1: {
                 Exists: {
-                    asset_class: AssetClass.dummy(3),
+                    asset_class: makeDummyAssetClass(3),
                     found: false
                 }
             },
@@ -500,7 +503,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
                         ...defaultTestArgs,
                         mode1: {
                             Exists: {
-                                asset_class: AssetClass.dummy(3),
+                                asset_class: makeDummyAssetClass(3),
                                 found: true
                             }
                         }
@@ -578,7 +581,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
         })
 
         it("portfolio_validator::validate_start_reduction #11 (throws an error if the asset class mph isn't exactly 28 bytes long)", () => {
-            const assetClass = AssetClass.dummy(3)
+            const assetClass = makeDummyAssetClass(3)
             // mutate hte bytearray to create an invalid AssetClass
             assetClass.mph.bytes.push(0)
 
@@ -599,7 +602,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
         })
 
         it("portfolio_validator::validate_start_reduction #12 (succeeds if the asset class token name is exactly 32 bytes long)", () => {
-            const assetClass = AssetClass.dummy(3)
+            const assetClass = makeDummyAssetClass(3)
             // mutate hte bytearray to create an invalid AssetClass
             for (let i = 0; i < 32; i++) {
                 assetClass.tokenName.push(i)
@@ -623,7 +626,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
         })
 
         it("portfolio_validator::validate_start_reduction #13 (throws an error if the asset class token name is longer than 32 bytes)", () => {
-            const assetClass = AssetClass.dummy(3)
+            const assetClass = makeDummyAssetClass(3)
             // mutate hte bytearray to create an invalid AssetClass
             for (let i = 0; i < 33; i++) {
                 assetClass.tokenName.push(i)
@@ -652,7 +655,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
             kp1: 0,
             mode1: {
                 DoesNotExist: {
-                    asset_class: AssetClass.dummy(3)
+                    asset_class: makeDummyAssetClass(3)
                 }
             },
             group_ptrs: groupPtrs,
@@ -730,7 +733,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
         })
 
         it("portfolio_validator::validate_start_reduction #19 (throws an error if the asset class mph isn't exactly 28 bytes long)", () => {
-            const assetClass = AssetClass.dummy(3)
+            const assetClass = makeDummyAssetClass(3)
             // mutate hte bytearray to create an invalid AssetClass
             assetClass.mph.bytes.push(0)
 
@@ -750,7 +753,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
         })
 
         it("portfolio_validator::validate_start_reduction #20 (succeeds if the asset class token name is exactly 32 bytes long)", () => {
-            const assetClass = AssetClass.dummy(3)
+            const assetClass = makeDummyAssetClass(3)
             // mutate hte bytearray to create an invalid AssetClass
             for (let i = 0; i < 32; i++) {
                 assetClass.tokenName.push(i)
@@ -773,7 +776,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
         })
 
         it("portfolio_validator::validate_start_reduction #21 (throws an error if the asset class token name is longer than 32 bytes)", () => {
-            const assetClass = AssetClass.dummy(3)
+            const assetClass = makeDummyAssetClass(3)
             // mutate hte bytearray to create an invalid AssetClass
             for (let i = 0; i < 33; i++) {
                 assetClass.tokenName.push(i)
@@ -798,7 +801,7 @@ describe("portfolio_validator::validate_start_reduction", () => {
     describe("any Reduction mode", () => {
         const dummyMode: PortfolioReductionModeType = {
             Exists: {
-                asset_class: AssetClass.dummy(),
+                asset_class: makeDummyAssetClass(),
                 found: false
             }
         }
@@ -857,9 +860,9 @@ describe("portfolio_validator::validate_continue_reduction", () => {
     // continue from the state of the previous unit-test suite
     const oldestPriceTimestamp = 9
     const groupPtrs = [1, 2]
-    const assetClass0 = AssetClass.dummy(3)
-    const assetClass1 = AssetClass.dummy(4)
-    const assetClass2 = AssetClass.dummy(5)
+    const assetClass0 = makeDummyAssetClass(3)
+    const assetClass1 = makeDummyAssetClass(4)
+    const assetClass2 = makeDummyAssetClass(5)
     const prevTotalValue = 30_000_000 + 200 * 1000 + 200 * 10 + 100 * 100
     const prevOldestPriceTimestamp = 10
 
@@ -1024,13 +1027,13 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             n_all_groups: 10,
             mode0: {
                 Exists: {
-                    asset_class: AssetClass.dummy(7),
+                    asset_class: makeDummyAssetClass(7),
                     found: false
                 }
             },
             mode1: {
                 Exists: {
-                    asset_class: AssetClass.dummy(7),
+                    asset_class: makeDummyAssetClass(7),
                     found: false
                 }
             },
@@ -1045,13 +1048,13 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             n_all_groups: 10,
             mode0: {
                 Exists: {
-                    asset_class: AssetClass.dummy(3),
+                    asset_class: makeDummyAssetClass(3),
                     found: false
                 }
             },
             mode1: {
                 Exists: {
-                    asset_class: AssetClass.dummy(3),
+                    asset_class: makeDummyAssetClass(3),
                     found: true
                 }
             },
@@ -1078,7 +1081,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                         ...defaultDidntExistDoesntExistArgs,
                         mode1: {
                             Exists: {
-                                asset_class: AssetClass.dummy(7),
+                                asset_class: makeDummyAssetClass(7),
                                 found: true
                             }
                         }
@@ -1121,7 +1124,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                         ...defaultDidntExistDoesExistArgs,
                         mode1: {
                             Exists: {
-                                asset_class: AssetClass.dummy(3),
+                                asset_class: makeDummyAssetClass(3),
                                 found: false
                             }
                         }
@@ -1151,7 +1154,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                         ...defaultDidntExistDoesExistArgs,
                         mode1: {
                             Exists: {
-                                asset_class: AssetClass.dummy(4),
+                                asset_class: makeDummyAssetClass(4),
                                 found: true
                             }
                         }
@@ -1171,12 +1174,12 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             n_all_groups: 10,
             mode0: {
                 DoesNotExist: {
-                    asset_class: AssetClass.dummy(7)
+                    asset_class: makeDummyAssetClass(7)
                 }
             },
             mode1: {
                 DoesNotExist: {
-                    asset_class: AssetClass.dummy(7)
+                    asset_class: makeDummyAssetClass(7)
                 }
             },
             group_ptrs: groupPtrs
@@ -1190,12 +1193,12 @@ describe("portfolio_validator::validate_continue_reduction", () => {
             n_all_groups: 10,
             mode0: {
                 DoesNotExist: {
-                    asset_class: AssetClass.dummy(4)
+                    asset_class: makeDummyAssetClass(4)
                 }
             },
             mode1: {
                 DoesNotExist: {
-                    asset_class: AssetClass.dummy(4)
+                    asset_class: makeDummyAssetClass(4)
                 }
             },
             group_ptrs: groupPtrs
@@ -1258,7 +1261,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                         ...defaultDoesntExistTestArgs,
                         mode1: {
                             DoesNotExist: {
-                                asset_class: AssetClass.dummy(8)
+                                asset_class: makeDummyAssetClass(8)
                             }
                         }
                     }),
@@ -1271,7 +1274,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
     describe("any Reduction mode", () => {
         const dummyMode: PortfolioReductionModeType = {
             Exists: {
-                asset_class: AssetClass.dummy(),
+                asset_class: makeDummyAssetClass(),
                 found: false
             }
         }
@@ -1335,7 +1338,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
                         ...defaultTestArgs,
                         mode1: {
                             DoesNotExist: {
-                                asset_class: AssetClass.dummy()
+                                asset_class: makeDummyAssetClass()
                             }
                         }
                     }),
@@ -1347,7 +1350,7 @@ describe("portfolio_validator::validate_continue_reduction", () => {
 })
 
 describe("portfolio_validator::validate_add_asset_class", () => {
-    const assetClass = AssetClass.dummy(1)
+    const assetClass = makeDummyAssetClass(1)
     const config = makeConfig({
         state: {
             Changing: {
@@ -1428,7 +1431,7 @@ describe("portfolio_validator::validate_add_asset_class", () => {
         configureContext({
             outputAssets: [
                 makeAsset({ assetClass, count: 0 }),
-                makeAsset({ assetClass: AssetClass.dummy(123), count: 0 })
+                makeAsset({ assetClass: makeDummyAssetClass(123), count: 0 })
             ]
         }).use((ctx) => {
             throws(() => {
@@ -1455,9 +1458,9 @@ describe("portfolio_validator::validate_add_asset_class", () => {
 
     it("portfolio_validator::validate_add_asset_class #05 (throws an error if the group output contains more than the permitted number of asset classes)", () => {
         const inputAssets = [
-            makeAsset({ assetClass: AssetClass.dummy(10), count: 0 }),
-            makeAsset({ assetClass: AssetClass.dummy(11), count: 0 }),
-            makeAsset({ assetClass: AssetClass.dummy(12), count: 0 })
+            makeAsset({ assetClass: makeDummyAssetClass(10), count: 0 }),
+            makeAsset({ assetClass: makeDummyAssetClass(11), count: 0 }),
+            makeAsset({ assetClass: makeDummyAssetClass(12), count: 0 })
         ]
         const outputAssets = inputAssets
             .slice()
@@ -1492,7 +1495,7 @@ describe("portfolio_validator::validate_add_asset_class", () => {
 })
 
 describe("portfolio_validator::validate_remove_asset_class", () => {
-    const assetClass = AssetClass.dummy(1)
+    const assetClass = makeDummyAssetClass(1)
     const config = makeConfig({
         state: {
             Changing: {
@@ -1570,7 +1573,7 @@ describe("portfolio_validator::validate_remove_asset_class", () => {
     it("portfolio_validator::validate_remove_asset_class #03 (throws an error if the group output contains more assets than expected)", () => {
         configureContext({
             outputAssets: [
-                makeAsset({ assetClass: AssetClass.dummy(123), count: 0 })
+                makeAsset({ assetClass: makeDummyAssetClass(123), count: 0 })
             ]
         }).use((ctx) => {
             throws(() => {
@@ -1587,7 +1590,7 @@ describe("portfolio_validator::validate_remove_asset_class", () => {
         configureContext({
             inputAssets: [
                 makeAsset({ assetClass, count: 0 }),
-                makeAsset({ assetClass: AssetClass.dummy(12), count: 0 })
+                makeAsset({ assetClass: makeDummyAssetClass(12), count: 0 })
             ],
             outputAssets: []
         }).use((ctx) => {
@@ -1648,9 +1651,9 @@ describe("portfolio_validator::validate_update_prices", () => {
     }) => {
         const config = makeConfig()
 
-        const assetClass0 = AssetClass.dummy(0)
-        const assetClass1 = AssetClass.dummy(1)
-        const assetClass2 = AssetClass.dummy(2)
+        const assetClass0 = makeDummyAssetClass(0)
+        const assetClass1 = makeDummyAssetClass(1)
+        const assetClass2 = makeDummyAssetClass(2)
 
         const inputAssets0: AssetType[] = [
             makeAsset({
@@ -1744,7 +1747,7 @@ describe("portfolio_validator::validate_update_prices", () => {
                     start_tick: 0,
                     mode: {
                         DoesNotExist: {
-                            asset_class: AssetClass.dummy()
+                            asset_class: makeDummyAssetClass()
                         }
                     }
                 }
@@ -1775,7 +1778,7 @@ describe("portfolio_validator::validate_update_prices", () => {
     })
 
     it("portfolio_validator::validate_update_prices #04 (throws an error if not witnessed by the oracle)", () => {
-        configureContext({ oracleHash: StakingValidatorHash.dummy() }).use(
+        configureContext({ oracleHash: makeDummyStakingValidatorHash() }).use(
             (ctx) => {
                 throws(() => {
                     validate_update_prices.eval({
@@ -1803,7 +1806,7 @@ describe("portfolio_validator::validate_update_prices", () => {
         configureContext({
             additionalFirstGroupOutputAssets: [
                 makeAsset({
-                    assetClass: AssetClass.dummy(5),
+                    assetClass: makeDummyAssetClass(5),
                     count: 10,
                     price: [10000, 1]
                 })
@@ -1943,9 +1946,9 @@ describe("portfolio_validator::validate_move_assets", () => {
             }
         })
 
-        const assetClass0 = AssetClass.dummy(0)
-        const assetClass1 = AssetClass.dummy(1)
-        const assetClass2 = AssetClass.dummy(2)
+        const assetClass0 = makeDummyAssetClass(0)
+        const assetClass1 = makeDummyAssetClass(1)
+        const assetClass2 = makeDummyAssetClass(2)
 
         const inputAssets0: AssetType[] = [
             makeAsset({
@@ -2043,7 +2046,7 @@ describe("portfolio_validator::validate_move_assets", () => {
                         start_tick: 0,
                         mode: {
                             DoesNotExist: {
-                                asset_class: AssetClass.dummy()
+                                asset_class: makeDummyAssetClass()
                             }
                         }
                     }
@@ -2065,7 +2068,7 @@ describe("portfolio_validator::validate_move_assets", () => {
             configureContext({
                 additionalFirstGroupOutputAssets: [
                     makeAsset({
-                        assetClass: AssetClass.dummy(14),
+                        assetClass: makeDummyAssetClass(14),
                         count: 10,
                         price: [1000, 1]
                     })
@@ -2114,9 +2117,9 @@ describe("portfolio_validator::validate_move_assets", () => {
             }
         })
 
-        const assetClass0 = AssetClass.dummy(0)
-        const assetClass1 = AssetClass.dummy(1)
-        const assetClass2 = AssetClass.dummy(2)
+        const assetClass0 = makeDummyAssetClass(0)
+        const assetClass1 = makeDummyAssetClass(1)
+        const assetClass2 = makeDummyAssetClass(2)
 
         const inputAssets0: AssetType[] = [
             makeAsset({
@@ -2133,7 +2136,7 @@ describe("portfolio_validator::validate_move_assets", () => {
             })
         ]
 
-        const configureContext = (props?: { secondGroupAddress?: Address }) => {
+        const configureContext = (props?: { secondGroupAddress?: ShelleyAddress }) => {
             let outputAssets0: AssetType[] = [
                 makeAsset({
                     assetClass: assetClass0,
@@ -2193,7 +2196,7 @@ describe("portfolio_validator::validate_move_assets", () => {
         })
 
         it("portfolio_validator::validate_move_assets #07 (returns false if the second asset group isn't sent to the assets_validator address)", () => {
-            configureContext({ secondGroupAddress: Address.dummy(false) }).use(
+            configureContext({ secondGroupAddress: makeDummyAddress(false) }).use(
                 (ctx) => {
                     throws(() => {
                         validate_move_assets.eval({
@@ -2214,7 +2217,7 @@ describe("portfolio_validator::validate_reset_reduction", () => {
             Reducing: {
                 group_iter: 0,
                 start_tick: 0,
-                mode: { DoesNotExist: { asset_class: AssetClass.dummy(1) } }
+                mode: { DoesNotExist: { asset_class: makeDummyAssetClass(1) } }
             }
         }
     })
@@ -2271,7 +2274,7 @@ describe("portfolio_validator::validate_reset_reduction", () => {
 describe("portfolio_validator::main", () => {
     describe("the config UTxO is referenced and nothing is minted, portfolio state going from Idle to Reducing", () => {
         const portfolio0 = makePortfolio({ nGroups: 1, state: { Idle: {} } })
-        const agent = PubKeyHash.dummy(444)
+        const agent = makeDummyPubKeyHash(444)
         const config = makeConfig({ agent })
         const supply = makeSupply({ tick: 0 })
 
@@ -2306,7 +2309,7 @@ describe("portfolio_validator::main", () => {
                         start_tick: props?.startTick ?? 0,
                         mode: {
                             DoesNotExist: {
-                                asset_class: AssetClass.dummy()
+                                asset_class: makeDummyAssetClass()
                             }
                         }
                     }
@@ -2351,7 +2354,7 @@ describe("portfolio_validator::main", () => {
             configureContext({
                 portfolio1,
                 action,
-                signingAgent: PubKeyHash.dummy(443)
+                signingAgent: makeDummyPubKeyHash(443)
             }).use((ctx) => {
                 throws(() => {
                     main.eval({ $scriptContext: ctx, _: portfolio0, action })
@@ -2369,13 +2372,13 @@ describe("portfolio_validator::main", () => {
                     start_tick: 0,
                     mode: {
                         DoesNotExist: {
-                            asset_class: AssetClass.dummy()
+                            asset_class: makeDummyAssetClass()
                         }
                     }
                 }
             }
         })
-        const agent = PubKeyHash.dummy(444)
+        const agent = makeDummyPubKeyHash(444)
         const config = makeConfig({ agent })
         const supply = makeSupply({ tick: 0 })
 
@@ -2410,7 +2413,7 @@ describe("portfolio_validator::main", () => {
                         start_tick: props?.startTick ?? 0,
                         mode: {
                             DoesNotExist: {
-                                asset_class: AssetClass.dummy()
+                                asset_class: makeDummyAssetClass()
                             }
                         }
                     }
@@ -2455,7 +2458,7 @@ describe("portfolio_validator::main", () => {
             configureContext({
                 portfolio1,
                 action,
-                signingAgent: PubKeyHash.dummy(445)
+                signingAgent: makeDummyPubKeyHash(445)
             }).use((ctx) => {
                 throws(() => {
                     main.eval({ $scriptContext: ctx, _: portfolio0, action })
@@ -2473,7 +2476,7 @@ describe("portfolio_validator::main", () => {
                     start_tick: 0,
                     mode: {
                         DoesNotExist: {
-                            asset_class: AssetClass.dummy()
+                            asset_class: makeDummyAssetClass()
                         }
                     }
                 }
@@ -2486,7 +2489,7 @@ describe("portfolio_validator::main", () => {
             spendConfig?: boolean
             signingAgent?: PubKeyHash
         }) => {
-            const agent = PubKeyHash.dummy(444)
+            const agent = makeDummyPubKeyHash(444)
             const config = makeConfig({ agent })
             const supply = makeSupply({ tick: 0 })
 
@@ -2539,7 +2542,7 @@ describe("portfolio_validator::main", () => {
             configureContext({
                 portfolio1,
                 action,
-                signingAgent: PubKeyHash.dummy(445)
+                signingAgent: makeDummyPubKeyHash(445)
             }).use((ctx) => {
                 throws(() => {
                     main.eval({ $scriptContext: ctx, _: portfolio0, action })
@@ -2560,7 +2563,7 @@ describe("portfolio_validator::main", () => {
             mintedToken?: Assets
         }) => {
             const groupId = props?.id ?? 1
-            const agent = PubKeyHash.dummy(10)
+            const agent = makeDummyPubKeyHash(10)
             const config = makeConfig({ agent })
 
             return new ScriptContextBuilder()
@@ -2608,7 +2611,7 @@ describe("portfolio_validator::main", () => {
         })
 
         it("portfolio_validator::main #15 (throws an error if not signed by correct agent)", () => {
-            configureContext({ signingAgent: PubKeyHash.dummy(100) }).use(
+            configureContext({ signingAgent: makeDummyPubKeyHash(100) }).use(
                 (ctx) => {
                     throws(() => {
                         main.eval({
@@ -2634,7 +2637,7 @@ describe("portfolio_validator::main", () => {
             burnedToken?: Assets
         }) => {
             const groupId = props?.id ?? 1
-            const agent = PubKeyHash.dummy(10)
+            const agent = makeDummyPubKeyHash(10)
             const config = makeConfig({ agent })
 
             return new ScriptContextBuilder()
@@ -2683,7 +2686,7 @@ describe("portfolio_validator::main", () => {
         })
 
         it("portfolio_validator::main #19 (throws an error if not signed by correct agent)", () => {
-            configureContext({ signingAgent: PubKeyHash.dummy(100) }).use(
+            configureContext({ signingAgent: makeDummyPubKeyHash(100) }).use(
                 (ctx) => {
                     throws(() => {
                         main.eval({

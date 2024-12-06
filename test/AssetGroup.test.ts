@@ -1,10 +1,12 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import {
-    Address,
-    AssetClass,
-    Assets,
-    StakingValidatorHash
+    type Assets,
+    type ShelleyAddress,
+    makeDummyAddress,
+    makeDummyAssetClass,
+    makeDummyStakingValidatorHash,
+    makeShelleyAddress
 } from "@helios-lang/ledger"
 import contract from "pbg-token-validators-test-context"
 import { indirectPolicyScripts, scripts } from "./constants"
@@ -46,7 +48,7 @@ describe("AssetGroupModule::AssetGroup::find_current", () => {
         const groupId = 123n
 
         const configureParentContext = (props?: {
-            address?: Address
+            address?: ShelleyAddress
             token?: Assets
         }) => {
             return new ScriptContextBuilder().addAssetGroupInput({
@@ -77,7 +79,7 @@ describe("AssetGroupModule::AssetGroup::find_current", () => {
             })
 
             it("AssetGroupModule::AssetGroup::find_current #02 (returns the asset group id and data even if the asset group UTxO, containing an asset group token, is at the wrong address)", () => {
-                configureContext({ address: Address.dummy(false) }).use(
+                configureContext({ address: makeDummyAddress(false) }).use(
                     (currentScript, ctx) => {
                         deepEqual(
                             find_current.eval({
@@ -112,7 +114,7 @@ describe("AssetGroupModule::AssetGroup::find_output", () => {
         const groupId = 123n
 
         const configureParentContext = (props?: {
-            address?: Address
+            address?: ShelleyAddress
             token?: Assets
             withoutDummyRedeemer?: boolean
         }) => {
@@ -150,7 +152,7 @@ describe("AssetGroupModule::AssetGroup::find_output", () => {
             })
 
             it("AssetGroupModule::AssetGroup::find_output #02 (throws an error if the asset group output isn't sent to the assets_validator address)", () => {
-                configureContext({ address: Address.dummy(false) }).use(
+                configureContext({ address: makeDummyAddress(false) }).use(
                     (currentScript, ctx) => {
                         throws(() => {
                             find_output.eval({
@@ -240,19 +242,19 @@ describe("AssetGroupModule::AssetGroup::find_output_asset", () => {
         const assets0 = [makeAsset()]
         const groupId0 = 0
         const assets1 = [
-            makeAsset({ assetClass: AssetClass.dummy(1) }),
+            makeAsset({ assetClass: makeDummyAssetClass(1) }),
             makeAsset({
-                assetClass: AssetClass.dummy(2)
+                assetClass: makeDummyAssetClass(2)
             }),
             makeAsset({
-                assetClass: AssetClass.dummy(3)
+                assetClass: makeDummyAssetClass(3)
             })
         ]
         const groupId1 = 1
 
         const configureParentContext = (props?: {
             firstGroupToken?: Assets
-            secondGroupAddress?: Address
+            secondGroupAddress?: ShelleyAddress
         }) => {
             return new ScriptContextBuilder()
                 .addAssetGroupOutput({
@@ -293,7 +295,7 @@ describe("AssetGroupModule::AssetGroup::find_output_asset", () => {
                         find_output_asset.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
-                            asset_class: AssetClass.dummy(4)
+                            asset_class: makeDummyAssetClass(4)
                         })
                     })
                 })
@@ -315,7 +317,7 @@ describe("AssetGroupModule::AssetGroup::find_output_asset", () => {
 
             it("AssetGroupModule::AssetGroup::find_output_asset #05 (throws an error if an asset group output isn't at the correct address)", () => {
                 configureContext({
-                    secondGroupAddress: Address.dummy(false)
+                    secondGroupAddress: makeDummyAddress(false)
                 }).use((currentScript, ctx) => {
                     throws(() => {
                         find_output_asset.eval({
@@ -368,19 +370,19 @@ describe("AssetGroupModule::AssetGroup::find_input_asset", () => {
         const assets0 = [makeAsset()]
         const groupId0 = 0
         const assets1 = [
-            makeAsset({ assetClass: AssetClass.dummy(1) }),
+            makeAsset({ assetClass: makeDummyAssetClass(1) }),
             makeAsset({
-                assetClass: AssetClass.dummy(2)
+                assetClass: makeDummyAssetClass(2)
             }),
             makeAsset({
-                assetClass: AssetClass.dummy(3)
+                assetClass: makeDummyAssetClass(3)
             })
         ]
         const groupId1 = 1
 
         const configureParentContext = (props?: {
             firstGroupToken?: Assets
-            secondGroupAddress?: Address
+            secondGroupAddress?: ShelleyAddress
         }) => {
             return new ScriptContextBuilder()
                 .addAssetGroupInput({
@@ -421,7 +423,7 @@ describe("AssetGroupModule::AssetGroup::find_input_asset", () => {
                         find_input_asset.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
-                            asset_class: AssetClass.dummy(4)
+                            asset_class: makeDummyAssetClass(4)
                         })
                     })
                 })
@@ -443,7 +445,7 @@ describe("AssetGroupModule::AssetGroup::find_input_asset", () => {
 
             it("AssetGroupModule::AssetGroup::find_input_asset #05 (throws an error if the asset group containing the searched asset isn't at the correct address)", () => {
                 configureContext({
-                    secondGroupAddress: Address.dummy(false)
+                    secondGroupAddress: makeDummyAddress(false)
                 }).use((currentScript, ctx) => {
                     throws(() => {
                         find_input_asset.eval({
@@ -509,12 +511,12 @@ describe("AssetGroupModule::AssetGroup::find_single_input", () => {
         const assets0 = [makeAsset()]
         const groupId0 = 0n
         const assets1 = [
-            makeAsset({ assetClass: AssetClass.dummy(1) }),
+            makeAsset({ assetClass: makeDummyAssetClass(1) }),
             makeAsset({
-                assetClass: AssetClass.dummy(2)
+                assetClass: makeDummyAssetClass(2)
             }),
             makeAsset({
-                assetClass: AssetClass.dummy(3)
+                assetClass: makeDummyAssetClass(3)
             })
         ]
         const groupId1 = 1n
@@ -583,27 +585,27 @@ describe("AssetGroupModule::AssetGroup::find_asset", () => {
             strictEqual(
                 find_asset.eval({
                     self: { assets },
-                    asset_class: AssetClass.dummy()
+                    asset_class: makeDummyAssetClass()
                 }),
-                null
+                undefined
             )
         })
     })
 
     describe("asset group with three assets", () => {
         const assets: AssetType[] = [
-            makeAsset({ assetClass: AssetClass.dummy(1) }),
-            makeAsset({ assetClass: AssetClass.dummy(2) }),
-            makeAsset({ assetClass: AssetClass.dummy(3) })
+            makeAsset({ assetClass: makeDummyAssetClass(1) }),
+            makeAsset({ assetClass: makeDummyAssetClass(2) }),
+            makeAsset({ assetClass: makeDummyAssetClass(3) })
         ]
 
         it("AssetGroupModule::AssetGroup::find_asset #02 (returns None if the asset class isn't found)", () => {
             strictEqual(
                 find_asset.eval({
                     self: { assets },
-                    asset_class: AssetClass.dummy()
+                    asset_class: makeDummyAssetClass()
                 }),
-                null
+                undefined
             )
         })
 
@@ -647,7 +649,7 @@ describe("AssetGroupModule::AssetGroup::has_asset", () => {
             strictEqual(
                 has_asset.eval({
                     self: { assets },
-                    asset_class: AssetClass.dummy()
+                    asset_class: makeDummyAssetClass()
                 }),
                 false
             )
@@ -656,16 +658,16 @@ describe("AssetGroupModule::AssetGroup::has_asset", () => {
 
     describe("asset group with three assets", () => {
         const assets: AssetType[] = [
-            makeAsset({ assetClass: AssetClass.dummy(1) }),
-            makeAsset({ assetClass: AssetClass.dummy(2) }),
-            makeAsset({ assetClass: AssetClass.dummy(3) })
+            makeAsset({ assetClass: makeDummyAssetClass(1) }),
+            makeAsset({ assetClass: makeDummyAssetClass(2) }),
+            makeAsset({ assetClass: makeDummyAssetClass(3) })
         ]
 
         it("AssetGroupModule::AssetGroup::has_asset #02 (returns false if not found)", () => {
             strictEqual(
                 has_asset.eval({
                     self: { assets },
-                    asset_class: AssetClass.dummy()
+                    asset_class: makeDummyAssetClass()
                 }),
                 false
             )
@@ -723,9 +725,9 @@ describe("AssetGroupModule::AssetGroup::is_empty", () => {
 
     it("AssetGroupModule::AssetGroup::is_empty #03 (returns false for non-empty list with three entries)", () => {
         const assets = [
-            makeAsset({ assetClass: AssetClass.dummy(0) }),
-            makeAsset({ assetClass: AssetClass.dummy(1) }),
-            makeAsset({ assetClass: AssetClass.dummy(2) })
+            makeAsset({ assetClass: makeDummyAssetClass(0) }),
+            makeAsset({ assetClass: makeDummyAssetClass(1) }),
+            makeAsset({ assetClass: makeDummyAssetClass(2) })
         ]
 
         strictEqual(is_empty.eval({ self: { assets } }), false)
@@ -748,7 +750,7 @@ describe("AssetGroupModule::AssetGroup::is_not_overfull", () => {
         const assets: AssetType[] = []
 
         for (let i = 0; i < expectedMaxSize; i++) {
-            assets.push(makeAsset({ assetClass: AssetClass.dummy(i) }))
+            assets.push(makeAsset({ assetClass: makeDummyAssetClass(i) }))
         }
 
         strictEqual(
@@ -763,7 +765,7 @@ describe("AssetGroupModule::AssetGroup::is_not_overfull", () => {
         const assets: AssetType[] = []
 
         for (let i = 0; i < expectedMaxSize + 1; i++) {
-            assets.push(makeAsset({ assetClass: AssetClass.dummy(i) }))
+            assets.push(makeAsset({ assetClass: makeDummyAssetClass(i) }))
         }
 
         strictEqual(
@@ -798,10 +800,10 @@ describe("AssetGroupModule::AssetGroup::nothing_spent", () => {
     })
 
     it("AssetGroupModule::AssetGroup::nothing_spent #03 (returns true if an input is spent from an address with the same spending credential as the assets_validator, but a non-empty staking credential)", () => {
-        const similarAddress = Address.fromHashes(
+        const similarAddress = makeShelleyAddress(
             false,
             contract.assets_validator.$hash,
-            StakingValidatorHash.dummy()
+            makeDummyStakingValidatorHash()
         )
 
         new ScriptContextBuilder()
@@ -834,7 +836,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                         search_for_asset_class.eval({
                             $currentScript: currentScript,
                             $scriptContext: ctx,
-                            asset_class: AssetClass.dummy(),
+                            asset_class: makeDummyAssetClass(),
                             group_ptrs: [0],
                             first_id: 0
                         }),
@@ -849,7 +851,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
         const assets = [makeAsset()]
         const groupId = 0n
 
-        const configureParentContext = (props?: { address?: Address }) => {
+        const configureParentContext = (props?: { address?: ShelleyAddress }) => {
             return new ScriptContextBuilder()
                 .addAssetGroupRef({
                     address: props?.address,
@@ -909,7 +911,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
             })
 
             it("AssetGroupModule::search_for_asset_class #05 (throws an error if the asset group is at the wrong address)", () => {
-                configureContext({ address: Address.dummy(false) }).use(
+                configureContext({ address: makeDummyAddress(false) }).use(
                     (currentScript, ctx) => {
                         throws(() => {
                             search_for_asset_class.eval({
@@ -928,9 +930,9 @@ describe("AssetGroupModule::search_for_asset_class", () => {
 
     describe("the tx references a single asset group, with three assets", () => {
         const assets: AssetType[] = [
-            makeAsset({ assetClass: AssetClass.dummy(1) }),
-            makeAsset({ assetClass: AssetClass.dummy(2) }),
-            makeAsset({ assetClass: AssetClass.dummy(3) })
+            makeAsset({ assetClass: makeDummyAssetClass(1) }),
+            makeAsset({ assetClass: makeDummyAssetClass(2) }),
+            makeAsset({ assetClass: makeDummyAssetClass(3) })
         ]
         const groupId = 0n
 
@@ -951,7 +953,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                         search_for_asset_class.eval({
                             $scriptContext: ctx,
                             $currentScript: currentScript,
-                            asset_class: AssetClass.dummy(0),
+                            asset_class: makeDummyAssetClass(0),
                             group_ptrs: [0],
                             first_id: 0
                         }),
@@ -964,20 +966,20 @@ describe("AssetGroupModule::search_for_asset_class", () => {
 
     describe("the tx references two asset groups, the first with three assets, the second with one asset", () => {
         const assets0: AssetType[] = [
-            makeAsset({ assetClass: AssetClass.dummy(1) }),
-            makeAsset({ assetClass: AssetClass.dummy(2) }),
-            makeAsset({ assetClass: AssetClass.dummy(3) })
+            makeAsset({ assetClass: makeDummyAssetClass(1) }),
+            makeAsset({ assetClass: makeDummyAssetClass(2) }),
+            makeAsset({ assetClass: makeDummyAssetClass(3) })
         ]
         const groupId0 = 0n
 
         const assets1: AssetType[] = [
-            makeAsset({ assetClass: AssetClass.dummy(0) })
+            makeAsset({ assetClass: makeDummyAssetClass(0) })
         ]
         const groupId1 = 1n
 
         const configureParentContext = (props?: {
             secondGroupId?: number
-            secondGroupAddress?: Address
+            secondGroupAddress?: ShelleyAddress
             secondGroupToken?: Assets
         }) => {
             return new ScriptContextBuilder()
@@ -1004,7 +1006,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                         search_for_asset_class.eval({
                             $scriptContext: ctx,
                             $currentScript: currentScript,
-                            asset_class: AssetClass.dummy(0),
+                            asset_class: makeDummyAssetClass(0),
                             group_ptrs: [0, 6],
                             first_id: 0
                         }),
@@ -1020,7 +1022,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                             search_for_asset_class.eval({
                                 $scriptContext: ctx,
                                 $currentScript: currentScript,
-                                asset_class: AssetClass.dummy(1),
+                                asset_class: makeDummyAssetClass(1),
                                 group_ptrs: [0, 6],
                                 first_id: 0
                             })
@@ -1031,13 +1033,13 @@ describe("AssetGroupModule::search_for_asset_class", () => {
 
             it("AssetGroupModule::search_for_asset_class #09 (throws an error if found in the first asset group (which is error-free), but the second asset group isn't at the assets_validator address)", () => {
                 configureContext({
-                    secondGroupAddress: Address.dummy(false)
+                    secondGroupAddress: makeDummyAddress(false)
                 }).use((currentScript, ctx) => {
                     throws(() => {
                         search_for_asset_class.eval({
                             $scriptContext: ctx,
                             $currentScript: currentScript,
-                            asset_class: AssetClass.dummy(1),
+                            asset_class: makeDummyAssetClass(1),
                             group_ptrs: [0, 6],
                             first_id: 0
                         })
@@ -1052,7 +1054,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                             search_for_asset_class.eval({
                                 $scriptContext: ctx,
                                 $currentScript: currentScript,
-                                asset_class: AssetClass.dummy(1),
+                                asset_class: makeDummyAssetClass(1),
                                 group_ptrs: [0, 6],
                                 first_id: 0
                             })
@@ -1067,7 +1069,7 @@ describe("AssetGroupModule::search_for_asset_class", () => {
                         search_for_asset_class.eval({
                             $scriptContext: ctx,
                             $currentScript: currentScript,
-                            asset_class: AssetClass.dummy(1),
+                            asset_class: makeDummyAssetClass(1),
                             group_ptrs: [0, 7],
                             first_id: 0
                         })
@@ -1340,7 +1342,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
             injectDummyRef?: boolean
             injectConfigRef?: boolean
             secondGroupId?: number
-            thirdGroupAddress?: Address
+            thirdGroupAddress?: ShelleyAddress
         }) => {
             const scb = new ScriptContextBuilder()
                 .addAssetGroupRef({ assets: assets0, id: groupId0 })
@@ -1376,7 +1378,7 @@ describe("AssetGroupModule::sum_total_asset_value", () => {
 
             it("AssetGroupModule::sum_total_asset_value #09 (throws an error if one of the referenced asset groups is not at the assets_validator address)", () => {
                 configureContext({
-                    thirdGroupAddress: Address.dummy(false)
+                    thirdGroupAddress: makeDummyAddress(false)
                 }).use((currentScript, ctx) => {
                     throws(() => {
                         sum_total_asset_value.eval({

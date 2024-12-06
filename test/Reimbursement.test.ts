@@ -1,13 +1,13 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { IntLike } from "@helios-lang/codec-utils"
-import { Address, AssetClass, Assets } from "@helios-lang/ledger"
+import { type IntLike } from "@helios-lang/codec-utils"
+import { type ShelleyAddress, type Assets, makeDummyAddress, makeDummyAssetClass, makeAssets } from "@helios-lang/ledger"
 import {
-    ByteArrayData,
-    ConstrData,
-    IntData,
-    ListData,
-    UplcData
+    expectConstrData,
+    expectListData,
+    makeByteArrayData,
+    makeIntData,
+    type UplcData
 } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { scripts } from "./constants"
@@ -44,7 +44,7 @@ describe("ReimbursementModule::Reimbursement::find_input", () => {
 
     const configureParentContext = (props?: {
         datum?: ReimbursementType
-        address?: Address
+        address?: ShelleyAddress
         extraTokens?: Assets
         redeemer?: UplcData
         nDvpTokens?: IntLike
@@ -71,7 +71,7 @@ describe("ReimbursementModule::Reimbursement::find_input", () => {
         ])
 
         it("ReimbursementModule::Reimbursement::find_input #01 (returns the reimbursement id, data and number of DVP tokens if the reimbursement UTxO is the current input)", () => {
-            configureContext({ redeemer: new IntData(0) }).use(
+            configureContext({ redeemer: makeIntData(0) }).use(
                 (currentScript, ctx) => {
                     deepEqual(
                         find_input.eval({
@@ -86,8 +86,8 @@ describe("ReimbursementModule::Reimbursement::find_input", () => {
 
         it("ReimbursementModule::Reimbursement::find_input #02 (returns the reimbursement id, data and number of DVP tokens even if the reimbursement UTxO isn't at the reimbursement address)", () => {
             configureContext({
-                redeemer: new IntData(0),
-                address: Address.dummy(false)
+                redeemer: makeIntData(0),
+                address: makeDummyAddress(false)
             }).use((currentScript, ctx) => {
                 deepEqual(
                     find_input.eval({
@@ -101,7 +101,7 @@ describe("ReimbursementModule::Reimbursement::find_input", () => {
 
         it("ReimbursementModule::Reimbursement::find_input #03 (throws an error if the reimbursement UTxO contains another token in addition to the reimbursement token and DVP tokens)", () => {
             configureContext({
-                redeemer: new IntData(0),
+                redeemer: makeIntData(0),
                 extraTokens: makeConfigToken()
             }).use((currentScript, ctx) => {
                 throws(() => {
@@ -115,7 +115,7 @@ describe("ReimbursementModule::Reimbursement::find_input", () => {
 
         it("ReimbursementModule::Reimbursement::find_input #04 (throws an error if the reimbursement UTxO contains another non DVP-token in addition to the reimbursement token)", () => {
             configureContext({
-                redeemer: new IntData(0),
+                redeemer: makeIntData(0),
                 extraTokens: makeConfigToken(),
                 nDvpTokens: 0
             }).use((currentScript, ctx) => {
@@ -174,7 +174,7 @@ describe("ReimbursementModule::Reimbursement::find_input", () => {
         })
 
         it("ReimbursementModule::Reimbursement::find_input #08 (throws an error if the reimbursement UTxO isn't at the reimbursement_validator address)", () => {
-            configureContext({ address: Address.dummy(false) }).use(
+            configureContext({ address: makeDummyAddress(false) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
                         find_input.eval({
@@ -193,7 +193,7 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
     const nDvpTokens = 1000n
     const reimbursement = makeExtractingReimbursement()
     const configureParentContext = (props?: {
-        address?: Address
+        address?: ShelleyAddress
         datum?: UplcData
         nDvpTokens?: IntLike
         extraTokens?: Assets
@@ -293,7 +293,7 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
 
         it("ReimbursementModule::Reimbursement::find_output #06 (throws an error if the reimbursement output contains additional unrelated tokens alongside the reimbursement token and DVP tokens)", () => {
             configureContext({
-                extraTokens: Assets.fromAssetClasses([[AssetClass.dummy(), 1]])
+                extraTokens: makeAssets([[makeDummyAssetClass(), 1]])
             }).use((currentScript, ctx) => {
                 throws(() => {
                     find_output.eval({
@@ -306,7 +306,7 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
         })
 
         it("ReimbursementModule::Reimbursement::find_output #07 (throws an error if the reimbursement output isn't sent to the reimbursement_validator address)", () => {
-            configureContext({ address: Address.dummy(false) }).use(
+            configureContext({ address: makeDummyAddress(false) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
                         find_output.eval({
@@ -320,10 +320,10 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
         })
 
         it("ReimbursementModule::Reimbursement::find_output #08 (throws an error if the first field in the listData isn't iData)", () => {
-            const datum = ListData.expect(
+            const datum = expectListData(
                 castReimbursement.toUplcData(reimbursement)
             )
-            datum.items[0] = new ByteArrayData([])
+            datum.items[0] = makeByteArrayData([])
 
             configureContext({ datum }).use((currentScript, ctx) => {
                 throws(() => {
@@ -337,10 +337,10 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
         })
 
         it("ReimbursementModule::Reimbursement::find_output #09 (throws an error if the listData contains an additional field)", () => {
-            const datum = ListData.expect(
+            const datum = expectListData(
                 castReimbursement.toUplcData(reimbursement)
             )
-            datum.items.push(new ByteArrayData([]))
+            datum.items.push(makeByteArrayData([]))
 
             configureContext({ datum }).use((currentScript, ctx) => {
                 throws(() => {
@@ -354,10 +354,10 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
         })
 
         it("ReimbursementModule::Reimbursement::find_output #10 (throws an error if the startPrice ratio denominator is zero)", () => {
-            const datum = ListData.expect(
+            const datum = expectListData(
                 castReimbursement.toUplcData(reimbursement)
             )
-            ListData.expect(datum.items[0]).items[1] = new IntData(0)
+            expectListData(datum.items[0]).items[1] = makeIntData(0)
 
             configureContext({ datum }).use((currentScript, ctx) => {
                 throws(() => {
@@ -371,10 +371,10 @@ describe("ReimbursementModule::Reimbursement::find_output", () => {
         })
 
         it("ReimbursementModule::Reimbursement::find_output #11 (throws an error if the endPrice ratio denominator is zero)", () => {
-            const datum = ListData.expect(
+            const datum = expectListData(
                 castReimbursement.toUplcData(reimbursement)
             )
-            ConstrData.expect(datum.items[1]).fields[0] = new IntData(0)
+            expectConstrData(datum.items[1]).fields[0] = makeIntData(0)
 
             configureContext({ datum }).use((currentScript, ctx) => {
                 throws(() => {
@@ -414,7 +414,7 @@ describe("ReimbursementModule::find_thread", () => {
         ])
 
         it("ReimbursementModule::find_thread #01 (returns the reimbursement data twice, along with its id, and the unchanged amount of DVP tokens in the input and the output if the reimbursement UTxO remains unchanged after being spent and returned)", () => {
-            configureContext({ redeemer: new IntData(0) }).use(
+            configureContext({ redeemer: makeIntData(0) }).use(
                 (currentScript, ctx) => {
                     deepEqual(
                         find_thread.eval({

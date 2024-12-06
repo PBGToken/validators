@@ -1,10 +1,10 @@
+import { deepEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
+import { makeDummyAssetClass } from "@helios-lang/ledger"
 import contract from "pbg-token-validators-test-context"
 import { scripts } from "./constants"
 import { makeAsset } from "./data"
 import { ScriptContextBuilder, withScripts } from "./tx"
-import { deepEqual, throws } from "node:assert"
-import { AssetClass } from "@helios-lang/ledger"
 
 const {
     "AssetPtr::resolve_input": resolve_input,
@@ -112,19 +112,19 @@ describe("AssetPtrModule::AssetPtr::resolve_input", () => {
     describe("the tx has two asset group inputs, the first with one asset, the second with three assets", () => {
         const assets0 = [
             makeAsset({
-                assetClass: AssetClass.dummy(0)
+                assetClass: makeDummyAssetClass(0)
             })
         ]
 
         const assets1 = [
             makeAsset({
-                assetClass: AssetClass.dummy(1)
+                assetClass: makeDummyAssetClass(1)
             }),
             makeAsset({
-                assetClass: AssetClass.dummy(2)
+                assetClass: makeDummyAssetClass(2)
             }),
             makeAsset({
-                assetClass: AssetClass.dummy(3)
+                assetClass: makeDummyAssetClass(3)
             })
         ]
 
@@ -152,7 +152,7 @@ describe("AssetPtrModule::AssetPtr::resolve_input", () => {
                                 asset_class_index: 2
                             },
                             inputs: tx.inputs,
-                            asset_class: AssetClass.dummy(3)
+                            asset_class: makeDummyAssetClass(3)
                         }),
                         assets1[2]
                     )
@@ -164,9 +164,9 @@ describe("AssetPtrModule::AssetPtr::resolve_input", () => {
     describe("the tx has a single asset group input, with two assets", () => {
         const assets = [
             makeAsset({
-                assetClass: AssetClass.dummy(1)
+                assetClass: makeDummyAssetClass(1)
             }),
-            makeAsset({ assetClass: AssetClass.dummy(2) })
+            makeAsset({ assetClass: makeDummyAssetClass(2) })
         ]
 
         const configureParentContext = () => {
@@ -192,7 +192,7 @@ describe("AssetPtrModule::AssetPtr::resolve_input", () => {
                                 asset_class_index: 0
                             },
                             inputs: tx.inputs,
-                            asset_class: AssetClass.dummy(0)
+                            asset_class: makeDummyAssetClass(0)
                         })
                     })
                 })
@@ -302,19 +302,19 @@ describe("AssetPtrModule::AssetPtr::resolve_output", () => {
     describe("the tx has two asset group outputs, the first with one asset, the second with three assets", () => {
         const assets0 = [
             makeAsset({
-                assetClass: AssetClass.dummy(0)
+                assetClass: makeDummyAssetClass(0)
             })
         ]
 
         const assets1 = [
             makeAsset({
-                assetClass: AssetClass.dummy(1)
+                assetClass: makeDummyAssetClass(1)
             }),
             makeAsset({
-                assetClass: AssetClass.dummy(2)
+                assetClass: makeDummyAssetClass(2)
             }),
             makeAsset({
-                assetClass: AssetClass.dummy(3)
+                assetClass: makeDummyAssetClass(3)
             })
         ]
 
@@ -342,7 +342,7 @@ describe("AssetPtrModule::AssetPtr::resolve_output", () => {
                                 asset_class_index: 2
                             },
                             outputs: tx.outputs,
-                            asset_class: AssetClass.dummy(3)
+                            asset_class: makeDummyAssetClass(3)
                         }),
                         assets1[2]
                     )
@@ -354,9 +354,9 @@ describe("AssetPtrModule::AssetPtr::resolve_output", () => {
     describe("the tx has a single asset group output, with two assets", () => {
         const assets = [
             makeAsset({
-                assetClass: AssetClass.dummy(1)
+                assetClass: makeDummyAssetClass(1)
             }),
-            makeAsset({ assetClass: AssetClass.dummy(2) })
+            makeAsset({ assetClass: makeDummyAssetClass(2) })
         ]
 
         const configureParentContext = () => {
@@ -382,7 +382,7 @@ describe("AssetPtrModule::AssetPtr::resolve_output", () => {
                                 asset_class_index: 0
                             },
                             outputs: tx.outputs,
-                            asset_class: AssetClass.dummy(0)
+                            asset_class: makeDummyAssetClass(0)
                         })
                     })
                 })

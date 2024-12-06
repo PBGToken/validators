@@ -1,7 +1,7 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { Address, AssetClass, Assets, Value } from "@helios-lang/ledger"
-import { IntData, UplcData } from "@helios-lang/uplc"
+import { type ShelleyAddress, makeAssets, makeDummyAddress, makeDummyAssetClass, makeValue, type Value } from "@helios-lang/ledger"
+import { makeIntData, type UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { scripts } from "./constants"
 import {
@@ -25,8 +25,8 @@ const {
 } = contract.BurnOrderModule
 
 describe("BurnOrderModule::BurnOrder::find_return", () => {
-    const address = Address.dummy(false)
-    const datum = new IntData(0)
+    const address = makeDummyAddress(false)
+    const datum = makeIntData(0)
     const burnOrder = makeBurnOrder({
         address,
         datum
@@ -34,7 +34,7 @@ describe("BurnOrderModule::BurnOrder::find_return", () => {
 
     const configureContext = (props?: {
         includeDummyOutputAtSameAddress?: boolean
-        address?: Address
+        address?: ShelleyAddress
         datum?: UplcData
     }) => {
         const scb = new ScriptContextBuilder().addDummyOutputs(10)
@@ -56,8 +56,8 @@ describe("BurnOrderModule::BurnOrder::find_return", () => {
                 self: burnOrder
             })
 
-            strictEqual(output.address.toBech32(), address.toBech32())
-            strictEqual(output.datum?.data.toSchemaJson(), datum.toSchemaJson())
+            strictEqual(output.address.toString(), address.toBech32())
+            strictEqual(output.datum?.data?.toSchemaJson(), datum.toSchemaJson())
         })
     })
 
@@ -69,9 +69,9 @@ describe("BurnOrderModule::BurnOrder::find_return", () => {
                     self: burnOrder
                 })
 
-                strictEqual(output.address.toBech32(), address.toBech32())
+                strictEqual(output.address.toString(), address.toBech32())
                 strictEqual(
-                    output.datum?.data.toSchemaJson(),
+                    output.datum?.data?.toSchemaJson(),
                     datum.toSchemaJson()
                 )
             }
@@ -79,7 +79,7 @@ describe("BurnOrderModule::BurnOrder::find_return", () => {
     })
 
     it("throws an error if not found due to the output having a different datum", () => {
-        configureContext({ datum: new IntData(1) }).use((ctx) => {
+        configureContext({ datum: makeIntData(1) }).use((ctx) => {
             throws(() => [
                 find_return.eval({
                     $scriptContext: ctx,
@@ -90,7 +90,7 @@ describe("BurnOrderModule::BurnOrder::find_return", () => {
     })
 
     it("throws an error if not found due to the output being at a different address", () => {
-        configureContext({ address: Address.dummy(false, 1) }).use((ctx) => {
+        configureContext({ address: makeDummyAddress(false, 1) }).use((ctx) => {
             throws(() => [
                 find_return.eval({
                     $scriptContext: ctx,
@@ -102,8 +102,8 @@ describe("BurnOrderModule::BurnOrder::find_return", () => {
 })
 
 describe("BurnOrderModule::BurnOrder::diff", () => {
-    const address = Address.dummy(false)
-    const datum = new IntData(0)
+    const address = makeDummyAddress(false)
+    const datum = makeIntData(0)
     const burnOrder = makeBurnOrder({
         address,
         datum
@@ -111,7 +111,7 @@ describe("BurnOrderModule::BurnOrder::diff", () => {
     const redeemer: BurnOrderRedeemerType = { Fulfill: { ptrs: [] } }
 
     describe("the order contains only lovelace", () => {
-        const inputValue = new Value(10_000_000)
+        const inputValue = makeValue(10_000_000)
 
         const configureParentContext = (props?: {
             returnDatum?: UplcData
@@ -126,7 +126,7 @@ describe("BurnOrderModule::BurnOrder::diff", () => {
                 .addBurnOrderReturn({
                     address,
                     datum: props?.returnDatum ?? datum,
-                    value: new Value(props?.returnLovelace ?? 10_000_000)
+                    value: makeValue(props?.returnLovelace ?? 10_000_000)
                 })
         }
 
@@ -179,7 +179,7 @@ describe("BurnOrderModule::BurnOrder::diff", () => {
             })
 
             it("throws an error if the return UTxO doesn't have the expected datum", () => {
-                configureContext({ returnDatum: new IntData(1) }).use(
+                configureContext({ returnDatum: makeIntData(1) }).use(
                     (currentScript, ctx) => {
                         throws(() => {
                             diff.eval({
@@ -214,11 +214,11 @@ describe("BurnOrderModule::BurnOrder::diff", () => {
     })
 
     describe("the order input contains lovelace and a number of tokens of a single asset class", () => {
-        const assetClass = AssetClass.dummy()
+        const assetClass = makeDummyAssetClass()
         const nTokens = 1000n
-        const inputValue = new Value(
+        const inputValue = makeValue(
             10_000_000,
-            Assets.fromAssetClasses([[assetClass, nTokens]])
+            makeAssets([[assetClass, nTokens]])
         )
 
         const configureParentContext = () => {
@@ -231,7 +231,7 @@ describe("BurnOrderModule::BurnOrder::diff", () => {
                 .addBurnOrderReturn({
                     address,
                     datum,
-                    value: new Value(10_000_000)
+                    value: makeValue(10_000_000)
                 })
         }
 
@@ -253,7 +253,7 @@ describe("BurnOrderModule::BurnOrder::diff", () => {
                         value.assetClasses[0].toFingerprint(),
                         assetClass.toFingerprint()
                     )
-                    strictEqual(value.assets.getQuantity(assetClass), nTokens)
+                    strictEqual(value.assets.getAssetClassQuantity(assetClass), nTokens)
                 })
             })
         })
@@ -280,8 +280,8 @@ describe("BurnOrderModule::BurnOrder::diff", () => {
 })
 
 describe("BurnOrderModule::BurnOrder::value", () => {
-    const address = Address.dummy(false)
-    const datum = new IntData(0)
+    const address = makeDummyAddress(false)
+    const datum = makeIntData(0)
     const burnOrder = makeBurnOrder({
         address,
         datum
@@ -290,7 +290,7 @@ describe("BurnOrderModule::BurnOrder::value", () => {
 
     describe("the order input contains only lovelace", () => {
         const lovelace = 2_000_000n
-        const inputValue = new Value(lovelace)
+        const inputValue = makeValue(lovelace)
 
         const configureParentContext = () => {
             return new ScriptContextBuilder()
@@ -302,7 +302,7 @@ describe("BurnOrderModule::BurnOrder::value", () => {
                 .addBurnOrderReturn({
                     address,
                     datum,
-                    value: new Value(0)
+                    value: makeValue(0)
                 })
         }
 
@@ -328,7 +328,7 @@ describe("BurnOrderModule::BurnOrder::value", () => {
 
     describe("the order input contains lovelace and some DVP tokens", () => {
         const lovelace = 2_000_000n
-        const inputValue = new Value(lovelace, makeDvpTokens(1000))
+        const inputValue = makeValue(lovelace, makeDvpTokens(1000))
 
         const configureParentContext = () => {
             return new ScriptContextBuilder()
@@ -340,7 +340,7 @@ describe("BurnOrderModule::BurnOrder::value", () => {
                 .addBurnOrderReturn({
                     address,
                     datum,
-                    value: new Value(0)
+                    value: makeValue(0)
                 })
         }
 
@@ -366,7 +366,7 @@ describe("BurnOrderModule::BurnOrder::value", () => {
 
     describe("the order input contains lovelace, some DVP tokens and two voucher pairs", () => {
         const lovelace = 2_000_000n
-        const inputValue = new Value(
+        const inputValue = makeValue(
             lovelace,
             makeDvpTokens(1000).add(makeVoucherPair(1).add(makeVoucherPair(2)))
         )
@@ -381,7 +381,7 @@ describe("BurnOrderModule::BurnOrder::value", () => {
                 .addBurnOrderReturn({
                     address,
                     datum,
-                    value: new Value(0)
+                    value: makeValue(0)
                 })
         }
 
@@ -407,7 +407,7 @@ describe("BurnOrderModule::BurnOrder::value", () => {
 
     describe("the order input contains lovelace and some DVP tokens and the output contains a voucher pair", () => {
         const lovelace = 2_000_000n
-        const inputValue = new Value(lovelace, makeDvpTokens(1000))
+        const inputValue = makeValue(lovelace, makeDvpTokens(1000))
 
         const configureParentContext = () => {
             return new ScriptContextBuilder()
@@ -419,7 +419,7 @@ describe("BurnOrderModule::BurnOrder::value", () => {
                 .addBurnOrderReturn({
                     address,
                     datum,
-                    value: new Value(0, makeVoucherPair(2))
+                    value: makeValue(0, makeVoucherPair(2))
                 })
         }
 
@@ -444,8 +444,8 @@ describe("BurnOrderModule::BurnOrder::value", () => {
 })
 
 describe("BurnOrderModule::BurnOrder::value_lovelace", () => {
-    const address = Address.dummy(false)
-    const datum = new IntData(0)
+    const address = makeDummyAddress(false)
+    const datum = makeIntData(0)
     const maxPriceAge = 100
     const burnOrder = makeBurnOrder({
         address,
@@ -454,7 +454,7 @@ describe("BurnOrderModule::BurnOrder::value_lovelace", () => {
     })
 
     describe("the order input contains only lovelace", () => {
-        const inputValue = new Value(10_000_000)
+        const inputValue = makeValue(10_000_000)
 
         const configureContext = (props: {
             ptrs: AssetPtrType[]
@@ -495,7 +495,7 @@ describe("BurnOrderModule::BurnOrder::value_lovelace", () => {
                 makeAssetPtr({ groupIndex: 100, assetClassIndex: 100 })
             ]
 
-            configureContext({ ptrs, returnValue: new Value(12_000_000) }).use(
+            configureContext({ ptrs, returnValue: makeValue(12_000_000) }).use(
                 (ctx) => {
                     strictEqual(
                         value_lovelace.eval({
@@ -513,7 +513,7 @@ describe("BurnOrderModule::BurnOrder::value_lovelace", () => {
         it("throws an error if more lovelace is returned but no asset pointers are specified", () => {
             const ptrs: AssetPtrType[] = []
 
-            configureContext({ ptrs, returnValue: new Value(12_000_000) }).use(
+            configureContext({ ptrs, returnValue: makeValue(12_000_000) }).use(
                 (ctx) => {
                     throws(() => {
                         value_lovelace.eval({
@@ -529,14 +529,14 @@ describe("BurnOrderModule::BurnOrder::value_lovelace", () => {
     })
 
     describe("the order input contains lovelace and some DVP tokens", () => {
-        const inputValue = new Value(10_000_000, makeDvpTokens(100))
+        const inputValue = makeValue(10_000_000, makeDvpTokens(100))
 
         it("returns the correct lovelace sum if some lovelace and two additional asset class tokens are returned", () => {
-            const ac0 = AssetClass.dummy(0)
-            const ac1 = AssetClass.dummy(1)
-            const returnValue = new Value(
+            const ac0 = makeDummyAssetClass(0)
+            const ac1 = makeDummyAssetClass(1)
+            const returnValue = makeValue(
                 2_000_000,
-                Assets.fromAssetClasses([
+                makeAssets([
                     [ac0, 10],
                     [ac1, 100]
                 ])
@@ -622,8 +622,8 @@ describe("BurnOrderModule::BurnOrder::price_expiry", () => {
 })
 
 describe("BurnOrderModule::BurnOrder::returned_enough", () => {
-    const address = Address.dummy(false)
-    const datum = new IntData(0)
+    const address = makeDummyAddress(false)
+    const datum = makeIntData(0)
     const maxPriceAge = 100
 
     describe("the order datum request pure lovelace and the order input contains a smaller amount of lovelace and some DVP tokens", () => {
@@ -633,7 +633,7 @@ describe("BurnOrderModule::BurnOrder::returned_enough", () => {
             lovelace: 10_000_000,
             maxPriceAge
         })
-        const inputValue = new Value(2_000_000, makeDvpTokens(10))
+        const inputValue = makeValue(2_000_000, makeDvpTokens(10))
         const ptrs: AssetPtrType[] = [
             // dummy ptr for lovelace
             makeAssetPtr({ groupIndex: 100, assetClassIndex: 100 })
@@ -650,7 +650,7 @@ describe("BurnOrderModule::BurnOrder::returned_enough", () => {
                 .addBurnOrderReturn({
                     address,
                     datum,
-                    value: new Value(props?.returnLovelace ?? 12_000_000)
+                    value: makeValue(props?.returnLovelace ?? 12_000_000)
                 })
                 .setTimeRange({ end: 200 })
         }
@@ -685,15 +685,15 @@ describe("BurnOrderModule::BurnOrder::returned_enough", () => {
     })
 
     describe("the order datum requests some tokens from a single asset class and the order input contains some lovelace and DVP tokens", () => {
-        const ac = AssetClass.dummy()
-        const requestedAssets = Assets.fromAssetClasses([[ac, 10]])
+        const ac = makeDummyAssetClass()
+        const requestedAssets = makeAssets([[ac, 10]])
         const burnOrder = makeBurnOrder({
             address,
             datum,
-            value: new Value(0, requestedAssets),
+            value: makeValue(0, requestedAssets),
             maxPriceAge
         })
-        const inputValue = new Value(2_000_000, makeDvpTokens(10))
+        const inputValue = makeValue(2_000_000, makeDvpTokens(10))
 
         // no asset pointers are required when the order request a precise return value, as the value doesn't need to be reduced
         const ptrs: AssetPtrType[] = []
@@ -714,7 +714,7 @@ describe("BurnOrderModule::BurnOrder::returned_enough", () => {
                     datum,
                     value:
                         props?.returnValue ??
-                        new Value(
+                        makeValue(
                             props?.returnLovelace ?? 2_000_000,
                             requestedAssets
                         )
@@ -752,9 +752,9 @@ describe("BurnOrderModule::BurnOrder::returned_enough", () => {
 
         it("returns false if not enough asset class tokens are returned", () => {
             configureContext({
-                returnValue: new Value(
+                returnValue: makeValue(
                     2_000_000,
-                    Assets.fromAssetClasses([[ac, 9]])
+                    makeAssets([[ac, 9]])
                 )
             }).use((ctx) => {
                 strictEqual(

@@ -1,7 +1,7 @@
-import { PermissiveType, StrictType } from "@helios-lang/contract-utils"
+import { type IntLike } from "@helios-lang/codec-utils"
+import { type PermissiveType, type StrictType } from "@helios-lang/contract-utils"
 import contract from "pbg-token-validators-test-context"
 import { SuccessFeeType, castSuccessFee, makeSuccessFee } from "./SuccessFee"
-import { IntLike, toInt } from "@helios-lang/codec-utils"
 import { RatioType, castRatio } from "./Price"
 
 export const castReimbursement = contract.ReimbursementModule.Reimbursement

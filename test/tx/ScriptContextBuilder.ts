@@ -1,26 +1,36 @@
 import { IntLike } from "@helios-lang/codec-utils"
 import { generateBytes, rand } from "@helios-lang/crypto"
 import {
-    Address,
-    Assets,
-    MintingPolicyHash,
-    PubKeyHash,
-    ScriptContextV2,
-    ScriptPurpose,
-    StakingAddress,
-    StakingCredential,
-    StakingValidatorHash,
-    TimeRange,
-    TxInfo,
-    TxInput,
-    TxOutput,
-    TxOutputDatum,
-    TxOutputId,
-    TxRedeemer,
-    Value
+    type ShelleyAddress,
+    type Assets,
+    makeDummyTxOutputId,
+    makeInlineTxOutputDatum,
+    makeSpendingPurpose,
+    makeTxInput,
+    makeTxOutput,
+    makeValue,
+    type PubKeyHash,
+    type ScriptPurpose,
+    type StakingValidatorHash,
+    type TxInfo,
+    type TxInput,
+    type TxOutput,
+    type TxOutputId,
+    type Value,
+    makeDummyAddress,
+    makeDummyPubKeyHash,
+    makeAssets,
+    makeDummyMintingPolicyHash,
+    makeMintingPurpose,
+    makeRewardingPurpose,
+    makeDummyStakingValidatorHash,
+    makeTxRewardingRedeemer,
+    makeStakingAddress,
+    makeTimeRange,
+    makeScriptContextV2
 } from "@helios-lang/ledger"
-import { None, expectSome } from "@helios-lang/type-utils"
-import { ByteArrayData, IntData, ListData, UplcData } from "@helios-lang/uplc"
+import { expectDefined } from "@helios-lang/type-utils"
+import { ByteArrayData, IntData, ListData, makeByteArrayData, makeIntData, UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { Addresses, policy } from "../constants"
 import {
@@ -83,7 +93,7 @@ import {
 export class ScriptContextBuilder {
     private dummyIdCount: number
     tx: TxInfo
-    purpose: Option<ScriptPurpose>
+    purpose: ScriptPurpose | undefined
 
     constructor() {
         this.dummyIdCount = 0
@@ -92,18 +102,18 @@ export class ScriptContextBuilder {
             outputs: []
         }
 
-        this.purpose = None
+        this.purpose = undefined
     }
 
     /**
      * The TxOutputId of each input and refInput must be unique (builtin functions like get_current_input() rely on that)
      */
     private newInputId(): TxOutputId {
-        return TxOutputId.dummy(this.dummyIdCount++)
+        return makeDummyTxOutputId(this.dummyIdCount++)
     }
 
     addAssetGroupInput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         assets?: AssetType[]
         id?: IntLike
         redeemer?: AssetGroupAction
@@ -112,26 +122,22 @@ export class ScriptContextBuilder {
         const address = props?.address ?? Addresses.assetsValidator
         const assets = props?.assets ?? []
         const token = props?.token ?? makeAssetsToken(props?.id ?? 0)
-        const value = new Value(2_000_000, token)
+        const value = makeValue(2_000_000, token)
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = ScriptPurpose.Spending(
-                TxRedeemer.Spending(
-                    this.tx.inputs.length,
-                    castAssetGroupAction.toUplcData(props.redeemer)
-                ),
+            this.purpose = makeSpendingPurpose(
                 id
             )
         }
 
         this.tx.inputs.push(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
                     value,
-                    TxOutputDatum.Inline(castAssetGroup.toUplcData({ assets }))
+                    makeInlineTxOutputDatum(castAssetGroup.toUplcData({ assets }))
                 )
             )
         )
@@ -140,7 +146,7 @@ export class ScriptContextBuilder {
     }
 
     addAssetGroupRef(props?: {
-        address?: Address
+        address?: ShelleyAddress
         assets?: AssetType[]
         id?: IntLike
         token?: Assets
@@ -148,16 +154,16 @@ export class ScriptContextBuilder {
         const address = props?.address ?? Addresses.assetsValidator
         const assets = props?.assets ?? []
         const token = props?.token ?? makeAssetsToken(Number(props?.id ?? 0))
-        const value = new Value(2_000_000, token)
+        const value = makeValue(2_000_000, token)
         const id = this.newInputId()
 
         this.addRefInput(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
                     value,
-                    TxOutputDatum.Inline(castAssetGroup.toUplcData({ assets }))
+                    makeInlineTxOutputDatum(castAssetGroup.toUplcData({ assets }))
                 )
             )
         )
@@ -166,7 +172,7 @@ export class ScriptContextBuilder {
     }
 
     addAssetGroupOutput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         assets?: AssetType[]
         id?: IntLike
         token?: Assets
@@ -174,12 +180,12 @@ export class ScriptContextBuilder {
         const address = props?.address ?? Addresses.assetsValidator
         const assets = props?.assets ?? []
         const token = props?.token ?? makeAssetsToken(props?.id ?? 0)
-        const value = new Value(2_000_000, token)
+        const value = makeValue(2_000_000, token)
 
         const datum = castAssetGroup.toUplcData({ assets })
 
         this.tx.outputs.push(
-            new TxOutput(address, value, TxOutputDatum.Inline(datum))
+            makeTxOutput(address, value, makeInlineTxOutputDatum(datum))
         )
 
         return this
@@ -190,7 +196,7 @@ export class ScriptContextBuilder {
         inputToken?: Assets
         inputAssets?: AssetType[]
         outputAssets: AssetType[]
-        outputAddress?: Address
+        outputAddress?: ShelleyAddress
         outputToken?: Assets
         redeemer?: AssetGroupAction
     }): ScriptContextBuilder {
@@ -208,33 +214,29 @@ export class ScriptContextBuilder {
     }
 
     addBurnOrderInput(props?: {
-        address?: Address<any, any>
+        address?: ShelleyAddress<any>
         datum?: BurnOrderType
         redeemer?: BurnOrderRedeemerType
         value?: Value
     }): ScriptContextBuilder {
         const address = props?.address ?? Addresses.burnOrderValidator
         const datum = props?.datum ?? makeBurnOrder()
-        const value = props?.value ?? new Value(2_000_000)
+        const value = props?.value ?? makeValue(2_000_000)
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = ScriptPurpose.Spending(
-                TxRedeemer.Spending(
-                    this.tx.inputs.length,
-                    castBurnOrderRedeemer.toUplcData(props.redeemer)
-                ),
+            this.purpose = makeSpendingPurpose(
                 id
             )
         }
 
         this.tx.inputs.push(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
                     value,
-                    TxOutputDatum.Inline(castBurnOrder.toUplcData(datum))
+                    makeInlineTxOutputDatum(castBurnOrder.toUplcData(datum))
                 )
             )
         )
@@ -243,21 +245,21 @@ export class ScriptContextBuilder {
     }
 
     addBurnOrderReturn(props?: {
-        address?: Address<any, any>
+        address?: ShelleyAddress<any>
         datum?: UplcData
         value?: Value
     }): ScriptContextBuilder {
-        const address = props?.address ?? Address.dummy(false)
-        const datum = props?.datum ?? new IntData(0)
-        const value = props?.value ?? new Value(2_000_000)
+        const address = props?.address ?? makeDummyAddress(false)
+        const datum = props?.datum ?? makeIntData(0)
+        const value = props?.value ?? makeValue(2_000_000)
 
         return this.addOutput(
-            new TxOutput(address, value, TxOutputDatum.Inline(datum))
+            makeTxOutput(address, value, makeInlineTxOutputDatum(datum))
         )
     }
 
     addConfigInput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         config?: ConfigType
         redeemer?: UplcData
         token?: Assets
@@ -268,19 +270,18 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = ScriptPurpose.Spending(
-                TxRedeemer.Spending(this.tx.inputs.length, props.redeemer),
+            this.purpose = makeSpendingPurpose(
                 id
             )
         }
 
         this.tx.inputs.push(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
-                    new Value(2_000_000, token),
-                    TxOutputDatum.Inline(castConfig.toUplcData(config))
+                    makeValue(2_000_000, token),
+                    makeInlineTxOutputDatum(castConfig.toUplcData(config))
                 )
             )
         )
@@ -289,7 +290,7 @@ export class ScriptContextBuilder {
     }
 
     addConfigOutput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         config?: ConfigType
         datum?: UplcData
         token?: Assets
@@ -299,10 +300,10 @@ export class ScriptContextBuilder {
         const token = props?.token ?? makeConfigToken()
 
         return this.addOutput(
-            new TxOutput(
+            makeTxOutput(
                 address,
-                new Value(2_000_000, token),
-                TxOutputDatum.Inline(
+                makeValue(2_000_000, token),
+                makeInlineTxOutputDatum(
                     props?.datum ?? castConfig.toUplcData(config)
                 )
             )
@@ -310,7 +311,7 @@ export class ScriptContextBuilder {
     }
 
     addConfigRef(props?: {
-        address?: Address
+        address?: ShelleyAddress
         config?: ConfigType
         token?: Assets
     }): ScriptContextBuilder {
@@ -318,15 +319,15 @@ export class ScriptContextBuilder {
         const config = props?.config ?? makeConfig()
         const token = props?.token ?? makeConfigToken()
         const id = this.newInputId()
-        const value = new Value(2_000_000n, token)
+        const value = makeValue(2_000_000n, token)
 
         this.addRefInput(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
                     value,
-                    TxOutputDatum.Inline(castConfig.toUplcData(config))
+                    makeInlineTxOutputDatum(castConfig.toUplcData(config))
                 )
             )
         )
@@ -349,23 +350,22 @@ export class ScriptContextBuilder {
     }
 
     addDummyInput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         id?: TxOutputId
         redeemer?: UplcData
         value?: Value
     }): ScriptContextBuilder {
-        const address = props?.address ?? Address.dummy(false)
+        const address = props?.address ?? makeDummyAddress(false)
         const id = props?.id ?? this.newInputId()
-        const value = props?.value ?? new Value(2_000_000)
+        const value = props?.value ?? makeValue(2_000_000)
 
         if (props?.redeemer) {
-            this.purpose = ScriptPurpose.Spending(
-                TxRedeemer.Spending(this.tx.inputs.length, props.redeemer),
+            this.purpose = makeSpendingPurpose(
                 id
             )
         }
 
-        this.tx.inputs.push(new TxInput(id, new TxOutput(address, value)))
+        this.tx.inputs.push(makeTxInput(id, makeTxOutput(address, value)))
 
         return this
     }
@@ -379,13 +379,13 @@ export class ScriptContextBuilder {
     }
 
     addDummyOutput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         value?: Value
     }): ScriptContextBuilder {
-        const address = props?.address ?? Address.dummy(false)
+        const address = props?.address ?? makeDummyAddress(false)
 
         this.tx.outputs.push(
-            new TxOutput(address, props?.value ?? new Value(2_000_000))
+            makeTxOutput(address, props?.value ?? makeValue(2_000_000))
         )
 
         return this
@@ -400,14 +400,14 @@ export class ScriptContextBuilder {
     }
 
     addDummyRef(props?: {
-        address?: Address
+        address?: ShelleyAddress
         value?: Value
     }): ScriptContextBuilder {
-        const address = props?.address ?? Address.dummy(false)
+        const address = props?.address ?? makeDummyAddress(false)
         const id = this.newInputId()
-        const value = props?.value ?? new Value(2_000_000)
+        const value = props?.value ?? makeValue(2_000_000)
 
-        this.addRefInput(new TxInput(id, new TxOutput(address, value)))
+        this.addRefInput(makeTxInput(id, makeTxOutput(address, value)))
 
         return this
     }
@@ -422,14 +422,14 @@ export class ScriptContextBuilder {
 
     addDummySigners(n: number): ScriptContextBuilder {
         for (let i = 0; i < n; i++) {
-            this.addSigner(PubKeyHash.dummy(1000000 + i))
+            this.addSigner(makeDummyPubKeyHash(1000000 + i))
         }
 
         return this
     }
 
     addMetadataInput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         metadata?: MetadataType
         redeemer?: UplcData
         token?: Assets
@@ -440,19 +440,18 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = ScriptPurpose.Spending(
-                TxRedeemer.Spending(this.tx.inputs.length, props.redeemer),
+            this.purpose = makeSpendingPurpose(
                 id
             )
         }
 
         this.tx.inputs.push(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
-                    new Value(2_000_000, token),
-                    TxOutputDatum.Inline(castMetadata.toUplcData(metadata))
+                    makeValue(2_000_000, token),
+                    makeInlineTxOutputDatum(castMetadata.toUplcData(metadata))
                 )
             )
         )
@@ -461,7 +460,7 @@ export class ScriptContextBuilder {
     }
 
     addMetadataOutput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         metadata?: MetadataType
         token?: Assets
     }): ScriptContextBuilder {
@@ -470,10 +469,10 @@ export class ScriptContextBuilder {
         const token = props?.token ?? makeMetadataToken()
 
         return this.addOutput(
-            new TxOutput(
+            makeTxOutput(
                 address,
-                new Value(2_000_000, token),
-                TxOutputDatum.Inline(castMetadata.toUplcData(metadata))
+                makeValue(2_000_000, token),
+                makeInlineTxOutputDatum(castMetadata.toUplcData(metadata))
             )
         )
     }
@@ -491,33 +490,29 @@ export class ScriptContextBuilder {
     }
 
     addMintOrderInput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         datum?: MintOrderType
         redeemer?: MintOrderRedeemerType
         value?: Value
     }): ScriptContextBuilder {
         const address = props?.address ?? Addresses.mintOrderValidator
         const datum = props?.datum ?? makeMintOrder()
-        const value = props?.value ?? new Value(2_000_000)
+        const value = props?.value ?? makeValue(2_000_000)
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = ScriptPurpose.Spending(
-                TxRedeemer.Spending(
-                    this.tx.inputs.length,
-                    castMintOrderRedeemer.toUplcData(props.redeemer)
-                ),
+            this.purpose = makeSpendingPurpose(
                 id
             )
         }
 
         this.tx.inputs.push(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
                     value,
-                    TxOutputDatum.Inline(castMintOrder.toUplcData(datum))
+                    makeInlineTxOutputDatum(castMintOrder.toUplcData(datum))
                 )
             )
         )
@@ -526,35 +521,36 @@ export class ScriptContextBuilder {
     }
 
     addMintOrderReturn(props?: {
-        address?: Address<any, any>
+        address?: ShelleyAddress<any>
         datum?: UplcData
         value?: Value
         tokens?: IntLike
     }): ScriptContextBuilder {
-        const address = props?.address ?? Address.dummy(false)
-        const datum = props?.datum ?? new IntData(0)
+        const address = props?.address ?? makeDummyAddress(false)
+        const datum = props?.datum ?? makeIntData(0)
         const value =
             props?.value ??
-            new Value(2_000_000, makeDvpTokens(Number(props?.tokens ?? 0)))
+            makeValue(2_000_000, makeDvpTokens(Number(props?.tokens ?? 0)))
 
         return this.addOutput(
-            new TxOutput(address, value, TxOutputDatum.Inline(datum))
+            makeTxOutput(address, value, makeInlineTxOutputDatum(datum))
         )
     }
 
     addOutput(
         props:
-            | TxOutput<any, any>
-            | { address?: Address; datum?: UplcData; value?: Value }
+            | TxOutput<any>
+            | { address?: ShelleyAddress; datum?: UplcData; value?: Value }
     ): ScriptContextBuilder {
-        if (props instanceof TxOutput) {
+        // TODO: TxOutput.kind
+        if ("correctLovelace" in props) {
             this.tx.outputs.push(props)
         } else {
             this.tx.outputs.push(
-                new TxOutput(
-                    props.address ?? Address.dummy(false, 0),
-                    props.value ?? new Value(0),
-                    props.datum ? TxOutputDatum.Inline(props.datum) : None
+                makeTxOutput(
+                    props.address ?? makeDummyAddress(false, 0),
+                    props.value ?? makeValue(0),
+                    props.datum ? makeInlineTxOutputDatum(props.datum) : undefined
                 )
             )
         }
@@ -563,7 +559,7 @@ export class ScriptContextBuilder {
     }
 
     addPortfolioInput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         portfolio?: PortfolioType
         redeemer?: PortfolioActionType
         token?: Assets
@@ -574,22 +570,18 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = ScriptPurpose.Spending(
-                TxRedeemer.Spending(
-                    this.tx.inputs.length,
-                    castPortfolioAction.toUplcData(props.redeemer)
-                ),
+            this.purpose = makeSpendingPurpose(
                 id
             )
         }
 
         this.tx.inputs.push(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
-                    new Value(2_000_000, token),
-                    TxOutputDatum.Inline(castPortfolio.toUplcData(portfolio))
+                    makeValue(2_000_000, token),
+                    makeInlineTxOutputDatum(castPortfolio.toUplcData(portfolio))
                 )
             )
         )
@@ -598,7 +590,7 @@ export class ScriptContextBuilder {
     }
 
     addPortfolioOutput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         datum?: UplcData
         portfolio?: PortfolioType
         token?: Assets
@@ -608,10 +600,10 @@ export class ScriptContextBuilder {
         const token = props?.token ?? makePortfolioToken()
 
         this.tx.outputs.push(
-            new TxOutput(
+            makeTxOutput(
                 address,
-                new Value(2_000_000, token),
-                TxOutputDatum.Inline(
+                makeValue(2_000_000, token),
+                makeInlineTxOutputDatum(
                     props?.datum ?? castPortfolio.toUplcData(portfolio)
                 )
             )
@@ -621,7 +613,7 @@ export class ScriptContextBuilder {
     }
 
     addPortfolioRef(props?: {
-        address?: Address
+        address?: ShelleyAddress
         portfolio?: PortfolioType
         token?: Assets
     }): ScriptContextBuilder {
@@ -631,12 +623,12 @@ export class ScriptContextBuilder {
         const token = props?.token ?? makePortfolioToken()
 
         this.addRefInput(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
-                    new Value(2_000_000, token),
-                    TxOutputDatum.Inline(castPortfolio.toUplcData(portfolio))
+                    makeValue(2_000_000, token),
+                    makeInlineTxOutputDatum(castPortfolio.toUplcData(portfolio))
                 )
             )
         )
@@ -659,7 +651,7 @@ export class ScriptContextBuilder {
     }
 
     addPriceInput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         price?: PriceType
         redeemer?: UplcData
         token?: Assets
@@ -670,19 +662,18 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = ScriptPurpose.Spending(
-                TxRedeemer.Spending(this.tx.inputs.length, props.redeemer),
+            this.purpose = makeSpendingPurpose(
                 id
             )
         }
 
         this.tx.inputs.push(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
-                    new Value(2_000_000, token),
-                    TxOutputDatum.Inline(castPrice.toUplcData(price))
+                    makeValue(2_000_000, token),
+                    makeInlineTxOutputDatum(castPrice.toUplcData(price))
                 )
             )
         )
@@ -691,7 +682,7 @@ export class ScriptContextBuilder {
     }
 
     addPriceOutput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         datum?: UplcData
         price?: PriceType
         token?: Assets
@@ -701,10 +692,10 @@ export class ScriptContextBuilder {
         const token = props?.token ?? makePriceToken()
 
         this.tx.outputs.push(
-            new TxOutput(
+            makeTxOutput(
                 address,
-                new Value(2_000_000, token),
-                TxOutputDatum.Inline(
+                makeValue(2_000_000, token),
+                makeInlineTxOutputDatum(
                     props?.datum ?? castPrice.toUplcData(price)
                 )
             )
@@ -714,7 +705,7 @@ export class ScriptContextBuilder {
     }
 
     addPriceRef(props?: {
-        address?: Address
+        address?: ShelleyAddress
         price?: PriceType
         token?: Assets
     }): ScriptContextBuilder {
@@ -724,12 +715,12 @@ export class ScriptContextBuilder {
         const token = props?.token ?? makePriceToken()
 
         return this.addRefInput(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
-                    new Value(2_000_000, token),
-                    TxOutputDatum.Inline(castPrice.toUplcData(price))
+                    makeValue(2_000_000, token),
+                    makeInlineTxOutputDatum(castPrice.toUplcData(price))
                 )
             )
         )
@@ -741,12 +732,12 @@ export class ScriptContextBuilder {
     }): ScriptContextBuilder {
         return this.addPriceInput({
             price: props?.price,
-            redeemer: new IntData(0)
+            redeemer: makeIntData(0)
         }).addPriceOutput({ price: props?.price })
     }
 
     addReimbursementInput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         datum?: ReimbursementType
         reimbursement?: ReimbursementType
         id?: IntLike
@@ -770,19 +761,18 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = ScriptPurpose.Spending(
-                TxRedeemer.Spending(this.tx.inputs.length, props.redeemer),
+            this.purpose = makeSpendingPurpose(
                 id
             )
         }
 
         this.tx.inputs.push(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
-                    new Value(2_000_000, tokens),
-                    TxOutputDatum.Inline(castReimbursement.toUplcData(datum))
+                    makeValue(2_000_000, tokens),
+                    makeInlineTxOutputDatum(castReimbursement.toUplcData(datum))
                 )
             )
         )
@@ -791,7 +781,7 @@ export class ScriptContextBuilder {
     }
 
     addReimbursementOutput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         datum?: UplcData | ReimbursementType
         reimbursement?: ReimbursementType
         id?: IntLike
@@ -815,10 +805,10 @@ export class ScriptContextBuilder {
         }
 
         return this.addOutput(
-            new TxOutput(
+            makeTxOutput(
                 address,
-                new Value(2_000_000, token),
-                TxOutputDatum.Inline(
+                makeValue(2_000_000, token),
+                makeInlineTxOutputDatum(
                     "kind" in datum
                         ? datum
                         : castReimbursement.toUplcData(datum)
@@ -870,7 +860,7 @@ export class ScriptContextBuilder {
     }
 
     addSupplyInput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         redeemer?: AssetPtrType[]
         supply?: SupplyType
         token?: Assets
@@ -879,25 +869,21 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
         const supply = props?.supply ?? makeSupply()
         const supplyToken = props?.token ?? makeSupplyToken()
-        const value = new Value(2_000_000n, supplyToken)
+        const value = makeValue(2_000_000n, supplyToken)
 
         if (props?.redeemer) {
-            this.purpose = ScriptPurpose.Spending(
-                TxRedeemer.Spending(
-                    this.tx.inputs.length,
-                    castAssetPtrs.toUplcData(props.redeemer)
-                ),
+            this.purpose = makeSpendingPurpose(
                 id
             )
         }
 
         this.tx.inputs.push(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
                     value,
-                    TxOutputDatum.Inline(castSupply.toUplcData(supply))
+                    makeInlineTxOutputDatum(castSupply.toUplcData(supply))
                 )
             )
         )
@@ -906,20 +892,20 @@ export class ScriptContextBuilder {
     }
 
     addSupplyOutput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         supply?: UplcData | SupplyType
         token?: Assets
     }): ScriptContextBuilder {
         const address = props?.address ?? Addresses.supplyValidator
         const supply = props?.supply ?? makeSupply()
         const supplyToken = props?.token ?? makeSupplyToken()
-        const value = new Value(2_000_000n, supplyToken)
+        const value = makeValue(2_000_000n, supplyToken)
 
         this.tx.outputs.push(
-            new TxOutput(
+            makeTxOutput(
                 address,
                 value,
-                TxOutputDatum.Inline(
+                makeInlineTxOutputDatum(
                     "kind" in supply ? supply : castSupply.toUplcData(supply)
                 )
             )
@@ -930,7 +916,7 @@ export class ScriptContextBuilder {
 
     addSupplyRef(
         props?: {
-            address?: Address
+            address?: ShelleyAddress
             supply?: SupplyType
             token?: Assets
         },
@@ -946,12 +932,12 @@ export class ScriptContextBuilder {
         const token = props?.token ?? makeSupplyToken()
 
         this.addRefInput(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
-                    new Value(2_000_000, token),
-                    TxOutputDatum.Inline(castSupply.toUplcData(supply))
+                    makeValue(2_000_000, token),
+                    makeInlineTxOutputDatum(castSupply.toUplcData(supply))
                 )
             )
         )
@@ -960,8 +946,8 @@ export class ScriptContextBuilder {
     }
 
     addSupplyThread(props?: {
-        inputAddress?: Address
-        outputAddress?: Address
+        inputAddress?: ShelleyAddress
+        outputAddress?: ShelleyAddress
         redeemer?: AssetPtrType[]
         supply?: SupplyType
         inputSupply?: SupplyType
@@ -985,7 +971,7 @@ export class ScriptContextBuilder {
     }
 
     addVoucherInput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         id?: IntLike
         redeemer?: UplcData
         token?: Assets
@@ -997,8 +983,7 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = ScriptPurpose.Spending(
-                TxRedeemer.Spending(this.tx.inputs.length, props.redeemer),
+            this.purpose = makeSpendingPurpose(
                 id
             )
         }
@@ -1006,12 +991,12 @@ export class ScriptContextBuilder {
         const datum = wrapVoucher(voucher)
 
         this.tx.inputs.push(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(
+                makeTxOutput(
                     address,
-                    new Value(2_000_000, token),
-                    TxOutputDatum.Inline(castVoucherWrapper.toUplcData(datum))
+                    makeValue(2_000_000, token),
+                    makeInlineTxOutputDatum(castVoucherWrapper.toUplcData(datum))
                 )
             )
         )
@@ -1020,7 +1005,7 @@ export class ScriptContextBuilder {
     }
 
     addVoucherOutput(props?: {
-        address?: Address
+        address?: ShelleyAddress
         datum?: UplcData
         id?: IntLike
         token?: Assets
@@ -1033,10 +1018,10 @@ export class ScriptContextBuilder {
         const datum = wrapVoucher(voucher)
 
         return this.addOutput(
-            new TxOutput(
+            makeTxOutput(
                 address,
-                new Value(2_000_000, token),
-                TxOutputDatum.Inline(
+                makeValue(2_000_000, token),
+                makeInlineTxOutputDatum(
                     props?.datum ?? castVoucherWrapper.toUplcData(datum)
                 )
             )
@@ -1051,14 +1036,13 @@ export class ScriptContextBuilder {
             return this
         }
 
-        const prev = this.tx.minted ?? new Assets()
+        const prev = this.tx.minted ?? makeAssets()
 
         if (props?.redeemer) {
             const mph =
-                props?.assets?.assets?.[0]?.[0] ?? MintingPolicyHash.dummy()
+                props?.assets?.assets?.[0]?.[0] ?? makeDummyMintingPolicyHash()
 
-            this.purpose = ScriptPurpose.Minting(
-                TxRedeemer.Minting(prev.assets.length, props.redeemer),
+            this.purpose = makeMintingPurpose(
                 mph
             )
         }
@@ -1081,9 +1065,8 @@ export class ScriptContextBuilder {
         this.reward({ hash, redeemer: castRatio.toUplcData(redeemer) })
 
         if (props?.isMainPurpose) {
-            this.purpose = ScriptPurpose.Rewarding(
-                TxRedeemer.Rewarding(0, new ListData([new IntData(redeemer[0]), new IntData(redeemer[1])])),
-                StakingCredential.new(hash)
+            this.purpose = makeRewardingPurpose(
+                hash
             )
         }
 
@@ -1095,7 +1078,7 @@ export class ScriptContextBuilder {
         redeemer?: UplcData
     }): ScriptContextBuilder {
         const hash = props?.hash ?? contract.oracle_delegate.$hash
-        const redeemer = props?.redeemer ?? new IntData(0)
+        const redeemer = props?.redeemer ?? makeIntData(0)
 
         return this.reward({ hash, redeemer })
     }
@@ -1103,8 +1086,8 @@ export class ScriptContextBuilder {
     observeDummy(props?: {
         hash?: StakingValidatorHash
     }): ScriptContextBuilder {
-        const hash = props?.hash ?? StakingValidatorHash.dummy()
-        const redeemer = new IntData(0)
+        const hash = props?.hash ?? makeDummyStakingValidatorHash()
+        const redeemer = makeIntData(0)
 
         return this.reward({ hash, redeemer })
     }
@@ -1118,7 +1101,7 @@ export class ScriptContextBuilder {
         }
 
         const hash = props?.hash ?? contract.governance_delegate.$hash
-        const redeemer = props?.redeemer ?? new IntData(0)
+        const redeemer = props?.redeemer ?? makeIntData(0)
 
         return this.reward({ hash, redeemer })
     }
@@ -1126,9 +1109,9 @@ export class ScriptContextBuilder {
     redeemDummyTokenWithDvpPolicy(props?: { qty?: number }) {
         const tokenName = generateBytes(rand(0), 32)
         const qty = props?.qty ?? 1n
-        const value = new Value(2_000_000, [[policy, [[tokenName, qty]]]])
+        const value = makeValue(2_000_000, [[policy, [[tokenName, qty]]]])
 
-        return this.addDummyInput({ redeemer: new IntData(0), value: value })
+        return this.addDummyInput({ redeemer: makeIntData(0), value: value })
     }
 
     reward(props: {
@@ -1138,9 +1121,9 @@ export class ScriptContextBuilder {
         const r = this.tx.redeemers ?? []
         const w = this.tx.withdrawals ?? []
 
-        r.push(TxRedeemer.Rewarding(w.length, props.redeemer))
+        r.push(makeTxRewardingRedeemer(w.length, props.redeemer))
 
-        w.push([StakingAddress.fromHash(false, props.hash), 0])
+        w.push([makeStakingAddress(false, props.hash), 0])
 
         this.tx.redeemers = r
         this.tx.withdrawals = w
@@ -1152,38 +1135,37 @@ export class ScriptContextBuilder {
         datum?: UplcData
         value?: Value
     }): ScriptContextBuilder {
-        const datum = props?.datum ?? new ByteArrayData([])
-        const value = props?.value ?? new Value(2_000_000)
+        const datum = props?.datum ?? makeByteArrayData([])
+        const value = props?.value ?? makeValue(2_000_000)
 
         this.tx.outputs.push(
-            new TxOutput(Addresses.vault, value, TxOutputDatum.Inline(datum))
+            makeTxOutput(Addresses.vault, value, makeInlineTxOutputDatum(datum))
         )
 
         return this
     }
 
     takeFromVault(props?: {
-        address?: Address
+        address?: ShelleyAddress
         datum?: UplcData
         redeemer?: UplcData
         value?: Value
     }): ScriptContextBuilder {
         const address = props?.address ?? Addresses.vault
-        const datum = props?.datum ?? new ByteArrayData([])
-        const value = props?.value ?? new Value(2_000_000)
+        const datum = props?.datum ?? makeByteArrayData([])
+        const value = props?.value ?? makeValue(2_000_000)
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = ScriptPurpose.Spending(
-                TxRedeemer.Spending(this.tx.inputs.length, props.redeemer),
+            this.purpose = makeSpendingPurpose(
                 id
             )
         }
 
         this.tx.inputs.push(
-            new TxInput(
+            makeTxInput(
                 id,
-                new TxOutput(address, value, TxOutputDatum.Inline(datum))
+                makeTxOutput(address, value, makeInlineTxOutputDatum(datum))
             )
         )
 
@@ -1194,7 +1176,7 @@ export class ScriptContextBuilder {
         start?: number
         end?: number
     }): ScriptContextBuilder {
-        this.tx.validityTimerange = new TimeRange(
+        this.tx.validityTimerange = makeTimeRange(
             args?.start ?? Number.NEGATIVE_INFINITY,
             args?.end ?? Number.POSITIVE_INFINITY
         )
@@ -1204,11 +1186,11 @@ export class ScriptContextBuilder {
 
     build(): UplcData {
         if (!this.purpose) {
-            this.addDummyInput({ redeemer: new IntData(0) })
+            this.addDummyInput({ redeemer: makeIntData(0) })
         }
 
-        const purpose = expectSome(this.purpose)
-        const ctx = new ScriptContextV2(this.tx, purpose)
+        const purpose = expectDefined(this.purpose)
+        const ctx = makeScriptContextV2(this.tx, purpose)
 
         return ctx.toUplcData()
     }
@@ -1223,7 +1205,7 @@ export class ScriptContextBuilder {
             outputs: this.tx.outputs.slice(),
             fee: this.tx.fee,
             minted: this.tx.minted
-                ? new Assets(this.tx.minted.assets.slice())
+                ? makeAssets(this.tx.minted.assets.slice())
                 : undefined,
             dcerts: this.tx.dcerts?.slice(),
             withdrawals: this.tx.withdrawals?.slice(),

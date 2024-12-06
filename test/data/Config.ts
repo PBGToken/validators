@@ -1,7 +1,7 @@
 import { strictEqual } from "node:assert"
-import { IntLike } from "@helios-lang/codec-utils"
-import { PermissiveType, StrictType } from "@helios-lang/contract-utils"
-import { PubKeyHash, StakingValidatorHash } from "@helios-lang/ledger"
+import { type IntLike } from "@helios-lang/codec-utils"
+import { type PermissiveType, type StrictType } from "@helios-lang/contract-utils"
+import { makeDummyPubKeyHash, type PubKeyHash, type StakingValidatorHash } from "@helios-lang/ledger"
 import contract from "pbg-token-validators-test-context"
 
 export const castConfigChangeProposal =
@@ -53,7 +53,7 @@ export function makeConfig(props?: {
     )
 
     return {
-        agent: props?.agent ?? PubKeyHash.dummy(99999),
+        agent: props?.agent ?? makeDummyPubKeyHash(99999),
         fees: {
             mint_fee: {
                 relative: props?.mintFee?.relative ?? 0,

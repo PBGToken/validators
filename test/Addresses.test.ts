@@ -23,56 +23,56 @@ const {
 describe("Addresses", () => {
     it("metadata", () => {
         strictEqual(
-            metadata.eval({}).toBech32(),
+            metadata.eval({}).toString(),
             Addresses.metadataValidator.toBech32()
         )
     })
 
     it("assets", () => {
         strictEqual(
-            assets.eval({}).toBech32(),
+            assets.eval({}).toString(),
             Addresses.assetsValidator.toBech32()
         )
     })
 
     it("config", () => {
         strictEqual(
-            config.eval({}).toBech32(),
+            config.eval({}).toString(),
             Addresses.configValidator.toBech32()
         )
     })
 
     it("portfolio", () => {
         strictEqual(
-            portfolio.eval({}).toBech32(),
+            portfolio.eval({}).toString(),
             Addresses.portfolioValidator.toBech32()
         )
     })
 
     it("price", () => {
         strictEqual(
-            price.eval({}).toBech32(),
+            price.eval({}).toString(),
             Addresses.priceValidator.toBech32()
         )
     })
 
     it("reimbursement", () => {
         strictEqual(
-            reimbursement.eval({}).toBech32(),
+            reimbursement.eval({}).toString(),
             Addresses.reimbursementValidator.toBech32()
         )
     })
 
     it("supply", () => {
         strictEqual(
-            supply.eval({}).toBech32(),
+            supply.eval({}).toString(),
             Addresses.supplyValidator.toBech32()
         )
     })
 
     it("voucher", () => {
         strictEqual(
-            voucher.eval({}).toBech32(),
+            voucher.eval({}).toString(),
             Addresses.voucherValidator.toBech32()
         )
     })
@@ -89,7 +89,7 @@ describe("Addresses::vault", () => {
                                 $currentScript: currentScript,
                                 $scriptContext: ctx
                             })
-                            .toBech32(),
+                            .toString(),
                         Addresses.vault.toBech32()
                     )
                 })
@@ -109,7 +109,7 @@ describe("Addresses::vault", () => {
                                     $currentScript: currentScript,
                                     $scriptContext: ctx
                                 })
-                                .toBech32(),
+                                .toString(),
                             Addresses.vault.toBech32()
                         )
                     })

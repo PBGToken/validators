@@ -2,8 +2,8 @@ import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { dummyBytes } from "@helios-lang/codec-utils"
 import { blake2b } from "@helios-lang/crypto"
-import { PubKeyHash } from "@helios-lang/ledger"
-import { IntData } from "@helios-lang/uplc"
+import { makePubKeyHash } from "@helios-lang/ledger"
+import { makeIntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
 import {
@@ -19,7 +19,7 @@ const { main } = contract.metadata_validator
 
 describe("metadata_validator::main", () => {
     const metadata = makeMetadata()
-    const redeemer = new IntData(0)
+    const redeemer = makeIntData(0)
     const actualHash = blake2b(castMetadata.toUplcData(metadata).toCbor())
 
     const configureContext = (props?: {
@@ -71,7 +71,7 @@ describe("metadata_validator::main", () => {
         configureContext({
             proposal: {
                 ChangingAgent: {
-                    agent: new PubKeyHash(actualHash.slice(0, 28))
+                    agent: makePubKeyHash(actualHash.slice(0, 28))
                 }
             }
         }).use((ctx) => {

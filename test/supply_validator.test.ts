@@ -1,18 +1,19 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { IntLike } from "@helios-lang/codec-utils"
+import { type IntLike } from "@helios-lang/codec-utils"
 import {
-    AssetClass,
-    PubKeyHash,
-    StakingValidatorHash,
-    Value
+    type PubKeyHash,
+    type StakingValidatorHash,
+    makeDummyAssetClass,
+    makeDummyPubKeyHash,
+    makeDummyStakingValidatorHash,
+    makeValue
 } from "@helios-lang/ledger"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
 import {
     ConfigStateType,
     RatioType,
-    SuccessFeeType,
     SupplyType,
     makeAsset,
     makeAssetPtr,
@@ -105,7 +106,7 @@ describe("charge the success fee by diluting the token supply", () => {
             ratio: endPrice,
             timestamp: props?.priceTimestamp ?? 1000
         })
-        const agent = PubKeyHash.dummy(12)
+        const agent = makeDummyPubKeyHash(12)
         const successFee = makeSuccessFee({
             c0: 0,
             steps: [{ c: 0.3, sigma: 1.05 }]
@@ -298,7 +299,7 @@ describe("charge the success fee by diluting the token supply", () => {
         })
 
         it("supply_validator::validate_reward_success #11 (returns true if the config UTxO is spent and new supply start price is correctly set using the new benchmark)", () => {
-            const benchmark = StakingValidatorHash.dummy(12)
+            const benchmark = makeDummyStakingValidatorHash(12)
             const supply1 = configureSupply1({
                 startPrice: [280, 1],
                 periodDuration: 2000
@@ -329,7 +330,7 @@ describe("charge the success fee by diluting the token supply", () => {
         })
 
         it("supply_validator::validate_reward_success #12 (throws an error if the config UTxO is spent but the new supply success fee period duration isn't set correctly)", () => {
-            const benchmark = StakingValidatorHash.dummy(12)
+            const benchmark = makeDummyStakingValidatorHash(12)
             const supply1 = configureSupply1({
                 startPrice: [280, 1],
                 periodDuration: 2001
@@ -362,7 +363,7 @@ describe("charge the success fee by diluting the token supply", () => {
         })
 
         it("supply_validator::validate_reward_success #13 (throws an error if the config UTxO is spent but the new supply success start price isn't set correctly)", () => {
-            const benchmark = StakingValidatorHash.dummy(12)
+            const benchmark = makeDummyStakingValidatorHash(12)
             const supply1 = configureSupply1({
                 startPrice: [281, 1],
                 periodDuration: 2000
@@ -444,7 +445,7 @@ describe("charge the success fee by diluting the token supply", () => {
                         proposal_timestamp: 0,
                         proposal: {
                             AddingAssetClass: {
-                                asset_class: AssetClass.dummy()
+                                asset_class: makeDummyAssetClass()
                             }
                         }
                     }
@@ -465,7 +466,7 @@ describe("charge the success fee by diluting the token supply", () => {
                         proposal: {
                             UpdatingSuccessFee: {
                                 fee: makeSuccessFee(),
-                                benchmark: StakingValidatorHash.dummy(),
+                                benchmark: makeDummyStakingValidatorHash(),
                                 period: 1000
                             }
                         }
@@ -537,7 +538,7 @@ describe("charge the success fee by diluting the token supply", () => {
         })
 
         it("supply_validator::main #02 (throws an error if not signed by the correct agent)", () => {
-            configureContext({ signingAgent: PubKeyHash.dummy(4) }).use(
+            configureContext({ signingAgent: makeDummyPubKeyHash(4) }).use(
                 (ctx) => {
                     throws(() => {
                         main.eval({
@@ -678,7 +679,7 @@ describe("charge the management fee by diluting the token supply", () => {
         timeOffset?: number
         signingAgent?: PubKeyHash
     }) => {
-        const agent = PubKeyHash.dummy(12)
+        const agent = makeDummyPubKeyHash(12)
         const config = makeConfig({
             relManagementFee: 0.0001,
             managementFeePeriod: defaultManagementFeePeriod,
@@ -895,7 +896,7 @@ describe("charge the management fee by diluting the token supply", () => {
         })
 
         it("supply_validator::main #10 (throws an error if signed by the wrong agent)", () => {
-            configureContext({ signingAgent: PubKeyHash.dummy(4) }).use(
+            configureContext({ signingAgent: makeDummyPubKeyHash(4) }).use(
                 (ctx) => {
                     throws(() => {
                         main.eval({
@@ -1023,7 +1024,7 @@ describe("supply_validator::validate_mint_user_tokens", () => {
                 .mint({ assets: makeVoucherPair(voucherId) })
                 .addVoucherOutput({ id: voucherId, voucher })
                 .sendToVault({
-                    value: new Value(props?.lovelaceToVault ?? 100_000_000)
+                    value: makeValue(props?.lovelaceToVault ?? 100_000_000)
                 })
                 .addSupplyInput({ supply: supply0, redeemer: [] })
         }
@@ -1242,7 +1243,7 @@ describe("supply_validator::validate_burn_user_tokens", () => {
                 .mint({ assets: makeVoucherPair(voucherId, -1) })
                 .addVoucherInput({ id: voucherId, voucher })
                 .takeFromVault({
-                    value: new Value(props?.lovelaceFromVault ?? 100_000_000)
+                    value: makeValue(props?.lovelaceFromVault ?? 100_000_000)
                 })
                 .addSupplyInput({ supply: supply0, redeemer: [] })
                 .addReimbursementInput({ id: props?.reimbursementId ?? 0 })
@@ -1429,7 +1430,7 @@ describe("supply_validator::validate_swap", () => {
             return new ScriptContextBuilder()
                 .addConfigRef({ config })
                 .setTimeRange({ end: 100 })
-                .sendToVault({ value: new Value(100_000_000) })
+                .sendToVault({ value: makeValue(100_000_000) })
                 .addSupplyInput({ supply: supply0, redeemer: [] })
         }
         const defaultTestArgs = {
@@ -1452,7 +1453,7 @@ describe("supply_validator::validate_swap", () => {
 
         it("supply_validator::validate_swap #02 (throws an error if more is taken from vault)", () => {
             configureContext()
-                .takeFromVault({ value: new Value(100_000_001) })
+                .takeFromVault({ value: makeValue(100_000_001) })
                 .use((ctx) => {
                     throws(() => {
                         validate_swap.eval({

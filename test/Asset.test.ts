@@ -1,6 +1,6 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { AssetClass } from "@helios-lang/ledger"
+import { makeDummyAssetClass } from "@helios-lang/ledger"
 import contract from "pbg-token-validators-test-context"
 import { makeAsset, equalsAsset } from "./data"
 
@@ -11,7 +11,7 @@ const {
 } = contract.AssetModule
 
 describe("AssetModule::Asset::new", () => {
-    const ac = AssetClass.dummy(1)
+    const ac = makeDummyAssetClass(1)
     const expected = makeAsset({
         assetClass: ac,
         count: 0,
@@ -33,7 +33,7 @@ describe("AssetModule::Asset::convert_asset_to_lovelace", () => {
         strictEqual(
             convert_asset_to_lovelace.eval({
                 self: makeAsset({
-                    assetClass: AssetClass.dummy(1),
+                    assetClass: makeDummyAssetClass(1),
                     count: 1_000_000_000n,
                     price: [100, 99]
                 }),
@@ -60,7 +60,7 @@ describe("AssetModule::Asset::calc_value", () => {
         strictEqual(
             calc_value.eval({
                 self: makeAsset({
-                    assetClass: AssetClass.dummy(1),
+                    assetClass: makeDummyAssetClass(1),
                     count: 1_000_000_000n,
                     price: [100, 99]
                 })

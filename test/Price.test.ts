@@ -1,7 +1,7 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { Address, Assets } from "@helios-lang/ledger"
-import { ByteArrayData, IntData, ListData, UplcData } from "@helios-lang/uplc"
+import { type ShelleyAddress, type Assets, makeDummyAddress } from "@helios-lang/ledger"
+import { expectListData, makeByteArrayData, makeIntData, type UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { scripts as allScripts } from "./constants"
 import { castPrice, makeConfig, makePrice } from "./data"
@@ -30,7 +30,7 @@ describe("PriceModule::Price::find", () => {
     const price = makePrice()
 
     const configureParentContext = (props?: {
-        address?: Address
+        address?: ShelleyAddress
         redeemer?: UplcData
         refer?: boolean
         token?: Assets
@@ -65,7 +65,7 @@ describe("PriceModule::Price::find", () => {
         ])
 
         it("returns the price data if the price UTxO is the current input", () => {
-            configureContext({ redeemer: new IntData(0) }).use(
+            configureContext({ redeemer: makeIntData(0) }).use(
                 (currentScript, ctx) => {
                     deepEqual(
                         find.eval({
@@ -121,7 +121,7 @@ describe("PriceModule::Price::find", () => {
         })
 
         it("throws an error if the price UTxO is spent", () => {
-            configureContext({ redeemer: new IntData(0) }).use(
+            configureContext({ redeemer: makeIntData(0) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
                         find.eval({
@@ -148,7 +148,7 @@ describe("PriceModule::Price::find", () => {
 
         it("throws an error if the referenced price UTxO isn't at the price_validator address", () => {
             configureContext({
-                address: Address.dummy(false),
+                address: makeDummyAddress(false),
                 refer: true
             }).use((currentScript, ctx) => {
                 throws(() => {
@@ -169,7 +169,7 @@ describe("PriceModule::Price::find_input", () => {
         it("returns the price data if the price UTxO is the current input", () => {
             new ScriptContextBuilder()
                 .addPriceInput({
-                    redeemer: new IntData(0),
+                    redeemer: makeIntData(0),
                     price
                 })
                 .use((ctx) => {
@@ -229,7 +229,7 @@ describe("PriceModule::Price::find_input", () => {
             new ScriptContextBuilder()
                 .addPriceInput({
                     price,
-                    address: Address.dummy(false)
+                    address: makeDummyAddress(false)
                 })
                 .redeemDummyTokenWithDvpPolicy()
                 .use((ctx) => {
@@ -270,7 +270,7 @@ describe("PriceModule::Price::find_output", () => {
     const price = makePrice()
 
     const configureParentContext = (props?: {
-        address?: Address
+        address?: ShelleyAddress
         datum?: UplcData
         token?: Assets
     }) => {
@@ -313,7 +313,7 @@ describe("PriceModule::Price::find_output", () => {
         })
 
         it("throws an error if the price UTxO output isn't sent to the price_validator address", () => {
-            configureContext({ address: Address.dummy(false) }).use(
+            configureContext({ address: makeDummyAddress(false) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
                         find_output.eval({
@@ -326,8 +326,8 @@ describe("PriceModule::Price::find_output", () => {
         })
 
         it("throws an error if the value denominator is zero", () => {
-            const datum = ListData.expect(castPrice.toUplcData(price))
-            ListData.expect(datum.items[0]).items[1] = new IntData(0)
+            const datum = expectListData(castPrice.toUplcData(price))
+            expectListData(datum.items[0]).items[1] = makeIntData(0)
 
             configureContext({ datum }).use((currentScript, ctx) => {
                 throws(() => {
@@ -340,8 +340,8 @@ describe("PriceModule::Price::find_output", () => {
         })
 
         it("throws an error if the value denominator is negative", () => {
-            const datum = ListData.expect(castPrice.toUplcData(price))
-            ListData.expect(datum.items[0]).items[1] = new IntData(-1)
+            const datum = expectListData(castPrice.toUplcData(price))
+            expectListData(datum.items[0]).items[1] = makeIntData(-1)
 
             configureContext({ datum }).use((currentScript, ctx) => {
                 throws(() => {
@@ -354,8 +354,8 @@ describe("PriceModule::Price::find_output", () => {
         })
 
         it("throws an error if the datum listData contains an additional field", () => {
-            const datum = ListData.expect(castPrice.toUplcData(price))
-            datum.items.push(new IntData(0))
+            const datum = expectListData(castPrice.toUplcData(price))
+            datum.items.push(makeIntData(0))
 
             configureContext({ datum }).use((currentScript, ctx) => {
                 throws(() => {
@@ -368,8 +368,8 @@ describe("PriceModule::Price::find_output", () => {
         })
 
         it("throws an error the datum listData time field isn't iData", () => {
-            const datum = ListData.expect(castPrice.toUplcData(price))
-            datum.items[1] = new ByteArrayData([])
+            const datum = expectListData(castPrice.toUplcData(price))
+            datum.items[1] = makeByteArrayData([])
 
             configureContext({ datum }).use((currentScript, ctx) => {
                 throws(() => {
@@ -429,7 +429,7 @@ describe("PriceModule::Price::find_ref", () => {
             new ScriptContextBuilder()
                 .addPriceRef({
                     price,
-                    address: Address.dummy(false)
+                    address: makeDummyAddress(false)
                 })
                 .redeemDummyTokenWithDvpPolicy()
                 .use((ctx) => {
@@ -454,7 +454,7 @@ describe("PriceModule::Price::find_thread", () => {
             new ScriptContextBuilder()
                 .addPriceThread({
                     price,
-                    redeemer: new IntData(0)
+                    redeemer: makeIntData(0)
                 })
                 .use((ctx) => {
                     allScripts.forEach((currentScript) => {

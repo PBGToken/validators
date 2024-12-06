@@ -1,6 +1,6 @@
 import { strictEqual } from "node:assert"
 import { describe, it } from "node:test"
-import { IntData, ListData } from "@helios-lang/uplc"
+import { makeIntData, makeListData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { makeSuccessFee } from "./data"
 
@@ -217,14 +217,14 @@ describe("SuccessFeeModule::calc_alpha", () => {
     })
 
     it("SuccessFeeModule::calc_alpha #02 (correct ratio division (evalUnsafe))", () => {
-        const startPrice = new ListData([
-            new IntData(200_000_000),
-            new IntData(1_000_000)
+        const startPrice = makeListData([
+            makeIntData(200_000_000),
+            makeIntData(1_000_000)
         ])
 
-        const endPrice = new ListData([
-            new IntData(200_000_000),
-            new IntData(1_000_000)
+        const endPrice = makeListData([
+            makeIntData(200_000_000),
+            makeIntData(1_000_000)
         ])
 
         strictEqual(

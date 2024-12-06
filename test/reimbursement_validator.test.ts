@@ -1,14 +1,16 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { IntLike } from "@helios-lang/codec-utils"
+import { type IntLike } from "@helios-lang/codec-utils"
 import {
-    Address,
-    AssetClass,
-    Assets,
-    PubKeyHash,
-    Value
+    type Assets,
+    makeAssets,
+    makeDummyAddress,
+    makeDummyAssetClass,
+    makeDummyPubKeyHash,
+    makeValue,
+    type PubKeyHash,
 } from "@helios-lang/ledger"
-import { ByteArrayData, IntData, UplcData } from "@helios-lang/uplc"
+import { makeByteArrayData, makeIntData, type UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
 import {
@@ -60,8 +62,8 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
             const voucherId1 = 1
             const voucherId2 = 2
 
-            const voucherAddr0 = Address.dummy(false, voucherId0)
-            const voucherDatum0 = new IntData(voucherId0)
+            const voucherAddr0 = makeDummyAddress(false, voucherId0)
+            const voucherDatum0 = makeIntData(voucherId0)
             const voucher0 = makeVoucher({
                 periodId,
                 price: [120, 1],
@@ -70,8 +72,8 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                 tokens: 1_000_000
             })
             const expectedReim0 = 50153
-            const voucherAddr1 = Address.dummy(false, voucherId1)
-            const voucherDatum1 = new IntData(voucherId1)
+            const voucherAddr1 = makeDummyAddress(false, voucherId1)
+            const voucherDatum1 = makeIntData(voucherId1)
             const voucher1 = makeVoucher({
                 periodId,
                 price: [125, 1],
@@ -80,8 +82,8 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                 tokens: 2_000_000
             })
             const expectedReim1 = 123946
-            const voucherAddr2 = Address.dummy(false, voucherId2)
-            const voucherDatum2 = new IntData(voucherId2)
+            const voucherAddr2 = makeDummyAddress(false, voucherId2)
+            const voucherDatum2 = makeIntData(voucherId2)
             const voucher2 = makeVoucher({
                 periodId: props?.thirdVoucherPeriodId ?? periodId,
                 price: [115, 1],
@@ -95,7 +97,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                 .addReimbursementInput({
                     id: periodId,
                     reimbursement,
-                    redeemer: new IntData(0)
+                    redeemer: makeIntData(0)
                 })
                 .mint({ assets: makeVoucherRefToken(voucherId0, -1) })
                 .mint({ assets: makeVoucherRefToken(voucherId1, -1) })
@@ -115,17 +117,17 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
                 .addOutput({
                     address: voucherAddr0,
                     datum: voucherDatum0,
-                    value: new Value(0, makeDvpTokens(expectedReim0))
+                    value: makeValue(0, makeDvpTokens(expectedReim0))
                 })
                 .addOutput({
                     address: voucherAddr1,
                     datum: voucherDatum1,
-                    value: new Value(0, makeDvpTokens(expectedReim1))
+                    value: makeValue(0, makeDvpTokens(expectedReim1))
                 })
                 .addOutput({
                     address: voucherAddr2,
                     datum: props?.thirdReturnDatum ?? voucherDatum2,
-                    value: new Value(0, makeDvpTokens(expectedReim2))
+                    value: makeValue(0, makeDvpTokens(expectedReim2))
                 })
                 .addConfigRef()
         }
@@ -216,7 +218,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
         })
 
         it("reimbursement_validator::validate_burned_vouchers #06 (throws an error if a voucher datum doesn't match)", () => {
-            configureContext({ thirdReturnDatum: new ByteArrayData([]) }).use(
+            configureContext({ thirdReturnDatum: makeByteArrayData([]) }).use(
                 (ctx) => {
                     throws(() => {
                         validate_burned_vouchers.eval({
@@ -229,7 +231,7 @@ describe("reimbursement_validator::validate_burned_vouchers", () => {
         })
 
         it("reimbursement_validator::validate_burned_vouchers #07 (throws an error if the pointers are in the wrong order)", () => {
-            configureContext({ thirdReturnDatum: new ByteArrayData([]) }).use(
+            configureContext({ thirdReturnDatum: makeByteArrayData([]) }).use(
                 (ctx) => {
                     throws(() => {
                         validate_burned_vouchers.eval({
@@ -262,7 +264,7 @@ describe("reimbursement_validator::sum_net_tokens", () => {
             .addDummyOutputs(10)
             .redeemDummyTokenWithDvpPolicy()
             .mint({
-                assets: Assets.fromAssetClasses([[AssetClass.dummy(), 10]])
+                assets: makeAssets([[makeDummyAssetClass(), 10]])
             })
             .use((ctx) => {
                 strictEqual(sum_net_tokens.eval({ $scriptContext: ctx }), 0n)
@@ -296,7 +298,7 @@ describe("reimbursement_validator::sum_net_tokens", () => {
 
     it("reimbursement_validator::sum_net_tokens #04 (returns a negative number if there are some dvp tokens in the inputs but more dvp tokens are burned)", () => {
         new ScriptContextBuilder()
-            .addDummyInput({ value: new Value(0, makeDvpTokens(10)) })
+            .addDummyInput({ value: makeValue(0, makeDvpTokens(10)) })
             .addDummyOutputs(10)
             .redeemDummyTokenWithDvpPolicy()
             .mint({ assets: makeDvpTokens(-1000) })
@@ -307,8 +309,8 @@ describe("reimbursement_validator::sum_net_tokens", () => {
 
     it("reimbursement_validator::sum_net_tokens #05 (the result is uninfluenced by dvp tokens in the outputs)", () => {
         new ScriptContextBuilder()
-            .addDummyInput({ value: new Value(0, makeDvpTokens(10)) })
-            .addDummyOutput({ value: new Value(0, makeDvpTokens(100000)) })
+            .addDummyInput({ value: makeValue(0, makeDvpTokens(10)) })
+            .addDummyOutput({ value: makeValue(0, makeDvpTokens(100000)) })
             .redeemDummyTokenWithDvpPolicy()
             .mint({ assets: makeDvpTokens(-1000) })
             .use((ctx) => {
@@ -319,7 +321,7 @@ describe("reimbursement_validator::sum_net_tokens", () => {
     it("reimbursement_validator::sum_net_tokens #06 (returns the number of dvp tokens in the inputs if no dvp tokens are burned or minted)", () => {
         new ScriptContextBuilder()
             .addDummyInputs(10)
-            .addDummyInput({ value: new Value(0, makeDvpTokens(123)) })
+            .addDummyInput({ value: makeValue(0, makeDvpTokens(123)) })
             .redeemDummyTokenWithDvpPolicy()
             .use((ctx) => {
                 strictEqual(sum_net_tokens.eval({ $scriptContext: ctx }), 123n)
@@ -350,7 +352,7 @@ describe("reimbursement_validator::validate_start_extracting", () => {
 
         const b = new ScriptContextBuilder()
             .addReimbursementInput({
-                redeemer: new IntData(0),
+                redeemer: makeIntData(0),
                 id: 1,
                 reimbursement: makeCollectingReimbursement(),
                 nDvpTokens: props?.nInputDvpTokens ?? 0
@@ -651,12 +653,12 @@ describe("reimbursement_validator::main", () => {
             agent?: PubKeyHash | null
             burnVoucher?: boolean
         }) => {
-            const agent = PubKeyHash.dummy(10)
+            const agent = makeDummyPubKeyHash(10)
             const config = makeConfig({ agent })
 
             const voucherId0 = 0
-            const voucherAddr0 = Address.dummy(false, voucherId0)
-            const voucherDatum0 = new IntData(voucherId0)
+            const voucherAddr0 = makeDummyAddress(false, voucherId0)
+            const voucherDatum0 = makeIntData(voucherId0)
             const voucher0 = makeVoucher({
                 price: [120, 1],
                 address: voucherAddr0,
@@ -670,7 +672,7 @@ describe("reimbursement_validator::main", () => {
                 .addConfigRef({ config })
                 .addReimbursementInput({
                     reimbursement,
-                    redeemer: new IntData(0)
+                    redeemer: makeIntData(0)
                 })
                 .mint({
                     assets:
@@ -685,7 +687,7 @@ describe("reimbursement_validator::main", () => {
                     .addOutput({
                         address: voucherAddr0,
                         datum: voucherDatum0,
-                        value: new Value(0, makeDvpTokens(expectedReim0))
+                        value: makeValue(0, makeDvpTokens(expectedReim0))
                     })
             }
 
@@ -787,7 +789,7 @@ describe("reimbursement_validator::main", () => {
             reimbursement0?: ReimbursementType
             reimbursement1?: ReimbursementType
         }) => {
-            const agent = PubKeyHash.dummy(10)
+            const agent = makeDummyPubKeyHash(10)
             const config = makeConfig({ agent })
 
             const reimbursement1 =
@@ -799,8 +801,8 @@ describe("reimbursement_validator::main", () => {
                 })
 
             const voucherId0 = 0
-            const voucherAddr0 = Address.dummy(false, voucherId0)
-            const voucherDatum0 = new IntData(voucherId0)
+            const voucherAddr0 = makeDummyAddress(false, voucherId0)
+            const voucherDatum0 = makeIntData(voucherId0)
             const voucher0 = makeVoucher({
                 periodId: props?.voucherPeriodId ?? periodId,
                 price: [120, 1],
@@ -820,7 +822,7 @@ describe("reimbursement_validator::main", () => {
                 .addReimbursementInput({
                     id: periodId,
                     reimbursement: props?.reimbursement0 ?? reimbursement0,
-                    redeemer: new IntData(0),
+                    redeemer: makeIntData(0),
                     extraTokens: makeDvpTokens(nTokens0)
                 })
                 .addReimbursementOutput({
@@ -835,7 +837,7 @@ describe("reimbursement_validator::main", () => {
                     .addOutput({
                         address: voucherAddr0,
                         datum: voucherDatum0,
-                        value: new Value(0, makeDvpTokens(expectedReim0))
+                        value: makeValue(0, makeDvpTokens(expectedReim0))
                     })
             }
 
@@ -873,7 +875,7 @@ describe("reimbursement_validator::main", () => {
         })
 
         it("reimbursement_validator::main #09 (throws an error if not signed by the correct agent)", () => {
-            configureContext({ signingAgent: PubKeyHash.dummy(11) }).use(
+            configureContext({ signingAgent: makeDummyPubKeyHash(11) }).use(
                 (ctx) => {
                     throws(() => {
                         main.eval({
@@ -1030,7 +1032,7 @@ describe("reimbursement_validator::main", () => {
             nextReim?: ReimbursementType
             spendConfig?: boolean
         }) => {
-            const agent = PubKeyHash.dummy(10)
+            const agent = makeDummyPubKeyHash(10)
             const successFee = makeSuccessFee()
             const config = makeConfig({ successFee, agent })
             const price = makePrice({
@@ -1046,7 +1048,7 @@ describe("reimbursement_validator::main", () => {
                         : (props?.signingAgent ?? agent)
                 )
                 .addReimbursementInput({
-                    redeemer: new IntData(0),
+                    redeemer: makeIntData(0),
                     id: 1,
                     reimbursement: reim0,
                     nDvpTokens: props?.nInputDvpTokens ?? 0

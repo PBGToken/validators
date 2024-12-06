@@ -1,12 +1,12 @@
 import { describe, it } from "node:test"
 import contract from "pbg-token-validators-test-context"
 import { ScriptContextBuilder } from "./tx"
-import { IntData } from "@helios-lang/uplc"
+import { IntData, makeIntData } from "@helios-lang/uplc"
 import { makeMetadata } from "./data"
 import { indirectPolicyScripts, scripts } from "./constants"
 import { deepEqual, throws } from "node:assert"
 import { makeConfigToken, makeMetadataToken } from "./tokens"
-import { Address } from "@helios-lang/ledger"
+import { Address, makeDummyAddress } from "@helios-lang/ledger"
 
 const {
     "Metadata::find_input": find_input,
@@ -23,7 +23,7 @@ describe("MetadataModule::Metadata::find_input", () => {
                 .addMetadataInput({
                     metadata,
                     token: makeMetadataToken(2),
-                    redeemer: new IntData(0)
+                    redeemer: makeIntData(0)
                 })
                 .use((ctx) => {
                     indirectPolicyScripts.forEach((currentScript) => {
@@ -43,7 +43,7 @@ describe("MetadataModule::Metadata::find_input", () => {
             new ScriptContextBuilder()
                 .addMetadataInput({
                     metadata,
-                    redeemer: new IntData(0)
+                    redeemer: makeIntData(0)
                 })
                 .use((ctx) => {
                     scripts.forEach((currentScript) => {
@@ -79,7 +79,7 @@ describe("MetadataModule::Metadata::find_input", () => {
                 .addMetadataInput({
                     metadata,
                     token: makeConfigToken(),
-                    redeemer: new IntData(0)
+                    redeemer: makeIntData(0)
                 })
                 .use((ctx) => {
                     scripts.forEach((currentScript) => {
@@ -97,8 +97,8 @@ describe("MetadataModule::Metadata::find_input", () => {
             new ScriptContextBuilder()
                 .addMetadataInput({
                     metadata,
-                    address: Address.dummy(false),
-                    redeemer: new IntData(0)
+                    address: makeDummyAddress(false),
+                    redeemer: makeIntData(0)
                 })
                 .use((ctx) => {
                     scripts.forEach((currentScript) => {
@@ -177,7 +177,7 @@ describe("MetadataModule::Metadata::find_output", () => {
             new ScriptContextBuilder()
                 .addMetadataOutput({
                     metadata,
-                    address: Address.dummy(false)
+                    address: makeDummyAddress(false)
                 })
                 .use((ctx) => {
                     scripts.forEach((currentScript) => {
@@ -201,7 +201,7 @@ describe("MetadataModule::Metadata::find_thread", () => {
             new ScriptContextBuilder()
                 .addMetadataThread({
                     metadata,
-                    redeemer: new IntData(0)
+                    redeemer: makeIntData(0)
                 })
                 .use((ctx) => {
                     scripts.forEach((currentScript) => {

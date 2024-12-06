@@ -1,8 +1,8 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { IntLike } from "@helios-lang/codec-utils"
-import { AssetClass, PubKeyHash } from "@helios-lang/ledger"
-import { IntData, ListData } from "@helios-lang/uplc"
+import { type IntLike } from "@helios-lang/codec-utils"
+import { makeDummyAssetClass, makeDummyPubKeyHash, type PubKeyHash } from "@helios-lang/ledger"
+import { makeIntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
 import {
@@ -50,7 +50,7 @@ describe("price_validator::main", () => {
             nTokens: props?.nTokens ?? 1000
         })
 
-        const agent = PubKeyHash.dummy(10)
+        const agent = makeDummyPubKeyHash(10)
         const config = makeConfig({ agent })
 
         return new ScriptContextBuilder()
@@ -58,14 +58,14 @@ describe("price_validator::main", () => {
             .addSigner(props?.signingAgent ?? agent)
             .addSupplyRef({ supply })
             .addConfigRef({ config })
-            .addPriceInput({ redeemer: new IntData(0), price })
+            .addPriceInput({ redeemer: makeIntData(0), price })
             .addPriceOutput({ price: props?.price ?? price })
     }
 
     const defaultTestArgs = {
         $datum: price,
         price0,
-        _: new IntData(0)
+        _: makeIntData(0)
     }
 
     it("price_validator::main #01 (succeeds if the price matches the ratio of the vault lovelace value and the number of tokens in circulation)", () => {
@@ -78,7 +78,7 @@ describe("price_validator::main", () => {
     })
 
     it("price_validator::main #02 (throws an error if not signed by the correct agent)", () => {
-        configureContext({ signingAgent: PubKeyHash.dummy(1) }).use((ctx) => {
+        configureContext({ signingAgent: makeDummyPubKeyHash(1) }).use((ctx) => {
             throws(() => {
                 main.eval({
                     $scriptContext: ctx,
@@ -116,7 +116,7 @@ describe("price_validator::main", () => {
 
     it("price_validator::main #05 (throws an error if the portfolio reduction state isn't TotalAssetValue)", () => {
         configureContext({
-            reductionMode: { DoesNotExist: { asset_class: AssetClass.dummy() } }
+            reductionMode: { DoesNotExist: { asset_class: makeDummyAssetClass() } }
         }).use((ctx) => {
             throws(() => {
                 main.eval({
@@ -158,7 +158,7 @@ describe("price_validator::main", () => {
         configureContext({
             nTokens: 0,
             price: makePrice({
-                ratio: price0.ratio,
+                ratio: price0.value,
                 timestamp: price.timestamp
             })
         }).use((ctx) => {

@@ -209,7 +209,7 @@ describe("TokenNames::parse_series", () => {
                 prefix: encodeUtf8(`${PREFIX} voucher `),
                 token_name: encodeUtf8(`${PREFIX} assets 10`)
             }),
-            null
+            undefined
         )
     })
 
@@ -301,7 +301,7 @@ describe("TokenNames::parse_assets", () => {
             parse_assets.eval({
                 token_name: encodeUtf8(`${PREFIX} voucher 10`)
             }),
-            null
+            undefined
         )
     })
 
@@ -342,7 +342,7 @@ describe("TokenNames::parse_assets", () => {
             parse_assets.eval({
                 token_name: encodeUtf8(`assets 1`)
             }),
-            null
+            undefined
         )
     })
 
@@ -351,7 +351,7 @@ describe("TokenNames::parse_assets", () => {
             parse_assets.eval({
                 token_name: encodeUtf8(`bPBG assets 1`)
             }),
-            null
+            undefined
         )
     })
 })
@@ -427,7 +427,7 @@ describe("TokenNames::parse_reimbursement", () => {
             parse_reimbursement.eval({
                 token_name: encodeUtf8(`${PREFIX} voucher 10`)
             }),
-            null
+            undefined
         )
     })
 
@@ -572,7 +572,7 @@ describe("TokenNames::parse_voucher_ref", () => {
             parse_voucher_ref.eval({
                 token_name: encodeUtf8(`${PREFIX} voucher -1`)
             }),
-            null
+            undefined
         )
     })
 
@@ -678,7 +678,7 @@ describe("TokenNames::parse_voucher_nft", () => {
             parse_voucher_nft.eval({
                 token_name: encodeUtf8(`${PREFIX} voucher -1`)
             }),
-            null
+            undefined
         )
     })
 

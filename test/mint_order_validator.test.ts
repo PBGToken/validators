@@ -1,8 +1,8 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { IntLike } from "@helios-lang/codec-utils"
-import { Address, PubKeyHash, Value } from "@helios-lang/ledger"
-import { IntData, ListData, UplcData } from "@helios-lang/uplc"
+import { type IntLike } from "@helios-lang/codec-utils"
+import { type ShelleyAddress, makeAddress, makeDummyAddress, makeDummyPubKeyHash, makeValue, type PubKeyHash } from "@helios-lang/ledger"
+import { makeIntData, makeListData, type UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
 import {
@@ -27,15 +27,15 @@ describe("mint_order_validator::main", () => {
             Cancel: {}
         }
 
-        const pkh = PubKeyHash.dummy(10)
-        const returnAddress = Address.fromHash(false, pkh)
+        const pkh = makeDummyPubKeyHash(10)
+        const returnAddress = makeAddress(false, pkh)
         const mintOrder = makeMintOrder({
             address: returnAddress
         })
 
         const configureContext = (props?: {
             pkh?: PubKeyHash
-            dummyInputAddr?: Address<any, any>
+            dummyInputAddr?: ShelleyAddress<any>
         }) => {
             const scb = new ScriptContextBuilder()
                 .addMintOrderInput({
@@ -66,7 +66,7 @@ describe("mint_order_validator::main", () => {
         })
 
         it("mint_order_validator::main #02 (throws an error if the tx isn't signed by the address pubkey)", () => {
-            configureContext({ pkh: PubKeyHash.dummy(1) }).use((ctx) => {
+            configureContext({ pkh: makeDummyPubKeyHash(1) }).use((ctx) => {
                 throws(() => {
                     main.eval({
                         $scriptContext: ctx,
@@ -79,7 +79,7 @@ describe("mint_order_validator::main", () => {
 
         it("mint_order_validator::main #03 (succeeds if the tx isn't signed by the address pubkey but an input is spent from the same address)", () => {
             configureContext({
-                pkh: PubKeyHash.dummy(1),
+                pkh: makeDummyPubKeyHash(1),
                 dummyInputAddr: returnAddress
             }).use((ctx) => {
                 strictEqual(
@@ -95,9 +95,9 @@ describe("mint_order_validator::main", () => {
     })
 
     describe("Fullfill redeemer with pure lovelace diff", () => {
-        const pkh = PubKeyHash.dummy(10)
-        const returnAddress = Address.fromHash(false, pkh)
-        const returnDatum = new IntData(1)
+        const pkh = makeDummyPubKeyHash(10)
+        const returnAddress = makeAddress(false, pkh)
+        const returnDatum = makeIntData(1)
         const mintOrder = makeMintOrder({
             address: returnAddress,
             datum: returnDatum,
@@ -109,7 +109,7 @@ describe("mint_order_validator::main", () => {
                 ptrs: [makeAssetPtr()] // dummy AssetPtr for ADA
             }
         }
-        const agent = PubKeyHash.dummy(123)
+        const agent = makeDummyPubKeyHash(123)
 
         const configureContext = (props?: {
             agent?: PubKeyHash
@@ -120,7 +120,7 @@ describe("mint_order_validator::main", () => {
             returnUserVoucher?: boolean
             startPrice?: RatioType
             returnRefVoucher?: {
-                returnAddress?: Address
+                returnAddress?: ShelleyAddress
                 returnDatum?: UplcData
                 price?: RatioType
                 nTokens?: IntLike
@@ -170,12 +170,12 @@ describe("mint_order_validator::main", () => {
                 .addMintOrderInput({
                     datum: props?.mintOrder ?? mintOrder,
                     redeemer,
-                    value: new Value(props?.inputLovelace ?? 200_000_000)
+                    value: makeValue(props?.inputLovelace ?? 200_000_000)
                 })
                 .addMintOrderReturn({
                     address: returnAddress,
                     datum: returnDatum,
-                    value: new Value(0, returnedTokens)
+                    value: makeValue(0, returnedTokens)
                 })
                 .addSigner(props?.agent ?? agent)
                 .setTimeRange({ end: 200 })
@@ -214,7 +214,7 @@ describe("mint_order_validator::main", () => {
         })
 
         it("mint_order_validator::main #05 (throws an error if not signed by agent)", () => {
-            configureContext({ agent: PubKeyHash.dummy() }).use((ctx) => {
+            configureContext({ agent: makeDummyPubKeyHash()}).use((ctx) => {
                 throws(() => {
                     main.eval({
                         $scriptContext: ctx,
@@ -287,7 +287,7 @@ describe("mint_order_validator::main", () => {
 
         it("mint_order_validator::main #11 (throws an error if the ref voucher return address is wrong)", () => {
             configureContext({
-                returnRefVoucher: { returnAddress: Address.dummy(false) }
+                returnRefVoucher: { returnAddress: makeDummyAddress(false) }
             }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -301,7 +301,7 @@ describe("mint_order_validator::main", () => {
 
         it("mint_order_validator::main #12 (throws an error if the ref voucher return datum is wrong)", () => {
             configureContext({
-                returnRefVoucher: { returnDatum: new ListData([]) }
+                returnRefVoucher: { returnDatum: makeListData([]) }
             }).use((ctx) => {
                 throws(() => {
                     main.eval({

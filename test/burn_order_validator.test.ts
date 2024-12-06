@@ -1,13 +1,16 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import {
-    Address,
-    AssetClass,
-    Assets,
-    PubKeyHash,
-    Value
+    type ShelleyAddress,
+    makeAddress,
+    makeDummyPubKeyHash,
+    makeValue,
+    type PubKeyHash,
+    type Value,
+    makeDummyAssetClass,
+    makeAssets
 } from "@helios-lang/ledger"
-import { ConstrData, IntData } from "@helios-lang/uplc"
+import { makeConstrData, makeIntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
 import {
@@ -57,7 +60,7 @@ describe("burn_order_validator::calc_provisional_success_fee", () => {
                     calc_provisional_success_fee.eval({
                         $scriptContext: ctx,
                         price,
-                        diff: new Value(0, makeDvpTokens(10_000_000)),
+                        diff: makeValue(0, makeDvpTokens(10_000_000)),
                         n_burn: 10_000_000
                     }),
                     750_000n
@@ -100,7 +103,7 @@ describe("burn_order_validator::calc_provisional_success_fee", () => {
                     calc_provisional_success_fee.eval({
                         $scriptContext: ctx,
                         price,
-                        diff: new Value(
+                        diff: makeValue(
                             0,
                             makeDvpTokens(10_000_000).add(
                                 makeVoucherUserToken(voucherId)
@@ -121,7 +124,7 @@ describe("burn_order_validator::calc_provisional_success_fee", () => {
                     calc_provisional_success_fee.eval({
                         $scriptContext: ctx,
                         price,
-                        diff: new Value(0, makeVoucherUserToken(voucherId)),
+                        diff: makeValue(0, makeVoucherUserToken(voucherId)),
                         n_burn: 0
                     }),
                     0n
@@ -136,9 +139,9 @@ describe("burn_order_validator::main", () => {
         it("burn_order_validator::main #01 (throws an error for garbage args)", () => {
             throws(() => {
                 main.evalUnsafe({
-                    $scriptContext: new ConstrData(0, []),
-                    order: new IntData(0),
-                    redeemer: new IntData(0)
+                    $scriptContext: makeConstrData(0, []),
+                    order: makeIntData(0),
+                    redeemer: makeIntData(0)
                 })
             }, /empty list in headList/)
         })
@@ -148,15 +151,15 @@ describe("burn_order_validator::main", () => {
         const redeemer: BurnOrderRedeemerType = {
             Cancel: {}
         }
-        const pkh = PubKeyHash.dummy(10)
-        const returnAddress = Address.fromHash(false, pkh)
+        const pkh = makeDummyPubKeyHash(10)
+        const returnAddress = makeAddress(false, pkh)
         const burnOrder = makeBurnOrder({
             address: returnAddress
         })
 
         const configureContext = (props?: {
             pkh?: PubKeyHash
-            dummyInputAddr?: Address<any, any>
+            dummyInputAddr?: ShelleyAddress<any>
         }) => {
             const scb = new ScriptContextBuilder()
                 .addBurnOrderInput({
@@ -187,7 +190,7 @@ describe("burn_order_validator::main", () => {
         })
 
         it("burn_order_validator::main #03 (throws an error if the tx isn't signed by the address pubkey)", () => {
-            configureContext({ pkh: PubKeyHash.dummy(1) }).use((ctx) => {
+            configureContext({ pkh: makeDummyPubKeyHash(1) }).use((ctx) => {
                 throws(() => {
                     main.eval({
                         $scriptContext: ctx,
@@ -200,7 +203,7 @@ describe("burn_order_validator::main", () => {
 
         it("burn_order_validator::main #04 (succeeds if the tx isn't signed by the address pubkey but an input is spent from the same address)", () => {
             configureContext({
-                pkh: PubKeyHash.dummy(1),
+                pkh: makeDummyPubKeyHash(1),
                 dummyInputAddr: returnAddress
             }).use((ctx) => {
                 strictEqual(
@@ -216,9 +219,9 @@ describe("burn_order_validator::main", () => {
     })
 
     describe("Fulfill redeemer", () => {
-        const pkh = PubKeyHash.dummy(10)
-        const returnAddress = Address.fromHash(false, pkh)
-        const returnDatum = new IntData(1)
+        const pkh = makeDummyPubKeyHash(10)
+        const returnAddress = makeAddress(false, pkh)
+        const returnDatum = makeIntData(1)
         const burnOrder = makeBurnOrder({
             address: returnAddress,
             datum: returnDatum,
@@ -230,7 +233,7 @@ describe("burn_order_validator::main", () => {
                 ptrs: [makeAssetPtr()] // dummy AssetPtr for ADA
             }
         }
-        const agent = PubKeyHash.dummy(123)
+        const agent = makeDummyPubKeyHash(123)
 
         const configureContext = (props?: {
             agent?: PubKeyHash
@@ -284,14 +287,14 @@ describe("burn_order_validator::main", () => {
                 .addBurnOrderInput({
                     datum: props?.burnOrder ?? burnOrder,
                     redeemer,
-                    value: new Value(0, burnedTokens)
+                    value: makeValue(0, burnedTokens)
                 })
                 .addBurnOrderReturn({
                     address: returnAddress,
                     datum: returnDatum,
                     value:
                         props?.returnValue ??
-                        new Value(props?.returnLovelace ?? 644_262_500)
+                        makeValue(props?.returnLovelace ?? 644_262_500)
                 })
                 .addSigner(props?.agent ?? agent)
                 .setTimeRange({ end: 200 })
@@ -325,7 +328,7 @@ describe("burn_order_validator::main", () => {
         })
 
         it("burn_order_validator::main #06 (throws an error if not signed by agent)", () => {
-            configureContext({ agent: PubKeyHash.dummy() }).use((ctx) => {
+            configureContext({ agent: makeDummyPubKeyHash() }).use((ctx) => {
                 throws(() => {
                     main.eval({
                         $scriptContext: ctx,
@@ -404,9 +407,9 @@ describe("burn_order_validator::main", () => {
 
         it("burn_order_validator::main #11 (throws an error when attempting to return something that isn't listed in a referenced asset group)", () => {
             configureContext({
-                returnValue: new Value(
+                returnValue: makeValue(
                     644_262_500,
-                    Assets.fromAssetClasses([[AssetClass.dummy(10), 100]])
+                    makeAssets([[makeDummyAssetClass(10), 100]])
                 )
             }).use((ctx) => {
                 throws(() => {
@@ -423,9 +426,9 @@ describe("burn_order_validator::main", () => {
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
                 datum: returnDatum,
-                value: new Value(
+                value: makeValue(
                     644_000_000,
-                    Assets.fromAssetClasses([[AssetClass.dummy(), 10]])
+                    makeAssets([[makeDummyAssetClass(), 10]])
                 )
             })
 
@@ -444,9 +447,9 @@ describe("burn_order_validator::main", () => {
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
                 datum: returnDatum,
-                value: new Value(
+                value: makeValue(
                     644_000_000,
-                    Assets.fromAssetClasses([[AssetClass.dummy(), 0]])
+                    makeAssets([[makeDummyAssetClass(), 0]])
                 )
             })
 
@@ -466,9 +469,9 @@ describe("burn_order_validator::main", () => {
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
                 datum: returnDatum,
-                value: new Value(
+                value: makeValue(
                     644_000_000,
-                    Assets.fromAssetClasses([[AssetClass.dummy(), 10]])
+                    makeAssets([[makeDummyAssetClass(), 10]])
                 )
             })
 
@@ -493,10 +496,10 @@ describe("burn_order_validator::main", () => {
                 }
             }
 
-            const assetClass = AssetClass.dummy()
-            const value = new Value(
+            const assetClass = makeDummyAssetClass()
+            const value = makeValue(
                 644_262_500,
-                Assets.fromAssetClasses([[assetClass, 10]])
+                makeAssets([[assetClass, 10]])
             )
 
             const burnOrder = makeBurnOrder({
@@ -537,10 +540,10 @@ describe("burn_order_validator::main", () => {
                 }
             }
 
-            const assetClass = AssetClass.dummy()
-            const value = new Value(
+            const assetClass = makeDummyAssetClass()
+            const value = makeValue(
                 644_262_500,
-                Assets.fromAssetClasses([[assetClass, 10]])
+                makeAssets([[assetClass, 10]])
             )
 
             const burnOrder = makeBurnOrder({
@@ -552,9 +555,9 @@ describe("burn_order_validator::main", () => {
             configureContext({
                 burnOrder,
                 returnValue: value.add(
-                    new Value(
+                    makeValue(
                         0,
-                        Assets.fromAssetClasses([[AssetClass.dummy(1), 10]])
+                        makeAssets([[makeDummyAssetClass(1), 10]])
                     )
                 )
             })
@@ -582,7 +585,7 @@ describe("burn_order_validator::main", () => {
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
                 datum: returnDatum,
-                value: new Value(644_000_000)
+                value: makeValue(644_000_000)
             })
 
             configureContext({
@@ -608,7 +611,7 @@ describe("burn_order_validator::main", () => {
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
                 datum: returnDatum,
-                value: new Value(644_000_000)
+                value: makeValue(644_000_000)
             })
 
             configureContext({

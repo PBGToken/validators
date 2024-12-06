@@ -1,19 +1,19 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { PubKeyHash } from "@helios-lang/ledger"
+import { type PubKeyHash, makeDummyPubKeyHash } from "@helios-lang/ledger"
 import contract, {
     GOV_KEY_1,
     GOV_KEY_2,
     GOV_KEY_3
 } from "pbg-token-validators-test-context"
-import { IntData } from "@helios-lang/uplc"
+import { makeIntData } from "@helios-lang/uplc"
 import { MAX_SCRIPT_SIZE } from "./constants"
 import { ScriptContextBuilder } from "./tx"
 
 const { main } = contract.governance_delegate
 
 describe("governance_delegate::main", () => {
-    const redeemer = new IntData(0)
+    const redeemer = makeIntData(0)
     const configureContext = (props?: {
         govKey2?: PubKeyHash
         govKey3?: PubKeyHash
@@ -31,15 +31,15 @@ describe("governance_delegate::main", () => {
     })
 
     it("succeeds if signed by majority", () => {
-        configureContext({ govKey3: PubKeyHash.dummy() }).use((ctx) => {
+        configureContext({ govKey3: makeDummyPubKeyHash() }).use((ctx) => {
             main.eval({ $scriptContext: ctx, _: redeemer })
         })
     })
 
     it("throws an error if only signed by one key", () => {
         configureContext({
-            govKey2: PubKeyHash.dummy(),
-            govKey3: PubKeyHash.dummy()
+            govKey2: makeDummyPubKeyHash(),
+            govKey3: makeDummyPubKeyHash()
         }).use((ctx) => {
             throws(() => {
                 main.eval({ $scriptContext: ctx, _: redeemer })

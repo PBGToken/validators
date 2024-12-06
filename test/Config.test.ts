@@ -1,10 +1,14 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { ConstrData, IntData, ListData, UplcData } from "@helios-lang/uplc"
+import { expectListData, makeConstrData, makeIntData, makeListData, UplcData } from "@helios-lang/uplc"
 import {
-    Address,
+    type ShelleyAddress,
     AssetClass,
-    Assets,
+    type Assets,
+    makeDummyAddress,
+    makeDummyAssetClass,
+    makeDummyPubKeyHash,
+    makeDummyStakingValidatorHash,
     PubKeyHash,
     StakingValidatorHash
 } from "@helios-lang/ledger"
@@ -126,13 +130,13 @@ describe("ConfigModule::MintFeeConfig::apply", () => {
     })
 
     describe("garbage mint fee data", () => {
-        const mintFeeData = new ListData([])
+        const mintFeeData = makeListData([])
 
         it("throws an error", () => {
             throws(() => {
                 apply_mint_fee.evalUnsafe({
                     self: mintFeeData,
-                    n: new IntData(2_000_000n)
+                    n: makeIntData(2_000_000n)
                 })
             })
         })
@@ -285,13 +289,13 @@ describe("ConfigModule::BurnFeeConfig::apply", () => {
     })
 
     describe("garbage burn fee data", () => {
-        const burnFeeData = new ListData([])
+        const burnFeeData = makeListData([])
 
         it("throws an error", () => {
             throws(() => {
                 apply_burn_fee.evalUnsafe({
                     self: burnFeeData,
-                    n: new IntData(2_000_000n)
+                    n: makeIntData(2_000_000n)
                 })
             })
         })
@@ -478,7 +482,7 @@ describe("ConfigModule::SuccessFeeConfig::get_benchmark_price", () => {
                         $scriptContext: ctx,
                         self: successFeeConfig,
                         lovelace_price: price,
-                        benchmark: StakingValidatorHash.dummy()
+                        benchmark: makeDummyStakingValidatorHash()
                     })
                 })
             })
@@ -504,7 +508,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
                         proposal_timestamp: 0,
                         proposal: {
                             AddingAssetClass: {
-                                asset_class: AssetClass.dummy()
+                                asset_class: makeDummyAssetClass()
                             }
                         }
                     }
@@ -522,7 +526,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
                         proposal_timestamp: 0,
                         proposal: {
                             RemovingAssetClass: {
-                                asset_class: AssetClass.dummy()
+                                asset_class: makeDummyAssetClass()
                             }
                         }
                     }
@@ -578,7 +582,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
                         proposal_timestamp: 0,
                         proposal: {
                             ChangingAgent: {
-                                agent: PubKeyHash.dummy()
+                                agent: makeDummyPubKeyHash()
                             }
                         }
                     }
@@ -596,7 +600,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
                         proposal_timestamp: 0,
                         proposal: {
                             ChangingOracle: {
-                                oracle: StakingValidatorHash.dummy()
+                                oracle: makeDummyStakingValidatorHash()
                             }
                         }
                     }
@@ -614,7 +618,7 @@ describe("ConfigModule::ConfigState::is_idle", () => {
                         proposal_timestamp: 0,
                         proposal: {
                             ChangingGovernance: {
-                                delegate: StakingValidatorHash.dummy(),
+                                delegate: makeDummyStakingValidatorHash(),
                                 update_delay: 10000
                             }
                         }
@@ -733,7 +737,7 @@ describe("ConfigModule::ConfigState::get_proposal", () => {
     it("returns the proposal data if in Changing(AddingAssetClass) state", () => {
         const proposal: ConfigChangeProposal = {
             AddingAssetClass: {
-                asset_class: AssetClass.dummy()
+                asset_class: makeDummyAssetClass()
             }
         }
 
@@ -753,7 +757,7 @@ describe("ConfigModule::ConfigState::get_proposal", () => {
     it("returns the proposal data if in Changing(RemovingAssetClass) state", () => {
         const proposal: ConfigChangeProposal = {
             RemovingAssetClass: {
-                asset_class: AssetClass.dummy()
+                asset_class: makeDummyAssetClass()
             }
         }
 
@@ -815,7 +819,7 @@ describe("ConfigModule::ConfigState::get_proposal", () => {
     it("returns the proposal data if in Changing(ChangingAgent) state", () => {
         const proposal: ConfigChangeProposal = {
             ChangingAgent: {
-                agent: PubKeyHash.dummy()
+                agent: makeDummyPubKeyHash()
             }
         }
 
@@ -835,7 +839,7 @@ describe("ConfigModule::ConfigState::get_proposal", () => {
     it("returns the proposal data if in Changing(ChangingOracle) state", () => {
         const proposal: ConfigChangeProposal = {
             ChangingOracle: {
-                oracle: StakingValidatorHash.dummy()
+                oracle: makeDummyStakingValidatorHash()
             }
         }
 
@@ -855,7 +859,7 @@ describe("ConfigModule::ConfigState::get_proposal", () => {
     it("returns the proposal data if in Changing(ChangingGovernance) state", () => {
         const proposal: ConfigChangeProposal = {
             ChangingGovernance: {
-                delegate: StakingValidatorHash.dummy(),
+                delegate: makeDummyStakingValidatorHash(),
                 update_delay: 10000
             }
         }
@@ -1001,7 +1005,7 @@ describe("ConfigModule::Config::find", () => {
     describe("for the config_validator", () => {
         it("returns the config data and the fact that the config UTxO is spent if the config UTxO is the current input", () => {
             new ScriptContextBuilder()
-                .addConfigInput({ config, redeemer: new IntData(0) })
+                .addConfigInput({ config, redeemer: makeIntData(0) })
                 .use((ctx) => {
                     // can't use deepEqual() because of Hash objects
                     const actual = find_config.eval({
@@ -1049,7 +1053,7 @@ describe("ConfigModule::Config::find", () => {
 
         it("throws an error if the config UTxO is spent instead of referenced", () => {
             new ScriptContextBuilder()
-                .addConfigInput({ config, redeemer: new IntData(0) })
+                .addConfigInput({ config, redeemer: makeIntData(0) })
                 .use((ctx) => {
                     orderValidatorScripts.forEach((currentScript) => {
                         throws(() => {
@@ -1064,7 +1068,7 @@ describe("ConfigModule::Config::find", () => {
 
         it("throws an error if the config UTxO isn't at the config_validator address", () => {
             new ScriptContextBuilder()
-                .addConfigRef({ config, address: Address.dummy(false) })
+                .addConfigRef({ config, address: makeDummyAddress(false) })
                 .redeemDummyTokenWithDvpPolicy()
                 .use((ctx) => {
                     orderValidatorScripts.forEach((currentScript) => {
@@ -1124,7 +1128,7 @@ describe("ConfigModule::Config::find", () => {
 
         it("throws an error if the referenced config UTxO isn't at the config_validator address", () => {
             new ScriptContextBuilder()
-                .addConfigRef({ config, address: Address.dummy(false) })
+                .addConfigRef({ config, address: makeDummyAddress(false) })
                 .redeemDummyTokenWithDvpPolicy()
                 .use((ctx) => {
                     otherScripts.forEach((currentScript) => {
@@ -1173,7 +1177,7 @@ describe("ConfigModule::Config::find", () => {
 
         it("throws an error if the spent config UTxO isn't at the config_validator address", () => {
             new ScriptContextBuilder()
-                .addConfigInput({ config, address: Address.dummy(false) })
+                .addConfigInput({ config, address: makeDummyAddress(false) })
                 .redeemDummyTokenWithDvpPolicy()
                 .use((ctx) => {
                     otherScripts.forEach((currentScript) => {
@@ -1211,7 +1215,7 @@ describe("ConfigModule::Config::find_input", () => {
     describe("@ config_validator", () => {
         it("returns the config data if the config UTxO is the current input", () => {
             new ScriptContextBuilder()
-                .addConfigInput({ config, redeemer: new IntData(0) })
+                .addConfigInput({ config, redeemer: makeIntData(0) })
                 .use((ctx) => {
                     // can't use deepEqual() because of Hash objects
                     const actual = find_config_input.eval({
@@ -1257,7 +1261,7 @@ describe("ConfigModule::Config::find_input", () => {
 
         it("returns the config data if the config UTxO is the current input", () => {
             new ScriptContextBuilder()
-                .addConfigInput({ config, redeemer: new IntData(0) })
+                .addConfigInput({ config, redeemer: makeIntData(0) })
                 .use((ctx) => {
                     otherScripts.forEach((currentScript) => {
                         const actual = find_config_input.eval({
@@ -1304,7 +1308,7 @@ describe("ConfigModule::Config::find_input", () => {
 
         it("throws an error if the spent config UTxO is at wrong address", () => {
             new ScriptContextBuilder()
-                .addConfigInput({ config, address: Address.dummy(false) })
+                .addConfigInput({ config, address: makeDummyAddress(false) })
                 .redeemDummyTokenWithDvpPolicy()
                 .use((ctx) => {
                     otherScripts.forEach((currentScript) => {
@@ -1340,7 +1344,7 @@ describe("ConfigModule::Config::find_output", () => {
     const config = makeConfig()
 
     const configureParentContext = (props?: {
-        address?: Address
+        address?: ShelleyAddress
         datum?: UplcData
         token?: Assets
     }) => {
@@ -1370,7 +1374,7 @@ describe("ConfigModule::Config::find_output", () => {
         })
 
         it("throws an error if a garbage datum is given", () => {
-            configureContext({ datum: new IntData(0) }).use(
+            configureContext({ datum: makeIntData(0) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
                         find_config_output.eval({
@@ -1383,12 +1387,12 @@ describe("ConfigModule::Config::find_output", () => {
         })
 
         it("throws an error if a garbage ConfigState::Changing proposal is given", () => {
-            const configData = ListData.expect(castConfig.toUplcData(config))
-            configData.items[5] = new ConstrData(1, [
-                new IntData(0),
-                new ConstrData(0, [
-                    AssetClass.dummy().toUplcData(),
-                    new IntData(0)
+            const configData = expectListData(castConfig.toUplcData(config))
+            configData.items[5] = makeConstrData(1, [
+                makeIntData(0),
+                makeConstrData(0, [
+                    makeDummyAssetClass().toUplcData(),
+                    makeIntData(0)
                 ])
             ])
 
@@ -1405,7 +1409,7 @@ describe("ConfigModule::Config::find_output", () => {
         })
 
         it("throws an error if the config UTxO is returned to the wrong address", () => {
-            configureContext({ address: Address.dummy(false) }).use(
+            configureContext({ address: makeDummyAddress(false) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
                         find_config_output.eval({
@@ -1485,7 +1489,7 @@ describe("ConfigModule::Config::find_ref", () => {
 
         it("throws an error if the referenced config UTxO is at the wrong address", () => {
             new ScriptContextBuilder()
-                .addConfigRef({ config, address: Address.dummy(false) })
+                .addConfigRef({ config, address: makeDummyAddress(false) })
                 .redeemDummyTokenWithDvpPolicy()
                 .use((ctx) => {
                     scripts.forEach((currentScript) => {
@@ -1523,7 +1527,7 @@ describe("ConfigModule::Config::find_thread", () => {
     describe("for the config_validator", () => {
         it("returns the config data twice if the config UTxO datum remains unchanged when spent and returned, and the config thread input is the current input", () => {
             new ScriptContextBuilder()
-                .addConfigThread({ config, redeemer: new IntData(0) })
+                .addConfigThread({ config, redeemer: makeIntData(0) })
                 .use((ctx) => {
                     const actual = find_config_thread.eval({
                         $currentScript: "config_validator",
@@ -1642,7 +1646,7 @@ describe("ConfigModule::Config::get_benchmark_price", () => {
                             self: config,
                             $scriptContext: ctx,
                             lovelace_price: price,
-                            benchmark: StakingValidatorHash.dummy()
+                            benchmark: makeDummyStakingValidatorHash()
                         })
                     })
                 })
@@ -1758,7 +1762,7 @@ describe("ConfigModule::price_expiry", () => {
     describe("for the config_validator", () => {
         it("returns a time before the tx validity time range end if the config UTxO is the current input", () => {
             new ScriptContextBuilder()
-                .addConfigInput({ config, redeemer: new IntData(0) })
+                .addConfigInput({ config, redeemer: makeIntData(0) })
                 .setTimeRange({ end: 200 })
                 .use((ctx) => {
                     strictEqual(
@@ -1871,7 +1875,7 @@ describe("ConfigModule::price_expiry", () => {
 })
 
 describe("ConfigModule::signed_by_agent", () => {
-    const agent = PubKeyHash.dummy(0)
+    const agent = makeDummyPubKeyHash(0)
     const config = makeConfig({ agent })
 
     const configureParentContext = (props?: {
@@ -1888,7 +1892,7 @@ describe("ConfigModule::signed_by_agent", () => {
         } else {
             scb.addConfigInput({
                 config: props?.config ?? config,
-                redeemer: new IntData(0)
+                redeemer: makeIntData(0)
             })
         }
 
@@ -1928,7 +1932,7 @@ describe("ConfigModule::signed_by_agent", () => {
         })
 
         it("ConfigModule::signed_by_agent #03 (returns false if the config UTxO is the current input but the tx isn't signed by the agent)", () => {
-            configureContext({ signingAgent: PubKeyHash.dummy(1) }).use(
+            configureContext({ signingAgent: makeDummyPubKeyHash(1) }).use(
                 (currentScript, ctx) => {
                     strictEqual(
                         signed_by_agent.eval({
@@ -1980,7 +1984,7 @@ describe("ConfigModule::signed_by_agent", () => {
         it("ConfigModule::signed_by_agent #06 (returns false if the config UTxO referenced but the tx isn't signed by the agent)", () => {
             configureContext({
                 referConfig: true,
-                signingAgent: PubKeyHash.dummy(1)
+                signingAgent: makeDummyPubKeyHash(1)
             }).use((currentScript, ctx) => {
                 strictEqual(
                     signed_by_agent.eval({
@@ -2016,7 +2020,7 @@ describe("ConfigModule::witnessed_by_oracle", () => {
             if (props?.config !== null) {
                 scb.addConfigInput({
                     config: props?.config ?? config,
-                    redeemer: new IntData(0)
+                    redeemer: makeIntData(0)
                 })
             } else {
                 scb.redeemDummyTokenWithDvpPolicy()
@@ -2030,7 +2034,7 @@ describe("ConfigModule::witnessed_by_oracle", () => {
         if (props?.reward) {
             scb.reward({
                 hash: props.reward,
-                redeemer: new IntData(0)
+                redeemer: makeIntData(0)
             })
         }
 
@@ -2057,7 +2061,7 @@ describe("ConfigModule::witnessed_by_oracle", () => {
         it("ConfigModule::witnessed_by_oracle #02 (returns false if the config UTxO is the current input but the transaction isn't witnessed by the oracle_delegate)", () => {
             configureContext({
                 oracle: null,
-                reward: StakingValidatorHash.dummy(1)
+                reward: makeDummyStakingValidatorHash(1)
             }).use((currentScript, ctx) => {
                 strictEqual(
                     witnessed_by_oracle.eval({
@@ -2145,7 +2149,7 @@ describe("ConfigModule::witnessed_by_governance", () => {
     describe("for the config_validator (which is the only relevant validator, as witnessed_by_governance() isn't called in other validators)", () => {
         it("returns true if the config UTxO is the current input and the transaction is witnessed by the governance_delegate", () => {
             new ScriptContextBuilder()
-                .addConfigInput({ config, redeemer: new IntData(0) })
+                .addConfigInput({ config, redeemer: makeIntData(0) })
                 .observeDummy() // dummy
                 .observeGovernance({ hash: governance })
                 .use((ctx) => {
@@ -2161,7 +2165,7 @@ describe("ConfigModule::witnessed_by_governance", () => {
 
         it("returns false if the config UTxO is the current input but the transaction isn't witnessed by the governance_delegate", () => {
             new ScriptContextBuilder()
-                .addConfigInput({ config, redeemer: new IntData(0) })
+                .addConfigInput({ config, redeemer: makeIntData(0) })
                 .observeDummy() // dummy
                 .use((ctx) => {
                     strictEqual(

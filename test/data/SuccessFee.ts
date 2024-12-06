@@ -1,4 +1,4 @@
-import { PermissiveType } from "@helios-lang/contract-utils"
+import { type PermissiveType } from "@helios-lang/contract-utils"
 import contract from "pbg-token-validators-test-context"
 
 export const castSuccessFee = contract.SuccessFeeModule.SuccessFee

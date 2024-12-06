@@ -1,5 +1,5 @@
-import { IntLike } from "@helios-lang/codec-utils"
-import { Assets } from "@helios-lang/ledger"
+import { type IntLike } from "@helios-lang/codec-utils"
+import { makeAssets } from "@helios-lang/ledger"
 import {
     assets,
     config,
@@ -14,43 +14,43 @@ import {
 } from "./asset-classes"
 
 export function makeAssetsToken(id: IntLike, n: IntLike = 1) {
-    return Assets.fromAssetClasses([[assets(id), n]])
+    return makeAssets([[assets(id), n]])
 }
 
 export function makeConfigToken(n: IntLike = 1) {
-    return Assets.fromAssetClasses([[config, n]])
+    return makeAssets([[config, n]])
 }
 
 export function makeDvpTokens(n: IntLike) {
-    return Assets.fromAssetClasses([[dvpToken, n]])
+    return makeAssets([[dvpToken, n]])
 }
 
 export function makeMetadataToken(n: IntLike = 1) {
-    return Assets.fromAssetClasses([[metadata, n]])
+    return makeAssets([[metadata, n]])
 }
 
 export function makePortfolioToken(n: IntLike = 1) {
-    return Assets.fromAssetClasses([[portfolio, n]])
+    return makeAssets([[portfolio, n]])
 }
 
 export function makePriceToken(n: IntLike = 1) {
-    return Assets.fromAssetClasses([[price, n]])
+    return makeAssets([[price, n]])
 }
 
 export function makeReimbursementToken(id: IntLike = 0, n: IntLike = 1) {
-    return Assets.fromAssetClasses([[reimbursement(id), n]])
+    return makeAssets([[reimbursement(id), n]])
 }
 
 export function makeSupplyToken(n: IntLike = 1) {
-    return Assets.fromAssetClasses([[supply, n]])
+    return makeAssets([[supply, n]])
 }
 
 export function makeVoucherRefToken(id: IntLike = 0, n: IntLike = 1) {
-    return Assets.fromAssetClasses([[voucher_ref(id), n]])
+    return makeAssets([[voucher_ref(id), n]])
 }
 
 export function makeVoucherUserToken(id: IntLike = 0, n: IntLike = 1) {
-    return Assets.fromAssetClasses([[voucher_nft(id), n]])
+    return makeAssets([[voucher_nft(id), n]])
 }
 
 export function makeVoucherPair(id: IntLike = 0, n: IntLike = 1) {

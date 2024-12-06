@@ -1,7 +1,7 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { Assets } from "@helios-lang/ledger"
-import { ConstrData, IntData, ListData } from "@helios-lang/uplc"
+import { type Assets } from "@helios-lang/ledger"
+import { makeConstrData, makeIntData, makeListData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
 import { AssetGroupAction } from "./data"
@@ -65,8 +65,8 @@ describe("assets_validator::main", () => {
                 contextContext({ redeemer }).use((ctx) => {
                     main.evalUnsafe({
                         $scriptContext: ctx,
-                        _: new ListData([]),
-                        action: new ConstrData(2, [new IntData(0)])
+                        _: makeListData([]),
+                        action: makeConstrData(2, [makeIntData(0)])
                     })
                 })
             })
@@ -167,8 +167,8 @@ describe("assets_validator::main", () => {
                 throws(() => {
                     main.evalUnsafe({
                         $scriptContext: ctx,
-                        _: new ListData([]),
-                        action: new ConstrData(2, [new IntData(0)])
+                        _: makeListData([]),
+                        action: makeConstrData(2, [makeIntData(0)])
                     })
                 })
             })
@@ -268,8 +268,8 @@ describe("assets_validator::main", () => {
             contextContext({ redeemer }).use((ctx) => {
                 main.evalUnsafe({
                     $scriptContext: ctx,
-                    _: new ListData([]),
-                    action: new ConstrData(2, [new IntData(11)])
+                    _: makeListData([]),
+                    action: makeConstrData(2, [makeIntData(11)])
                 })
             })
         })

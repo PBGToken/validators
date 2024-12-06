@@ -1,6 +1,6 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { Assets, MintingPolicyHash } from "@helios-lang/ledger"
+import { makeAssets, makeDummyMintingPolicyHash } from "@helios-lang/ledger"
 import contract from "pbg-token-validators-test-context"
 import { directPolicyScripts, policy, scripts } from "./constants"
 import { AssetClasses, makeAssetsToken, makeDvpTokens } from "./tokens"
@@ -299,7 +299,7 @@ describe("Tokens::get_minted", () => {
 
     it("returns empty map if something else is minted", () => {
         new ScriptContextBuilder()
-            .mint({ assets: new Assets([[MintingPolicyHash.dummy(1), []]]) })
+            .mint({ assets: makeAssets([[makeDummyMintingPolicyHash(1), []]]) })
             .redeemDummyTokenWithDvpPolicy()
             .use((ctx) => {
                 scripts.forEach((currentScript) => {
@@ -351,7 +351,7 @@ describe("Tokens::nothing_minted", () => {
 
     it("true if something else is minted", () => {
         new ScriptContextBuilder()
-            .mint({ assets: new Assets([[MintingPolicyHash.dummy(1), []]]) })
+            .mint({ assets: makeAssets([[makeDummyMintingPolicyHash(1), []]]) })
             .redeemDummyTokenWithDvpPolicy()
             .use((ctx) => {
                 scripts.forEach((currentScript) => {

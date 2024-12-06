@@ -1,7 +1,7 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { DCert, ScriptPurpose, StakingCredential, TxRedeemer } from "@helios-lang/ledger"
-import { ByteArrayData, IntData, ListData } from "@helios-lang/uplc"
+import { makeCertifyingPurpose, makeDeregistrationDCert } from "@helios-lang/ledger"
+import { makeByteArrayData, makeListData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
 import { RatioType } from "./data"
@@ -76,9 +76,9 @@ describe("benchmark_delegate::main", () => {
                 throws(() => {
                     main.evalUnsafe({
                         $scriptContext: ctx,
-                        benchmark_price: new ListData([
-                            new ByteArrayData(""),
-                            new ByteArrayData("")
+                        benchmark_price: makeListData([
+                            makeByteArrayData(""),
+                            makeByteArrayData("")
                         ])
                     })
                 }, /expected IntData/)
@@ -92,9 +92,8 @@ describe("benchmark_delegate::main", () => {
                 redeemer: props?.redeemer
             })
 
-            ctx.purpose = ScriptPurpose.Certifying(
-                TxRedeemer.Certifying(0, new ListData([new IntData(1n), new IntData(1n)])),
-                DCert.Deregister(StakingCredential.new(contract.benchmark_delegate.$hash))
+            ctx.purpose = makeCertifyingPurpose(
+                makeDeregistrationDCert(contract.benchmark_delegate.$hash)
             )
 
             return ctx

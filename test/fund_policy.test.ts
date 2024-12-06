@@ -2,14 +2,19 @@ import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { IntLike } from "@helios-lang/codec-utils"
 import {
-    Address,
+    type ShelleyAddress,
     AssetClass,
     Assets,
-    PubKeyHash,
+    type PubKeyHash,
+    makeDummyPubKeyHash,
+    makeDummyAddress,
+    makeValue,
     TxOutputId,
-    Value
+    Value,
+    makeDummyTxOutputId,
+    makeAssets
 } from "@helios-lang/ledger"
-import { ByteArrayData, IntData } from "@helios-lang/uplc"
+import { makeByteArrayData, makeIntData } from "@helios-lang/uplc"
 import contract, {
     SEED_ID as SEED_ID_PARAM,
     INITIAL_AGENT as INITIAL_AGENT_PARAM
@@ -297,7 +302,7 @@ describe("fund_policy::validate_initial_config", () => {
     })
 
     it("fund_policy::validate_initial_config #02 (throws an error if the tx isn't signed by the agent)", () => {
-        configureContext({ signingAgent: PubKeyHash.dummy(6) }).use((ctx) => {
+        configureContext({ signingAgent: makeDummyPubKeyHash(6) }).use((ctx) => {
             throws(() => {
                 validate_initial_config.eval({ $scriptContext: ctx })
             }, /not signed by agent/)
@@ -813,7 +818,7 @@ describe("fund_policy::validate_initialization", () => {
 
 describe("fund_policy::validate_vault_spending", () => {
     const configureContext = (props?: {
-        address?: Address
+        address?: ShelleyAddress
         refer?: boolean
         token?: Assets
     }) => {
@@ -843,7 +848,7 @@ describe("fund_policy::validate_vault_spending", () => {
     })
 
     it("fund_policy::validate_vault_spending #03 (throws an error if the supply UTxO isn't at the supply_validator address)", () => {
-        configureContext({ address: Address.dummy(false) }).use((ctx) => {
+        configureContext({ address: makeDummyAddress(false) }).use((ctx) => {
             throws(() => {
                 validate_vault_spending.eval({ $scriptContext: ctx })
             }, /vault spending not witnessed by supply spending/)
@@ -861,7 +866,7 @@ describe("fund_policy::validate_vault_spending", () => {
 
 describe("fund_policy::validate_mint_or_burn_asset_groups", () => {
     const configureContext = (props?: {
-        address?: Address
+        address?: ShelleyAddress
         refer?: boolean
         token?: Assets
     }) => {
@@ -899,7 +904,7 @@ describe("fund_policy::validate_mint_or_burn_asset_groups", () => {
     })
 
     it("fund_policy::validate_mint_or_burn_asset_groups #03 (throws an error if the portfolio UTxO isn't at the portfolio_validator address)", () => {
-        configureContext({ address: Address.dummy(false) }).use((ctx) => {
+        configureContext({ address: makeDummyAddress(false) }).use((ctx) => {
             throws(() => {
                 validate_mint_or_burn_asset_groups.eval({
                     $scriptContext: ctx
@@ -921,7 +926,7 @@ describe("fund_policy::validate_mint_or_burn_asset_groups", () => {
 
 describe("fund_policy::validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement", () => {
     const configureContext = (props?: {
-        address?: Address
+        address?: ShelleyAddress
         refer?: boolean
         token?: Assets
     }) => {
@@ -955,7 +960,7 @@ describe("fund_policy::validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursemen
     })
 
     it("fund_policy::validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement #03 (throws an error if the supply UTxO isn't at the supply_validator address)", () => {
-        configureContext({ address: Address.dummy(false) }).use((ctx) => {
+        configureContext({ address: makeDummyAddress(false) }).use((ctx) => {
             throws(() => {
                 validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement.eval(
                     { $scriptContext: ctx }
@@ -977,11 +982,11 @@ describe("fund_policy::validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursemen
 
 describe("fund_policy::main", () => {
     describe("spending from vault", () => {
-        const configureContext = (props?: { address?: Address }) => {
+        const configureContext = (props?: { address?: ShelleyAddress }) => {
             return new ScriptContextBuilder().addSupplyInput().takeFromVault({
                 address: props?.address,
-                redeemer: new IntData(0),
-                value: new Value(2_000_000)
+                redeemer: makeIntData(0),
+                value: makeValue(2_000_000)
             })
         }
 
@@ -989,10 +994,10 @@ describe("fund_policy::main", () => {
             configureContext().use((ctx) => {
                 main.eval({
                     $scriptContext: ctx,
-                    $datum: new ByteArrayData([]),
+                    $datum: makeByteArrayData([]),
                     args: {
                         Spending: {
-                            redeemer: new IntData(0)
+                            redeemer: makeIntData(0)
                         }
                     }
                 })
@@ -1000,14 +1005,14 @@ describe("fund_policy::main", () => {
         })
 
         it("fund_policy::main #02 (throws an error if the currently spent input isn't from a validator address (unable to get own hash))", () => {
-            configureContext({ address: Address.dummy(false) }).use((ctx) => {
+            configureContext({ address: makeDummyAddress(false) }).use((ctx) => {
                 throws(() => {
                     main.eval({
                         $scriptContext: ctx,
-                        $datum: new ByteArrayData([]),
+                        $datum: makeByteArrayData([]),
                         args: {
                             Spending: {
-                                redeemer: new IntData(0)
+                                redeemer: makeIntData(0)
                             }
                         }
                     })
@@ -1017,7 +1022,7 @@ describe("fund_policy::main", () => {
     })
 
     describe("initializing", () => {
-        const redeemer = new IntData(0)
+        const redeemer = makeIntData(0)
 
         const configureContext = (props?: { seedId?: TxOutputId }) => {
             const metadata = makeInitialMetadata()
@@ -1059,7 +1064,7 @@ describe("fund_policy::main", () => {
                 .addConfigOutput({ config, token: configToken })
                 .addMetadataOutput({ metadata, token: metadataToken })
                 .addDummyInput({
-                    address: Address.dummy(false),
+                    address: makeDummyAddress(false),
                     id: props?.seedId ?? SEED_ID_PARAM
                 })
         }
@@ -1078,7 +1083,7 @@ describe("fund_policy::main", () => {
         })
 
         it("fund_policy::main #04 (throws an error if no input is spent with the correct seed id, no asset group is minted and supply UTxO isn't spent)", () => {
-            configureContext({ seedId: TxOutputId.dummy(12345) }).use((ctx) => {
+            configureContext({ seedId: makeDummyTxOutputId(12345) }).use((ctx) => {
                 throws(() => {
                     main.eval({
                         $scriptContext: ctx,
@@ -1094,11 +1099,11 @@ describe("fund_policy::main", () => {
     })
 
     describe("minted an asset group", () => {
-        const redeemer = new IntData(0)
+        const redeemer = makeIntData(0)
         const token = makeAssetsToken(0)
 
         const configureContext = (props?: {
-            portfolioAddress?: Address
+            portfolioAddress?: ShelleyAddress
             portfolioToken?: Assets
         }) => {
             return new ScriptContextBuilder()
@@ -1123,7 +1128,7 @@ describe("fund_policy::main", () => {
         })
 
         it("fund_policy::main #06 (throws an error if the portfolio UTxO isn't at the portfolio address)", () => {
-            configureContext({ portfolioAddress: Address.dummy(false) }).use(
+            configureContext({ portfolioAddress: makeDummyAddress(false) }).use(
                 (ctx) => {
                     throws(() => {
                         main.eval({
@@ -1158,7 +1163,7 @@ describe("fund_policy::main", () => {
     })
 
     describe("burn vouchers or reimbursement tokens", () => {
-        const redeemer = new IntData(0)
+        const redeemer = makeIntData(0)
 
         const configureContext = (props?: {
             assets?: Assets
@@ -1166,7 +1171,7 @@ describe("fund_policy::main", () => {
         }) => {
             const assetClass = props?.assetClass ?? AssetClasses.voucher_ref(0)
             const assets =
-                props?.assets ?? Assets.fromAssetClasses([[assetClass, -1]])
+                props?.assets ?? makeAssets([[assetClass, -1]])
 
             return new ScriptContextBuilder().mint({ assets, redeemer })
         }
@@ -1240,11 +1245,11 @@ describe("fund_policy::main", () => {
     })
 
     describe("remaining mint/burn", () => {
-        const redeemer = new IntData(0)
+        const redeemer = makeIntData(0)
 
         const configureContext = (props?: {
             token?: Assets
-            supplyAddress?: Address
+            supplyAddress?: ShelleyAddress
             supplyToken?: Assets
         }) => {
             const voucherId = 10
@@ -1321,7 +1326,7 @@ describe("fund_policy::main", () => {
         })
 
         it("fund_policy::main #17 (throws an error if the supply UTxO isn't at the supply_validator address)", () => {
-            configureContext({ supplyAddress: Address.dummy(false) }).use(
+            configureContext({ supplyAddress: makeDummyAddress(false) }).use(
                 (ctx) => {
                     throws(() => {
                         main.eval({

@@ -1,7 +1,7 @@
-import { IntLike } from "@helios-lang/codec-utils"
-import { PermissiveType, StrictType } from "@helios-lang/contract-utils"
-import { Address } from "@helios-lang/ledger"
-import { IntData, UplcData } from "@helios-lang/uplc"
+import { type IntLike } from "@helios-lang/codec-utils"
+import { type PermissiveType, type StrictType } from "@helios-lang/contract-utils"
+import { makeDummyAddress, type ShelleyAddress } from "@helios-lang/ledger"
+import { makeIntData, type UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { RatioType } from "./Price"
 
@@ -12,15 +12,15 @@ export type VoucherWrapperType = PermissiveType<typeof castVoucherWrapper>
 type VoucherStrictType = StrictType<typeof castVoucher>
 
 export function makeVoucher(props?: {
-    address?: Address<any, any>
+    address?: ShelleyAddress<any>
     datum?: UplcData
     periodId?: IntLike
     price?: RatioType
     tokens?: IntLike
 }): VoucherStrictType {
     return {
-        return_address: props?.address ?? Address.dummy(false),
-        return_datum: props?.datum ?? new IntData(0),
+        return_address: props?.address ?? makeDummyAddress(false),
+        return_datum: props?.datum ?? makeIntData(0),
         tokens: BigInt(props?.tokens ?? 0),
         price: props?.price
             ? [BigInt(props.price[0]), BigInt(props.price[1])]

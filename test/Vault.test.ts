@@ -1,7 +1,7 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { Address, AssetClass, Assets, Value } from "@helios-lang/ledger"
-import { IntData } from "@helios-lang/uplc"
+import { type ShelleyAddress, AssetClass, Assets, makeAssets, makeDummyAddress, makeDummyAssetClass, makeValue } from "@helios-lang/ledger"
+import { makeIntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import {
     directPolicyScripts,
@@ -30,7 +30,7 @@ describe("Vault::VAULT_DATUM", () => {
 describe("Vault::nothing_spent", () => {
     it("Vault::nothing_spent #01 (returns false if a vault asset UTxO is spent)", () => {
         new ScriptContextBuilder()
-            .takeFromVault({ value: new Value(2_000_000n) })
+            .takeFromVault({ value: makeValue(2_000_000n) })
             .use((ctx) => {
                 directPolicyScripts.forEach((currentScript) => {
                     strictEqual(
@@ -44,7 +44,7 @@ describe("Vault::nothing_spent", () => {
             })
 
         new ScriptContextBuilder()
-            .takeFromVault({ value: new Value(2_000_000n) })
+            .takeFromVault({ value: makeValue(2_000_000n) })
             .redeemDummyTokenWithDvpPolicy()
             .use((ctx) => {
                 indirectPolicyScripts.forEach((currentScript) => {
@@ -86,7 +86,7 @@ describe("Vault::nothing_spent", () => {
 
     it("Vault::nothing_spent #03 (true if nothing from vault nor from assets_validator address is spent)", () => {
         new ScriptContextBuilder()
-            .addPriceThread({ redeemer: new IntData(0) })
+            .addPriceThread({ redeemer: makeIntData(0) })
             .use((ctx) => {
                 scripts.forEach((currentScript) => {
                     strictEqual(
@@ -107,8 +107,8 @@ describe("Vault::diff", () => {
             omitDummyPolicyRedeemer?: boolean
         }) => {
             const scb = new ScriptContextBuilder()
-                .takeFromVault({ value: new Value(2_000_000) })
-                .sendToVault({ value: new Value(2_000_000) })
+                .takeFromVault({ value: makeValue(2_000_000) })
+                .sendToVault({ value: makeValue(2_000_000) })
 
             if (!props?.omitDummyPolicyRedeemer) {
                 scb.redeemDummyTokenWithDvpPolicy()
@@ -130,7 +130,7 @@ describe("Vault::diff", () => {
                         $scriptContext: ctx
                     })
 
-                    strictEqual(v.isEqual(new Value(0)), true)
+                    strictEqual(v.isEqual(makeValue(0)), true)
                 })
             })
 
@@ -162,7 +162,7 @@ describe("Vault::diff", () => {
                             $scriptContext: ctx
                         })
 
-                        strictEqual(v.isEqual(new Value(0)), true)
+                        strictEqual(v.isEqual(makeValue(0)), true)
                     }
                 )
             })
@@ -171,11 +171,11 @@ describe("Vault::diff", () => {
         describe("@ all validators", () => {
             it("Vault::diff #04 (returns the correct sum over multiple inputs and outputs)", () => {
                 new ScriptContextBuilder()
-                    .takeFromVault({ value: new Value(1_000_000) })
-                    .takeFromVault({ value: new Value(2_000_000) })
-                    .takeFromVault({ value: new Value(10_000_000) })
-                    .sendToVault({ value: new Value(15_000_000) })
-                    .sendToVault({ value: new Value(2_000_000) })
+                    .takeFromVault({ value: makeValue(1_000_000) })
+                    .takeFromVault({ value: makeValue(2_000_000) })
+                    .takeFromVault({ value: makeValue(10_000_000) })
+                    .sendToVault({ value: makeValue(15_000_000) })
+                    .sendToVault({ value: makeValue(2_000_000) })
                     .redeemDummyTokenWithDvpPolicy()
                     .use((ctx) => {
                         scripts.forEach((currentScript) => {
@@ -184,29 +184,29 @@ describe("Vault::diff", () => {
                                 $scriptContext: ctx
                             })
 
-                            strictEqual(v.isEqual(new Value(4_000_000)), true)
+                            strictEqual(v.isEqual(makeValue(4_000_000)), true)
                         })
                     })
             })
 
             it("Vault::diff #05 (ignores outputs sent to vault with multiple assets)", () => {
                 new ScriptContextBuilder()
-                    .takeFromVault({ value: new Value(1_000_000) })
-                    .takeFromVault({ value: new Value(2_000_000) })
-                    .takeFromVault({ value: new Value(10_000_000) })
+                    .takeFromVault({ value: makeValue(1_000_000) })
+                    .takeFromVault({ value: makeValue(2_000_000) })
+                    .takeFromVault({ value: makeValue(10_000_000) })
                     .sendToVault({
-                        value: new Value(
+                        value: makeValue(
                             15_000_000,
-                            Assets.fromAssetClasses([
-                                [AssetClass.dummy(0), 10],
-                                [AssetClass.dummy(1), 20]
+                            makeAssets([
+                                [makeDummyAssetClass(0), 10],
+                                [makeDummyAssetClass(1), 20]
                             ])
                         )
                     })
                     .sendToVault({
-                        value: new Value(
+                        value: makeValue(
                             2_000_000,
-                            Assets.fromAssetClasses([[AssetClass.dummy(0), 10]])
+                            makeAssets([[makeDummyAssetClass(0), 10]])
                         )
                     })
                     .redeemDummyTokenWithDvpPolicy()
@@ -219,10 +219,10 @@ describe("Vault::diff", () => {
 
                             strictEqual(
                                 v.isEqual(
-                                    new Value(
+                                    makeValue(
                                         -11_000_000,
-                                        Assets.fromAssetClasses([
-                                            [AssetClass.dummy(0), 10]
+                                        makeAssets([
+                                            [makeDummyAssetClass(0), 10]
                                         ])
                                     )
                                 ),
@@ -234,10 +234,10 @@ describe("Vault::diff", () => {
 
             it("Vault::diff #06 (throws an error for outputs sent back to vault with wrong datum)", () => {
                 new ScriptContextBuilder()
-                    .takeFromVault({ value: new Value(2_000_000) })
+                    .takeFromVault({ value: makeValue(2_000_000) })
                     .sendToVault({
-                        datum: new IntData(0),
-                        value: new Value(2_000_000)
+                        datum: makeIntData(0),
+                        value: makeValue(2_000_000)
                     })
                     .redeemDummyTokenWithDvpPolicy()
                     .use((ctx) => {
@@ -253,16 +253,16 @@ describe("Vault::diff", () => {
             })
 
             it("Vault::diff #07 (returns a negative asset value if assets are taken out (i.e. value into transaction))", () => {
-                const ac = AssetClass.dummy()
+                const ac = makeDummyAssetClass()
 
                 new ScriptContextBuilder()
                     .takeFromVault({
-                        value: new Value(
+                        value: makeValue(
                             0,
-                            Assets.fromAssetClasses([[ac, 1_000_000n]])
+                            makeAssets([[ac, 1_000_000n]])
                         )
                     })
-                    .sendToVault({ value: new Value(0) })
+                    .sendToVault({ value: makeValue(0) })
                     .redeemDummyTokenWithDvpPolicy()
                     .use((ctx) => {
                         scripts.forEach((currentScript) => {
@@ -271,7 +271,7 @@ describe("Vault::diff", () => {
                                 $scriptContext: ctx
                             })
 
-                            strictEqual(v.assets.getQuantity(ac), -1_000_000n)
+                            strictEqual(v.assets.getAssetClassQuantity(ac), -1_000_000n)
                         })
                     })
             })
@@ -282,8 +282,8 @@ describe("Vault::diff", () => {
 describe("Vault::diff_lovelace", () => {
     it("Vault::diff_lovelace #01 (throws an error if the config UTxO isn't referenced or spent)", () => {
         new ScriptContextBuilder()
-            .takeFromVault({ value: new Value(1_000_000) })
-            .sendToVault({ value: new Value(10_000_000) })
+            .takeFromVault({ value: makeValue(1_000_000) })
+            .sendToVault({ value: makeValue(10_000_000) })
             .use((ctx) => {
                 scripts.forEach((currentScript) => {
                     throws(() => {
@@ -305,8 +305,8 @@ describe("Vault::diff_lovelace", () => {
 
     it("Vault::diff_lovelace #02 (throws an error if the tx validity time-range isn't set)", () => {
         new ScriptContextBuilder()
-            .takeFromVault({ value: new Value(1_000_000) })
-            .sendToVault({ value: new Value(10_000_000) })
+            .takeFromVault({ value: makeValue(1_000_000) })
+            .sendToVault({ value: makeValue(10_000_000) })
             .addConfigRef()
             .use((ctx) => {
                 scripts.forEach((currentScript) => {
@@ -329,8 +329,8 @@ describe("Vault::diff_lovelace", () => {
 
     it("Vault::diff_lovelace #03 (returns the correctly summed pure lovelace without asset counters (in scripts that have direct access to policy without dummy redeemer))", () => {
         new ScriptContextBuilder()
-            .takeFromVault({ value: new Value(1_000_000) })
-            .sendToVault({ value: new Value(10_000_000) })
+            .takeFromVault({ value: makeValue(1_000_000) })
+            .sendToVault({ value: makeValue(10_000_000) })
             .addConfigRef()
             .setTimeRange({ end: 0 })
             .use((ctx) => {
@@ -355,8 +355,8 @@ describe("Vault::diff_lovelace", () => {
 
     it("Vault::diff_lovelace #04 (returns the correctly summed pure lovelace without asset counters (in scripts that don't have direct access to policy, so with dummy redeemer))", () => {
         new ScriptContextBuilder()
-            .takeFromVault({ value: new Value(1_000_000) })
-            .sendToVault({ value: new Value(10_000_000) })
+            .takeFromVault({ value: makeValue(1_000_000) })
+            .sendToVault({ value: makeValue(10_000_000) })
             .addConfigRef()
             .redeemDummyTokenWithDvpPolicy()
             .setTimeRange({ end: 0 })
@@ -399,8 +399,8 @@ describe("Vault::diff_lovelace", () => {
 
     it("Vault::diff_lovelace #05 (throws an error for scripts that don't have direct access to policy if current input doesn't contain a policy token)", () => {
         new ScriptContextBuilder()
-            .takeFromVault({ value: new Value(1_000_000) })
-            .sendToVault({ value: new Value(10_000_000) })
+            .takeFromVault({ value: makeValue(1_000_000) })
+            .sendToVault({ value: makeValue(10_000_000) })
             .addConfigRef()
             .use((ctx) => {
                 indirectPolicyScripts.forEach((currentScript) => {
@@ -428,7 +428,7 @@ describe("Vault::diff_counted", () => {
         const groupId = 0
         const configureParentContext = (props?: {
             inputToken?: Assets
-            outputAddress?: Address
+            outputAddress?: ShelleyAddress
             outputToken?: Assets
         }) => {
             return new ScriptContextBuilder()
@@ -464,7 +464,7 @@ describe("Vault::diff_counted", () => {
                         ...defaultTestArgs
                     })
 
-                    strictEqual(actual.toString(), new Value(0).toString())
+                    strictEqual(actual.toString(), makeValue(0).toString())
                 })
             })
 
@@ -498,7 +498,7 @@ describe("Vault::diff_counted", () => {
 
             it("Vault::diff_counted #04 (throws an error if the thread output isn't at the assets_validator address)", () => {
                 configureContext({
-                    outputAddress: Address.dummy(false)
+                    outputAddress: makeDummyAddress(false)
                 }).use((currentScript, ctx) => {
                     throws(() => {
                         diff_counted.eval({
@@ -557,11 +557,11 @@ describe("Vault::diff_counted", () => {
 
     describe("two asset groups threads, the first with a one asset, the second with three assets", () => {
         const groupId0 = 0
-        const ac0 = AssetClass.dummy(0)
+        const ac0 = makeDummyAssetClass(0)
         const groupId1 = 1
-        const ac1 = AssetClass.dummy(1)
-        const ac2 = AssetClass.dummy(2)
-        const ac3 = AssetClass.dummy(3)
+        const ac1 = makeDummyAssetClass(1)
+        const ac2 = makeDummyAssetClass(2)
+        const ac3 = makeDummyAssetClass(3)
         const priceTimestamp = 123
 
         const configureParentContext = (props?: {
@@ -674,9 +674,9 @@ describe("Vault::diff_counted", () => {
                 asset_group_output_ptrs: [5, 8]
             }
 
-            const expected = new Value(
+            const expected = makeValue(
                 2_000_000n,
-                Assets.fromAssetClasses([
+                makeAssets([
                     [ac0, 12],
                     [ac1, 5],
                     [ac2, 5],
@@ -726,7 +726,7 @@ describe("Vault::diff_counted", () => {
 
             it("Vault::diff_counted #11 (throws an error if one of the asset classes changed)", () => {
                 configureContext({
-                    lastOutputAssetClass: AssetClass.dummy(5)
+                    lastOutputAssetClass: makeDummyAssetClass(5)
                 }).use((currentScript, ctx) => {
                     throws(() => {
                         diff_counted.eval({
@@ -768,8 +768,8 @@ describe("Vault::diff_counted", () => {
 
             it("Vault::diff_counted #14 (throws an error if the second asset group output contains an additional token)", () => {
                 configureContext({
-                    secondGroupExtraTokens: Assets.fromAssetClasses([
-                        [AssetClass.dummy(123), 1]
+                    secondGroupExtraTokens: makeAssets([
+                        [makeDummyAssetClass(123), 1]
                     ])
                 }).use((currentScript, ctx) => {
                     throws(() => {
@@ -805,8 +805,8 @@ describe("Vault::counters_are_consistent", () => {
     describe("only lovelace difference", () => {
         const configureParentContext = () => {
             return new ScriptContextBuilder()
-                .takeFromVault({ value: new Value(2_000_000n) })
-                .sendToVault({ value: new Value(4_000_000n) })
+                .takeFromVault({ value: makeValue(2_000_000n) })
+                .sendToVault({ value: makeValue(4_000_000n) })
                 .redeemDummyTokenWithDvpPolicy()
         }
 
@@ -852,11 +852,11 @@ describe("Vault::counters_are_consistent", () => {
 
     describe("two asset groups, the first with one asset, the second with three assets", () => {
         const groupId0 = 0
-        const ac0 = AssetClass.dummy(0)
+        const ac0 = makeDummyAssetClass(0)
         const groupId1 = 1
-        const ac1 = AssetClass.dummy(1)
-        const ac2 = AssetClass.dummy(2)
-        const ac3 = AssetClass.dummy(3)
+        const ac1 = makeDummyAssetClass(1)
+        const ac2 = makeDummyAssetClass(2)
+        const ac3 = makeDummyAssetClass(3)
         const priceTimestamp = 123
 
         const configureParentContext = (props?: {
@@ -942,24 +942,24 @@ describe("Vault::counters_are_consistent", () => {
 
             return new ScriptContextBuilder()
                 .takeFromVault({
-                    value: new Value(
+                    value: makeValue(
                         lovelaceDiff < 0 ? -lovelaceDiff : 0,
-                        Assets.fromAssetClasses([
+                        makeAssets([
                             [ac2, 20],
                             [ac3, 30]
                         ])
                     )
                 })
                 .sendToVault({
-                    value: new Value(0, Assets.fromAssetClasses([[ac0, 12]]))
+                    value: makeValue(0, makeAssets([[ac0, 12]]))
                 })
                 .sendToVault({
-                    value: new Value(0, Assets.fromAssetClasses([[ac1, 5]]))
+                    value: makeValue(0, makeAssets([[ac1, 5]]))
                 })
                 .sendToVault({
-                    value: new Value(
+                    value: makeValue(
                         lovelaceDiff > 0 ? lovelaceDiff : 0,
-                        Assets.fromAssetClasses([[ac2, 25]])
+                        makeAssets([[ac2, 25]])
                     )
                 })
                 .addDummyInputs(5)
@@ -1125,8 +1125,8 @@ describe("Vault::counters_are_consistent", () => {
 
             it("Vault::counters_are_consistent #11 (throws an error if second asset group output contains additional tokens)", () => {
                 configureContext({
-                    secondGroupExtraTokens: Assets.fromAssetClasses([
-                        [AssetClass.dummy(123), 1]
+                    secondGroupExtraTokens: makeAssets([
+                        [makeDummyAssetClass(123), 1]
                     ])
                 }).use((currentScript, ctx) => {
                     throws(() => {

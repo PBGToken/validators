@@ -1,7 +1,7 @@
-import { IntLike } from "@helios-lang/codec-utils"
-import { PermissiveType, StrictType } from "@helios-lang/contract-utils"
-import { Address, Value } from "@helios-lang/ledger"
-import { IntData, UplcData } from "@helios-lang/uplc"
+import { type IntLike } from "@helios-lang/codec-utils"
+import { type PermissiveType, type StrictType } from "@helios-lang/contract-utils"
+import { type ShelleyAddress, makeDummyAddress, Value } from "@helios-lang/ledger"
+import { makeIntData, UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 
 export const castBurnOrder = contract.BurnOrderModule.BurnOrder
@@ -15,14 +15,14 @@ export const castBurnOrderRedeemer = contract.burn_order_validator.Redeemer
 export type BurnOrderRedeemerType = PermissiveType<typeof castBurnOrderRedeemer>
 
 export function makeBurnOrder(props?: {
-    address?: Address<any, any>
+    address?: ShelleyAddress<any>
     lovelace?: IntLike
     datum?: UplcData
     value?: Value
     maxPriceAge?: IntLike
 }): BurnOrderStrictType {
-    const returnAddress = props?.address ?? Address.dummy(false)
-    const returnDatum = props?.datum ?? new IntData(0)
+    const returnAddress = props?.address ?? makeDummyAddress(false)
+    const returnDatum = props?.datum ?? makeIntData(0)
     const minReturnValue: BurnOrderReturnValueType = props?.lovelace
         ? {
               L: {

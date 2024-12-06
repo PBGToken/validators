@@ -1,17 +1,19 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import {
-    Address,
+    type ShelleyAddress,
+    makeDummyAddress,
     Assets,
-    TxOutput,
-    TxOutputDatum,
-    Value
+    makeTxOutput,
+    makeValue,
+    makeInlineTxOutputDatum
 } from "@helios-lang/ledger"
 import {
-    ByteArrayData,
-    ConstrData,
-    IntData,
-    MapData,
+    expectMapData,
+    makeByteArrayData,
+    makeConstrData,
+    makeIntData,
+    makeMapData,
     UplcData
 } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
@@ -51,7 +53,7 @@ describe("VoucherModule::get_current_voucher", () => {
     const configureContext = (props?: { token?: Assets }) => {
         return new ScriptContextBuilder().addVoucherInput({
             id: voucherId,
-            redeemer: new IntData(0),
+            redeemer: makeIntData(0),
             token: props?.token
         })
     }
@@ -70,8 +72,8 @@ describe("VoucherModule::get_current_voucher", () => {
 
                 strictEqual(actualVoucherId, voucherId)
                 strictEqual(
-                    actualVoucher.return_address.toBech32(),
-                    voucher.return_address.toBech32()
+                    actualVoucher.return_address.toString(),
+                    voucher.return_address.toString()
                 )
                 strictEqual(
                     actualVoucher.return_datum.toSchemaJson(),
@@ -106,7 +108,7 @@ describe("VoucherModule::find_input_voucher", () => {
     const voucher = makeVoucher()
     const voucherId = 123n
 
-    const configureParentContext = (props?: { address?: Address }) => {
+    const configureParentContext = (props?: { address?: ShelleyAddress }) => {
         return new ScriptContextBuilder()
             .addVoucherInput({
                 id: voucherId,
@@ -145,7 +147,7 @@ describe("VoucherModule::find_input_voucher", () => {
         })
 
         it("VoucherModule::find_input_voucher #03 (throws an error if the voucher UTxO with the given id isn't at the voucher_validator address)", () => {
-            configureContext({ address: Address.dummy(false) }).use(
+            configureContext({ address: makeDummyAddress(false) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
                         find_input_voucher.eval({
@@ -164,7 +166,7 @@ describe("VoucherModule::find_output_voucher", () => {
     const voucher = makeVoucher()
     const voucherId = 123n
     const configureParentContext = (props?: {
-        address?: Address
+        address?: ShelleyAddress
         datum?: UplcData
     }) => {
         return new ScriptContextBuilder()
@@ -206,7 +208,7 @@ describe("VoucherModule::find_output_voucher", () => {
         })
 
         it("VoucherModule::find_output_voucher #03 (throws an error if the voucher output with the given id isn't at the voucher_validator address)", () => {
-            configureContext({ address: Address.dummy(false) }).use(
+            configureContext({ address: makeDummyAddress(false) }).use(
                 (currentScript, ctx) => {
                     throws(() => {
                         find_output_voucher.eval({
@@ -220,12 +222,12 @@ describe("VoucherModule::find_output_voucher", () => {
         })
 
         it("VoucherModule::find_output_voucher #04 (throws an error if the return_address data isn't Address)", () => {
-            const datum = MapData.expect(castVoucher.toUplcData(voucher))
-            datum.items[0][1] = new IntData(0)
-            const wrapped = new ConstrData(0, [
+            const datum = expectMapData(castVoucher.toUplcData(voucher))
+            datum.items[0][1] = makeIntData(0)
+            const wrapped = makeConstrData(0, [
                 datum,
-                new IntData(1),
-                new ConstrData(0, [])
+                makeIntData(1),
+                makeConstrData(0, [])
             ])
 
             configureContext({ datum: wrapped }).use((currentScript, ctx) => {
@@ -240,12 +242,12 @@ describe("VoucherModule::find_output_voucher", () => {
         })
 
         it('VoucherModule::find_output_voucher #05 (throws an error if the return_address key isn\'t "owner")', () => {
-            const datum = MapData.expect(castVoucher.toUplcData(voucher))
-            datum.items[0][0] = new ByteArrayData(encodeUtf8("@owner"))
-            const wrapped = new ConstrData(0, [
+            const datum = expectMapData(castVoucher.toUplcData(voucher))
+            datum.items[0][0] = makeByteArrayData(encodeUtf8("@owner"))
+            const wrapped = makeConstrData(0, [
                 datum,
-                new IntData(1),
-                new ConstrData(0, [])
+                makeIntData(1),
+                makeConstrData(0, [])
             ])
 
             configureContext({ datum: wrapped }).use((currentScript, ctx) => {
@@ -264,8 +266,8 @@ describe("VoucherModule::find_output_voucher", () => {
         //    const datum = ConstrData.expect(castVoucher.toUplcData(voucher))
         //    const cip68Fields = MapData.expect(datum.fields[0])
         //    cip68Fields.items.push([
-        //        new ByteArrayData(encodeUtf8("@owner")),
-        //        new IntData(0)
+        //        makeByteArrayData(encodeUtf8("@owner")),
+        //        makeIntData(0)
         //    ])
         //
         //    configureContext({datum})
@@ -283,28 +285,28 @@ describe("VoucherModule::find_output_voucher", () => {
 })
 
 describe("VoucherModule::Voucher::find_return", () => {
-    const address = Address.dummy(false, 5)
-    const datum = new IntData(0)
+    const address = makeDummyAddress(false, 5)
+    const datum = makeIntData(0)
     const returnLovelace = 2_345_678n
-    const returnValue = new Value(returnLovelace)
+    const returnValue = makeValue(returnLovelace)
     const voucher = makeVoucher({
         address,
         datum
     })
 
     const configureContext = (props?: {
-        address?: Address
+        address?: ShelleyAddress
         datum?: null | UplcData
     }) => {
         return new ScriptContextBuilder()
             .addDummyOutputs(10)
             .addOutput(
-                new TxOutput(
+                makeTxOutput(
                     props?.address ?? address,
                     returnValue,
                     props?.datum === null
                         ? undefined
-                        : TxOutputDatum.Inline(props?.datum ?? datum)
+                        : makeInlineTxOutputDatum(props?.datum ?? datum)
                 )
             )
     }
@@ -336,7 +338,7 @@ describe("VoucherModule::Voucher::find_return", () => {
     })
 
     it("VoucherModule::Voucher::find_return #03 (throws an error if the voucher return output has the wrong datum)", () => {
-        configureContext({ datum: new IntData(1) }).use((ctx) => {
+        configureContext({ datum: makeIntData(1) }).use((ctx) => {
             throws(() => {
                 find_return.eval({
                     ...defaultTestArgs,
@@ -347,7 +349,7 @@ describe("VoucherModule::Voucher::find_return", () => {
     })
 
     it("VoucherModule::Voucher::find_return #04 (throws an error if the voucher return output isn't at the requested address)", () => {
-        configureContext({ address: Address.dummy(false, 6) }).use((ctx) => {
+        configureContext({ address: makeDummyAddress(false, 6) }).use((ctx) => {
             throws(() => {
                 find_return.eval({
                     ...defaultTestArgs,
@@ -399,7 +401,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
     describe("one voucher minted", () => {
         const voucherId = 0
         const configureParentContext = (props?: {
-            address?: Address
+            address?: ShelleyAddress
             minted?: Assets
             datumTokens?: IntLike
         }) => {
@@ -507,7 +509,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
             })
 
             it("VoucherModule::validate_minted_vouchers #06 (throws an error if the voucher output isn't sent to the voucher_validator address)", () => {
-                configureContext({ address: Address.dummy(false) }).use(
+                configureContext({ address: makeDummyAddress(false) }).use(
                     (currentScript, ctx) => {
                         throws(() => {
                             validate_minted_vouchers.eval({
@@ -568,7 +570,7 @@ describe("VoucherModule::validate_minted_vouchers", () => {
             it("VoucherModule::validate_minted_vouchers #10 (returns the fact that no vouchers were minted if there is success but no vouchers were minted nor returned to the voucher address)", () => {
                 configureContext({
                     minted: makeDvpTokens(0),
-                    address: Address.dummy(false)
+                    address: makeDummyAddress(false)
                 }).use((currentScript, ctx) => {
                     deepEqual(
                         validate_minted_vouchers.eval({

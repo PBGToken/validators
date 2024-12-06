@@ -5,9 +5,12 @@ import {
     AssetClass,
     Assets,
     PubKeyHash,
-    StakingValidatorHash
+    StakingValidatorHash,
+    makeDummyAssetClass,
+    makeDummyPubKeyHash,
+    makeDummyStakingValidatorHash
 } from "@helios-lang/ledger"
-import { IntData } from "@helios-lang/uplc"
+import { makeIntData, makeListData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
 import {
@@ -79,7 +82,7 @@ describe("config_validator::main", () => {
             Idle: {}
         }
         const config = makeConfig({ state })
-        const redeemer = new IntData(0)
+        const redeemer = makeIntData(0)
         const configureContext = (props?: { startTime?: null | number }) => {
             return new ScriptContextBuilder()
                 .setTimeRange({
@@ -156,7 +159,7 @@ describe("config_validator::main", () => {
                 proposal_timestamp: 0,
                 proposal: {
                     AddingAssetClass: {
-                        asset_class: AssetClass.dummy()
+                        asset_class: makeDummyAssetClass()
                     }
                 }
             }
@@ -164,7 +167,7 @@ describe("config_validator::main", () => {
         const config = makeConfig({
             state
         })
-        const redeemer = new IntData(0)
+        const redeemer = makeIntData(0)
         const configureContext = () => {
             return new ScriptContextBuilder()
                 .setTimeRange({ start: 100, end: 1000 })
@@ -188,7 +191,7 @@ describe("config_validator::main", () => {
     })
 
     describe("Idle -> Changing", () => {
-        const redeemer = new IntData(0)
+        const redeemer = makeIntData(0)
         const state0: ConfigStateType = {
             Idle: {}
         }
@@ -217,7 +220,7 @@ describe("config_validator::main", () => {
                     proposal_timestamp: proposalTimestamp,
                     proposal: props?.proposal ?? {
                         AddingAssetClass: {
-                            asset_class: AssetClass.dummy()
+                            asset_class: makeDummyAssetClass()
                         }
                     }
                 }
@@ -245,7 +248,7 @@ describe("config_validator::main", () => {
         }
 
         describe("AddingAssetClass", () => {
-            const assetClass = AssetClass.dummy(0)
+            const assetClass = makeDummyAssetClass(0)
 
             const configureContext = (props?: { assetClass?: AssetClass }) => {
                 const portfolio = makePortfolio({
@@ -290,7 +293,7 @@ describe("config_validator::main", () => {
             })
 
             it("config_validator::main #07 (throws an error if the portfolio Reducing::DoesNotExist asset class doesn't correspond to the asset class being added)", () => {
-                configureContext({ assetClass: AssetClass.dummy(1) }).use(
+                configureContext({ assetClass: makeDummyAssetClass(1) }).use(
                     (ctx) => {
                         throws(() => {
                             main.eval({
@@ -305,7 +308,7 @@ describe("config_validator::main", () => {
         })
 
         describe("RemovingAssetClass", () => {
-            const assetClass = AssetClass.dummy(0)
+            const assetClass = makeDummyAssetClass(0)
 
             const configureContext = (props?: {
                 assetClass?: AssetClass
@@ -354,7 +357,7 @@ describe("config_validator::main", () => {
             })
 
             it("config_validator::main #09 (throws an error if the portfolio Reducing::Exists asset class doesn't correspond)", () => {
-                configureContext({ assetClass: AssetClass.dummy(1) }).use(
+                configureContext({ assetClass: makeDummyAssetClass(1) }).use(
                     (ctx) => {
                         throws(() => {
                             main.eval({
@@ -381,7 +384,7 @@ describe("config_validator::main", () => {
         })
 
         describe("UpdatingSuccessFee", () => {
-            const benchmark = StakingValidatorHash.dummy(1)
+            const benchmark = makeDummyStakingValidatorHash(1)
             const configureContext = (props?: {
                 benchmark?: StakingValidatorHash
                 newPeriod?: IntLike
@@ -429,7 +432,7 @@ describe("config_validator::main", () => {
 
             it("config_validator::main #12 (throws an error if not witnessed by correct benchmark staking validator)", () => {
                 configureContext({
-                    benchmark: StakingValidatorHash.dummy(2)
+                    benchmark: makeDummyStakingValidatorHash(2)
                 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -553,7 +556,7 @@ describe("config_validator::main", () => {
             const configureContext = (props?: {
                 signingAgent?: PubKeyHash | null
             }) => {
-                const agent = PubKeyHash.dummy(2)
+                const agent = makeDummyPubKeyHash(2)
 
                 const scb = configureParentContext({
                     proposal: {
@@ -590,7 +593,7 @@ describe("config_validator::main", () => {
             })
 
             it("config_validator::main #21 (throws an error if not signed by correct agent)", () => {
-                configureContext({ signingAgent: PubKeyHash.dummy(3) }).use(
+                configureContext({ signingAgent: makeDummyPubKeyHash(3) }).use(
                     (ctx) => {
                         throws(() => {
                             main.eval({
@@ -617,7 +620,7 @@ describe("config_validator::main", () => {
         })
 
         describe("ChangingOracle", () => {
-            const newOracle = StakingValidatorHash.dummy(5)
+            const newOracle = makeDummyStakingValidatorHash(5)
             const configureContext = (props?: {
                 oracle?: StakingValidatorHash
             }) => {
@@ -646,7 +649,7 @@ describe("config_validator::main", () => {
             })
 
             it("config_validator::main #24 (throws an error if not witnessed by the corresponding oracle staking validator)", () => {
-                configureContext({ oracle: StakingValidatorHash.dummy(6) }).use(
+                configureContext({ oracle: makeDummyStakingValidatorHash(6) }).use(
                     (ctx) => {
                         throws(() => {
                             main.eval({
@@ -661,7 +664,7 @@ describe("config_validator::main", () => {
         })
 
         describe("ChangingGovernance", () => {
-            const newGovernance = StakingValidatorHash.dummy(5)
+            const newGovernance = makeDummyStakingValidatorHash(5)
             const configureContext = (props?: {
                 governance?: StakingValidatorHash
                 updateDelay?: IntLike
@@ -693,7 +696,7 @@ describe("config_validator::main", () => {
 
             it("config_validator::main #26 (throws an error if not witnessed by the corresponding governance staking validator)", () => {
                 configureContext({
-                    governance: StakingValidatorHash.dummy(6)
+                    governance: makeDummyStakingValidatorHash(6)
                 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -1118,7 +1121,7 @@ describe("config_validator::main", () => {
         describe("all Changing proposals", () => {
             it("config_validator::main #53 (throws an error if not witnessed by correct governance hash)", () => {
                 configureContext({
-                    governance: StakingValidatorHash.dummy()
+                    governance: makeDummyStakingValidatorHash()
                 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -1143,7 +1146,7 @@ describe("config_validator::main", () => {
             })
 
             it("config_validator::main #55 (throws an error if the something else in the config datum changed)", () => {
-                configureContext({ prevAgent: PubKeyHash.dummy(123) }).use(
+                configureContext({ prevAgent: makeDummyPubKeyHash(123) }).use(
                     (ctx) => {
                         throws(() => {
                             main.eval({
@@ -1187,11 +1190,11 @@ describe("config_validator::main", () => {
     })
 
     describe("Changing -> Idle", () => {
-        const redeemer = new IntData(0)
+        const redeemer = makeIntData(0)
 
         const updateDelay = 4 * 24 * 60 * 60 * 1000
         const origMaxSupply = 100_000_000_000
-        const signingAgent = PubKeyHash.dummy(10)
+        const signingAgent = makeDummyPubKeyHash(10)
 
         const makeConfig0 = (props?: {
             agent?: PubKeyHash
@@ -1205,7 +1208,7 @@ describe("config_validator::main", () => {
                     proposal_timestamp: proposalTimestamp,
                     proposal: props?.proposal ?? {
                         AddingAssetClass: {
-                            asset_class: AssetClass.dummy()
+                            asset_class: makeDummyAssetClass()
                         }
                     }
                 }
@@ -1294,7 +1297,7 @@ describe("config_validator::main", () => {
         const configureParentContext = configureContext
 
         describe("AddingAssetClass", () => {
-            const assetClass = AssetClass.dummy()
+            const assetClass = makeDummyAssetClass()
 
             const config0 = makeConfig0({
                 proposal: {
@@ -1372,7 +1375,7 @@ describe("config_validator::main", () => {
             it("config_validator::main #61 (throws an error of the output asset group doesn't contain the asset class)", () => {
                 configureContext({
                     outputAssets: [
-                        makeAsset({ assetClass: AssetClass.dummy(12) })
+                        makeAsset({ assetClass: makeDummyAssetClass(12) })
                     ]
                 }).use((ctx) => {
                     throws(() => {
@@ -1405,7 +1408,7 @@ describe("config_validator::main", () => {
 
             it("config_validator::main #63 (throws an error if the output config data contains an invalid change)", () => {
                 configureContext({
-                    governance: StakingValidatorHash.dummy(1)
+                    governance: makeDummyStakingValidatorHash(1)
                 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -1419,7 +1422,7 @@ describe("config_validator::main", () => {
         })
 
         describe("RemovingAssetClass", () => {
-            const assetClass = AssetClass.dummy()
+            const assetClass = makeDummyAssetClass()
 
             const config0 = makeConfig0({
                 proposal: {
@@ -1496,7 +1499,7 @@ describe("config_validator::main", () => {
             it("config_validator::main #67 (throws an error of the input asset group doesn't contain the asset class)", () => {
                 configureContext({
                     inputAssets: [
-                        makeAsset({ assetClass: AssetClass.dummy(12) })
+                        makeAsset({ assetClass: makeDummyAssetClass(12) })
                     ]
                 }).use((ctx) => {
                     throws(() => {
@@ -1511,7 +1514,7 @@ describe("config_validator::main", () => {
 
             it("config_validator::main #68 (throws an error if the output config data contains an invalid change)", () => {
                 configureContext({
-                    governance: StakingValidatorHash.dummy(1)
+                    governance: makeDummyStakingValidatorHash(1)
                 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -1525,7 +1528,7 @@ describe("config_validator::main", () => {
         })
 
         describe("UpdatingSuccessFee", () => {
-            const benchmark = StakingValidatorHash.dummy(1)
+            const benchmark = makeDummyStakingValidatorHash(1)
             const fee = makeSuccessFee()
             const config0 = makeConfig0({
                 proposal: {
@@ -1653,7 +1656,7 @@ describe("config_validator::main", () => {
         })
 
         describe("ChangingAgent", () => {
-            const newAgent = PubKeyHash.dummy(123)
+            const newAgent = makeDummyPubKeyHash(123)
             const config0 = makeConfig0({
                 proposal: {
                     ChangingAgent: {
@@ -1686,7 +1689,7 @@ describe("config_validator::main", () => {
             })
 
             it("config_validator::main #75 (throws an error if the output data doesn't contain the correct agent)", () => {
-                configureContext({ agentInConfig: PubKeyHash.dummy(124) }).use(
+                configureContext({ agentInConfig: makeDummyPubKeyHash(124) }).use(
                     (ctx) => {
                         throws(() => {
                             main.eval({
@@ -1701,7 +1704,7 @@ describe("config_validator::main", () => {
         })
 
         describe("ChangingOracle", () => {
-            const newOracle = StakingValidatorHash.dummy(123)
+            const newOracle = makeDummyStakingValidatorHash(123)
             const config0 = makeConfig0({
                 proposal: {
                     ChangingOracle: {
@@ -1735,7 +1738,7 @@ describe("config_validator::main", () => {
 
             it("config_validator::main #77 (throws an error if the output data doesn't contain the correct oracle staking validator hash)", () => {
                 configureContext({
-                    oracleInConfig: StakingValidatorHash.dummy(124)
+                    oracleInConfig: makeDummyStakingValidatorHash(124)
                 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -1749,7 +1752,7 @@ describe("config_validator::main", () => {
         })
 
         describe("ChangingGovernance", () => {
-            const newGovernance = StakingValidatorHash.dummy(123)
+            const newGovernance = makeDummyStakingValidatorHash(123)
             const newUpdateDelay = 7 * 24 * 60 * 60 * 1000
             const config0 = makeConfig0({
                 proposal: {
@@ -1790,7 +1793,7 @@ describe("config_validator::main", () => {
 
             it("config_validator::main #79 (throws an error if the output data doesn't contain the correct governance staking validator hash)", () => {
                 configureContext({
-                    governanceInConfig: StakingValidatorHash.dummy(124)
+                    governanceInConfig: makeDummyStakingValidatorHash(124)
                 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -2098,7 +2101,7 @@ describe("config_validator::main", () => {
 
             it("config_validator::main #93 (throws an error if the output config data contains an invalid change)", () => {
                 configureContext({
-                    governance: StakingValidatorHash.dummy(200)
+                    governance: makeDummyStakingValidatorHash(200)
                 }).use((ctx) => {
                     throws(() => {
                         main.eval({
@@ -2147,7 +2150,7 @@ describe("config_validator::main", () => {
             it("config_validator::main #96 (throws an error if the tx isn't signed by the agent)", () => {
                 const config0 = makeConfig0()
 
-                configureContext({ config0, agent: PubKeyHash.dummy(1) }).use(
+                configureContext({ config0, agent: makeDummyPubKeyHash(1) }).use(
                     (ctx) => {
                         throws(() => {
                             main.eval({
@@ -2161,7 +2164,7 @@ describe("config_validator::main", () => {
             })
 
             it("config_validator::main #97 (throws an error if the output config data contains an invalid change)", () => {
-                const assetClass = AssetClass.dummy()
+                const assetClass = makeDummyAssetClass()
                 const config0 = makeConfig0()
                 const groupId = 0
                 const assets0: AssetType[] = []
@@ -2170,7 +2173,7 @@ describe("config_validator::main", () => {
 
                 configureContext({
                     config0,
-                    governance: StakingValidatorHash.dummy(13)
+                    governance: makeDummyStakingValidatorHash(13)
                 })
                     .addAssetGroupThread({
                         id: groupId,

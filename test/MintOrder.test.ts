@@ -1,7 +1,7 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { Address, AssetClass, Assets, Value } from "@helios-lang/ledger"
-import { IntData } from "@helios-lang/uplc"
+import { Address, AssetClass, Assets, makeAssets, makeDummyAddress, makeDummyAssetClass, makeValue } from "@helios-lang/ledger"
+import { IntData, makeIntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { scripts } from "./constants"
 import {
@@ -25,8 +25,8 @@ const {
 } = contract.MintOrderModule
 
 describe("MintOrderModule::MintOrder::find_return", () => {
-    const address = Address.dummy(false)
-    const datum = new IntData(0)
+    const address = makeDummyAddress(false)
+    const datum = makeIntData(0)
     const mintOrder = makeMintOrder({
         address,
         datum
@@ -42,9 +42,9 @@ describe("MintOrderModule::MintOrder::find_return", () => {
                     self: mintOrder
                 })
 
-                strictEqual(output.address.toBech32(), address.toBech32())
+                strictEqual(output.address.toString(), address.toBech32())
                 strictEqual(
-                    output.datum?.data.toSchemaJson(),
+                    output.datum?.data?.toSchemaJson(),
                     datum.toSchemaJson()
                 )
             })
@@ -61,9 +61,9 @@ describe("MintOrderModule::MintOrder::find_return", () => {
                     self: mintOrder
                 })
 
-                strictEqual(output.address.toBech32(), address.toBech32())
+                strictEqual(output.address.toString(), address.toBech32())
                 strictEqual(
-                    output.datum?.data.toSchemaJson(),
+                    output.datum?.data?.toSchemaJson(),
                     datum.toSchemaJson()
                 )
             })
@@ -71,7 +71,7 @@ describe("MintOrderModule::MintOrder::find_return", () => {
 
     it("MintOrderModule::MintOrder::find_return #03 (throws an error if not found due to the output having a different datum)", () => {
         new ScriptContextBuilder()
-            .addMintOrderReturn({ address, datum: new IntData(1) })
+            .addMintOrderReturn({ address, datum: makeIntData(1) })
             .use((ctx) => {
                 throws(() => [
                     find_return.eval({
@@ -86,7 +86,7 @@ describe("MintOrderModule::MintOrder::find_return", () => {
     it("MintOrderModule::MintOrder::find_return #04 (throws an error if not found due to the output being at a different address)", () => {
         new ScriptContextBuilder()
             .addDummyOutputs(10)
-            .addMintOrderReturn({ address: Address.dummy(false, 1) })
+            .addMintOrderReturn({ address: makeDummyAddress(false, 1) })
             .use((ctx) => {
                 throws(() => [
                     find_return.eval({
@@ -100,8 +100,8 @@ describe("MintOrderModule::MintOrder::find_return", () => {
 })
 
 describe("MintOrderModule::MintOrder::diff", () => {
-    const address = Address.dummy(false)
-    const datum = new IntData(0)
+    const address = makeDummyAddress(false)
+    const datum = makeIntData(0)
     const mintOrder = makeMintOrder({
         address,
         datum
@@ -109,20 +109,20 @@ describe("MintOrderModule::MintOrder::diff", () => {
     const redeemer: MintOrderRedeemerType = { Fulfill: { ptrs: [] } }
 
     describe("the order contains only lovelace", () => {
-        const inputValue = new Value(10_000_000)
+        const inputValue = makeValue(10_000_000)
 
         describe("for the mint_order_validator", () => {
             it("MintOrderModule::MintOrder::diff #01 (returns 0 if precisely the order value is returned)", () => {
                 new ScriptContextBuilder()
                     .addMintOrderInput({
-                        value: new Value(10_000_000),
+                        value: makeValue(10_000_000),
                         datum: mintOrder,
                         redeemer
                     })
                     .addMintOrderReturn({
                         address,
                         datum,
-                        value: new Value(10_000_000)
+                        value: makeValue(10_000_000)
                     })
                     .use((ctx) => {
                         const value = diff.eval({
@@ -146,7 +146,7 @@ describe("MintOrderModule::MintOrder::diff", () => {
                     .addMintOrderReturn({
                         address,
                         datum,
-                        value: new Value(11_000_000)
+                        value: makeValue(11_000_000)
                     })
                     .use((ctx) => {
                         const value = diff.eval({
@@ -170,7 +170,7 @@ describe("MintOrderModule::MintOrder::diff", () => {
                     .addMintOrderReturn({
                         address,
                         datum,
-                        value: new Value(9_000_000)
+                        value: makeValue(9_000_000)
                     })
                     .use((ctx) => {
                         const value = diff.eval({
@@ -193,7 +193,7 @@ describe("MintOrderModule::MintOrder::diff", () => {
                     })
                     .addMintOrderReturn({
                         address,
-                        datum: new IntData(1),
+                        datum: makeIntData(1),
                         value: inputValue
                     })
                     .use((ctx) => {
@@ -237,10 +237,10 @@ describe("MintOrderModule::MintOrder::diff", () => {
     })
 
     describe("the order input contains lovelace and a number of tokens of a single asset class", () => {
-        const ac = AssetClass.dummy()
-        const inputValue = new Value(
+        const ac = makeDummyAssetClass()
+        const inputValue = makeValue(
             10_000_000,
-            Assets.fromAssetClasses([[ac, 1000]])
+            makeAssets([[ac, 1000]])
         )
 
         describe("for the mint_order_validator", () => {
@@ -254,7 +254,7 @@ describe("MintOrderModule::MintOrder::diff", () => {
                     .addMintOrderReturn({
                         address,
                         datum,
-                        value: new Value(10_000_000)
+                        value: makeValue(10_000_000)
                     })
                     .use((ctx) => {
                         const value = diff.eval({
@@ -268,7 +268,7 @@ describe("MintOrderModule::MintOrder::diff", () => {
                             value.assetClasses[0].toFingerprint(),
                             ac.toFingerprint()
                         )
-                        strictEqual(value.assets.getQuantity(ac), 1000n)
+                        strictEqual(value.assets.getAssetClassQuantity(ac), 1000n)
                     })
             })
         })
@@ -288,7 +288,7 @@ describe("MintOrderModule::MintOrder::diff", () => {
                     .addMintOrderReturn({
                         address,
                         datum,
-                        value: new Value(10_000_000)
+                        value: makeValue(10_000_000)
                     })
                     .use((ctx) => {
                         otherScripts.forEach((currentScript) => {
@@ -336,8 +336,8 @@ describe("MintOrderModule::MintOrder::price_expiry", () => {
 })
 
 describe("MintOrderModule::MintOrder::returned_tokens", () => {
-    const address = Address.dummy(false)
-    const datum = new IntData(0)
+    const address = makeDummyAddress(false)
+    const datum = makeIntData(0)
     const mintOrder = makeMintOrder({
         address,
         datum
@@ -345,14 +345,14 @@ describe("MintOrderModule::MintOrder::returned_tokens", () => {
     const redeemer: MintOrderRedeemerType = { Fulfill: { ptrs: [] } }
 
     describe("the order input contains lovelace and some tokens of a single asset class", () => {
-        const inputValue = new Value(
+        const inputValue = makeValue(
             10_000_000,
-            Assets.fromAssetClasses([[AssetClass.dummy(), 10000]])
+            makeAssets([[makeDummyAssetClass(), 10000]])
         )
 
         it("MintOrderModule::MintOrder::returned_tokens #01 (returns the number of DVP tokens contained in the return value)", () => {
             const nDvpTokens = 1000n
-            const returnValue = new Value(2_000_000, makeDvpTokens(nDvpTokens))
+            const returnValue = makeValue(2_000_000, makeDvpTokens(nDvpTokens))
 
             new ScriptContextBuilder()
                 .addMintOrderInput({
@@ -378,7 +378,7 @@ describe("MintOrderModule::MintOrder::returned_tokens", () => {
         })
 
         it("MintOrderModule::MintOrder::returned_tokens #02 (throws an error if no DVP tokens are returned)", () => {
-            const returnValue = new Value(2_000_000, makeDvpTokens(0))
+            const returnValue = makeValue(2_000_000, makeDvpTokens(0))
 
             new ScriptContextBuilder()
                 .addMintOrderInput({
@@ -405,8 +405,8 @@ describe("MintOrderModule::MintOrder::returned_tokens", () => {
 })
 
 describe("MintOrderModule::MintOrder::value", () => {
-    const address = Address.dummy(false)
-    const datum = new IntData(0)
+    const address = makeDummyAddress(false)
+    const datum = makeIntData(0)
     const mintOrder = makeMintOrder({
         address,
         datum
@@ -415,10 +415,10 @@ describe("MintOrderModule::MintOrder::value", () => {
 
     describe("the order input contains only lovelace", () => {
         const lovelace = 2_000_000n
-        const inputValue = new Value(2_000_000n)
+        const inputValue = makeValue(2_000_000n)
 
         it("MintOrderModule::MintOrder::value #01 (returns the positive input lovelace value if zero is returned)", () => {
-            const returnedValue = new Value(0)
+            const returnedValue = makeValue(0)
 
             new ScriptContextBuilder()
                 .addMintOrderInput({
@@ -444,7 +444,7 @@ describe("MintOrderModule::MintOrder::value", () => {
         })
 
         it("MintOrderModule::MintOrder::value #02 (returns only the positive input lovelace if zero lovelace and some DVP tokens are returned (the DVP tokens are ignored))", () => {
-            const returnedValue = new Value(0, makeDvpTokens(1000))
+            const returnedValue = makeValue(0, makeDvpTokens(1000))
 
             new ScriptContextBuilder()
                 .addMintOrderInput({
@@ -472,8 +472,8 @@ describe("MintOrderModule::MintOrder::value", () => {
 })
 
 describe("MintOrderModule::MintOrder::value_lovelace", () => {
-    const address = Address.dummy(false)
-    const datum = new IntData(0)
+    const address = makeDummyAddress(false)
+    const datum = makeIntData(0)
     const maxPriceAge = 100
     const mintOrder = makeMintOrder({
         address,
@@ -482,7 +482,7 @@ describe("MintOrderModule::MintOrder::value_lovelace", () => {
     })
 
     describe("the order input contains only lovelace", () => {
-        const inputValue = new Value(10_000_000)
+        const inputValue = makeValue(10_000_000)
 
         it("MintOrderModule::MintOrder::value_lovelace #01 (returns zero if the order is redeemed with an empty asset pointers list and if precisely the order input value is returned)", () => {
             new ScriptContextBuilder()
@@ -524,7 +524,7 @@ describe("MintOrderModule::MintOrder::value_lovelace", () => {
                 .addMintOrderReturn({
                     address,
                     datum,
-                    value: new Value(8_000_000)
+                    value: makeValue(8_000_000)
                 })
                 .setTimeRange({ end: 200 })
                 .use((ctx) => {
@@ -541,7 +541,7 @@ describe("MintOrderModule::MintOrder::value_lovelace", () => {
         })
 
         it("MintOrderModule::MintOrder::value_lovelace #03 (throws an error if more lovelace is returned but no asset pointers are specified)", () => {
-            const returnValue = new Value(12_000_000)
+            const returnValue = makeValue(12_000_000)
 
             const ptrs: AssetPtrType[] = []
 
@@ -571,18 +571,18 @@ describe("MintOrderModule::MintOrder::value_lovelace", () => {
     })
 
     describe("the order input contains lovelace and two other asset class tokens", () => {
-        const ac0 = AssetClass.dummy(0)
-        const ac1 = AssetClass.dummy(1)
-        const inputValue = new Value(
+        const ac0 = makeDummyAssetClass(0)
+        const ac1 = makeDummyAssetClass(1)
+        const inputValue = makeValue(
             2_000_000,
-            Assets.fromAssetClasses([
+            makeAssets([
                 [ac0, 10],
                 [ac1, 100]
             ])
         )
 
         it("MintOrderModule::MintOrder::value_lovelace #04 (returns the correct lovelace sum if some lovelace and DVP tokens are returned)", () => {
-            const returnValue = new Value(10_000_000, makeDvpTokens(100))
+            const returnValue = makeValue(10_000_000, makeDvpTokens(100))
 
             // the correct order of these AssetPtrs was determined by trial-and-error
             const ptrs: AssetPtrType[] = [
@@ -635,8 +635,8 @@ describe("MintOrderModule::MintOrder::value_lovelace", () => {
 })
 
 describe("MintOrderModule::MintOrder::voucher_id", () => {
-    const address = Address.dummy(false)
-    const datum = new IntData(0)
+    const address = makeDummyAddress(false)
+    const datum = makeIntData(0)
     const mintOrder = makeMintOrder({
         address,
         datum
@@ -651,8 +651,8 @@ describe("MintOrderModule::MintOrder::voucher_id", () => {
             inputAssets?: Assets
             returnAssets?: Assets
         }) => {
-            const inputValue = new Value(10_000_000, props?.inputAssets)
-            const returnValue = new Value(
+            const inputValue = props?.inputAssets ? makeValue(10_000_000, props?.inputAssets) : makeValue(10_000_000)
+            const returnValue = makeValue(
                 12_000_000,
                 props?.returnAssets ?? token
             )
@@ -689,7 +689,7 @@ describe("MintOrderModule::MintOrder::voucher_id", () => {
             })
 
             it("MintOrderModule::MintOrder::voucher_id #02 (throws an error if no voucher is returned)", () => {
-                configureContext({ returnAssets: new Assets([]) }).use(
+                configureContext({ returnAssets: makeAssets([]) }).use(
                     (currentScript, ctx) => {
                         throws(() => {
                             voucher_id.eval({
@@ -720,7 +720,7 @@ describe("MintOrderModule::MintOrder::voucher_id", () => {
             it("MintOrderModule::MintOrder::voucher_id #04 (throws an error if the voucher is sent as an input)", () => {
                 configureContext({
                     inputAssets: token,
-                    returnAssets: new Assets([])
+                    returnAssets: makeAssets([])
                 }).use((currentScript, ctx) => {
                     throws(() => {
                         voucher_id.eval({
@@ -740,7 +740,7 @@ describe("MintOrderModule::MintOrder::voucher_id", () => {
             )
 
             it("MintOrderModule::MintOrder::voucher_id #05 (throws an error if no voucher is returned)", () => {
-                configureContext({ returnAssets: new Assets([]) }).use(
+                configureContext({ returnAssets: makeAssets([]) }).use(
                     (currentScript, ctx) => {
                         throws(() => {
                             voucher_id.eval({
