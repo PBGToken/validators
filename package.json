@@ -2,15 +2,39 @@
     "name": "pbg-token-validators",
     "version": "1.0.29",
     "description": "PBG Token contracts validators for Cardano",
-    "main": "dist/index.js",
     "type": "module",
-    "types": "dist/index.d.ts",
+    "main": "dist/dvp/index.js",
+    "types": "dist/dvp/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/dvp/index.d.ts",
+            "import": "./dist/dvp/index.js",
+            "require": "./dist/dvp/index.js"
+        },
+        "./preprod": {
+            "types": "./dist/preprod/index.d.ts",
+            "import": "./dist/preprod/index.js",
+            "require": "./dist/preprod/index.js"
+        },
+        "./beta": {
+            "types": "./dist/beta/index.d.ts",
+            "import": "./dist/beta/index.js",
+            "require": "./dist/beta/index.js"
+        },
+        "./mainnet": {
+            "types": "./dist/mainnet/index.d.ts",
+            "import": "./dist/mainnet/index.js",
+            "require": "./dist/mainnet/index.js"
+        }
+    },
     "workspaces": [
         "test",
         "test/context"
     ],
     "scripts": {
-        "build": "npx hl2ts --out-dir ./dist",
+        "build": "npm run build:types && npm run build:stages",
+        "build:types": "npx hl2ts --out-dir ./dist/dvp",
+        "build:stages": "node ./build-contexts.js",
         "co:login": "aws codeartifact login --tool npm --repository pbg --domain pbg --domain-owner 198334355085 --profile pbg --region us-east-1",
         "prettify": "npx prettier . --write",
         "test": "npm run test --prefix test"
@@ -43,15 +67,16 @@
     },
     "homepage": "https://github.com/PBGToken/validators#readme",
     "dependencies": {
-        "@helios-lang/compiler": "^0.17.8",
-        "@helios-lang/contract-utils": "^0.3.2"
+        "@helios-lang/codec-utils": "^0.3.2",
+        "@helios-lang/compiler": "0.17.10",
+        "@helios-lang/contract-utils": "^0.3.7",
+        "@helios-lang/ledger": "^0.6.13",
+        "@helios-lang/tx-utils": "^0.3.15",
+        "@helios-lang/type-utils": "^0.2.8",
+        "@helios-lang/uplc": "^0.7.8"
     },
     "devDependencies": {
-        "@helios-lang/codec-utils": "^0.3.2",
         "@helios-lang/crypto": "^0.2.1",
-        "@helios-lang/ledger": "^0.6.8",
-        "@helios-lang/type-utils": "^0.2.8",
-        "@helios-lang/uplc": "^0.7.6",
         "@types/node": "^22.4.1",
         "prettier": "^3.3.3",
         "tsx": "^4.19.0"
