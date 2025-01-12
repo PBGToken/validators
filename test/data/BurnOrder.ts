@@ -1,6 +1,13 @@
 import { type IntLike } from "@helios-lang/codec-utils"
-import { type PermissiveType, type StrictType } from "@helios-lang/contract-utils"
-import { type ShelleyAddress, makeDummyAddress, Value } from "@helios-lang/ledger"
+import {
+    type PermissiveType,
+    type StrictType
+} from "@helios-lang/contract-utils"
+import {
+    type ShelleyAddress,
+    makeDummyAddress,
+    Value
+} from "@helios-lang/ledger"
 import { makeIntData, UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 

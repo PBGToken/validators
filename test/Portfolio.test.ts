@@ -1,6 +1,13 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { type ShelleyAddress, type Assets, makeAssets, makeDummyAddress, makeDummyAssetClass, makeValue } from "@helios-lang/ledger"
+import {
+    type ShelleyAddress,
+    type Assets,
+    makeAssets,
+    makeDummyAddress,
+    makeDummyAssetClass,
+    makeValue
+} from "@helios-lang/ledger"
 import {
     expectConstrData,
     expectListData,
@@ -314,7 +321,10 @@ describe("PortfolioModule::Portfolio::find_ref", () => {
     describe("for the config_validator", () => {
         it("PortfolioModule::Portfolio::find_ref #01 (returns the portfolio data even if the referenced portfolio UTxO isn't at the portfolio_validator address)", () => {
             new ScriptContextBuilder()
-                .addPortfolioRef({ address: makeDummyAddress(false), portfolio })
+                .addPortfolioRef({
+                    address: makeDummyAddress(false),
+                    portfolio
+                })
                 .redeemDummyTokenWithDvpPolicy()
                 .use((ctx) => {
                     deepEqual(
@@ -370,7 +380,10 @@ describe("PortfolioModule::Portfolio::find_ref", () => {
 
         it("PortfolioModule::Portfolio::find_ref #04 (throws an error if the referenced portfolio UTxO isn't at the portfolio_validator address)", () => {
             new ScriptContextBuilder()
-                .addPortfolioRef({ address: makeDummyAddress(false), portfolio })
+                .addPortfolioRef({
+                    address: makeDummyAddress(false),
+                    portfolio
+                })
                 .redeemDummyTokenWithDvpPolicy()
                 .use((ctx) => {
                     allExceptConfigValidator.forEach((currentScript) => {

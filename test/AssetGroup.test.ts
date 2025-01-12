@@ -851,7 +851,9 @@ describe("AssetGroupModule::search_for_asset_class", () => {
         const assets = [makeAsset()]
         const groupId = 0n
 
-        const configureParentContext = (props?: { address?: ShelleyAddress }) => {
+        const configureParentContext = (props?: {
+            address?: ShelleyAddress
+        }) => {
             return new ScriptContextBuilder()
                 .addAssetGroupRef({
                     address: props?.address,

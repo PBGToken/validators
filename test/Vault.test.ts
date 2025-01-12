@@ -1,6 +1,14 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { type ShelleyAddress, AssetClass, Assets, makeAssets, makeDummyAddress, makeDummyAssetClass, makeValue } from "@helios-lang/ledger"
+import {
+    type ShelleyAddress,
+    AssetClass,
+    Assets,
+    makeAssets,
+    makeDummyAddress,
+    makeDummyAssetClass,
+    makeValue
+} from "@helios-lang/ledger"
 import { makeIntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import {
@@ -257,10 +265,7 @@ describe("Vault::diff", () => {
 
                 new ScriptContextBuilder()
                     .takeFromVault({
-                        value: makeValue(
-                            0,
-                            makeAssets([[ac, 1_000_000n]])
-                        )
+                        value: makeValue(0, makeAssets([[ac, 1_000_000n]]))
                     })
                     .sendToVault({ value: makeValue(0) })
                     .redeemDummyTokenWithDvpPolicy()
@@ -271,7 +276,10 @@ describe("Vault::diff", () => {
                                 $scriptContext: ctx
                             })
 
-                            strictEqual(v.assets.getAssetClassQuantity(ac), -1_000_000n)
+                            strictEqual(
+                                v.assets.getAssetClassQuantity(ac),
+                                -1_000_000n
+                            )
                         })
                     })
             })

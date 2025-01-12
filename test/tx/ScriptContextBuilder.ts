@@ -30,7 +30,14 @@ import {
     makeScriptContextV2
 } from "@helios-lang/ledger"
 import { expectDefined } from "@helios-lang/type-utils"
-import { ByteArrayData, IntData, ListData, makeByteArrayData, makeIntData, UplcData } from "@helios-lang/uplc"
+import {
+    ByteArrayData,
+    IntData,
+    ListData,
+    makeByteArrayData,
+    makeIntData,
+    UplcData
+} from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { Addresses, policy } from "../constants"
 import {
@@ -126,9 +133,7 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = makeSpendingPurpose(
-                id
-            )
+            this.purpose = makeSpendingPurpose(id)
         }
 
         this.tx.inputs.push(
@@ -137,7 +142,9 @@ export class ScriptContextBuilder {
                 makeTxOutput(
                     address,
                     value,
-                    makeInlineTxOutputDatum(castAssetGroup.toUplcData({ assets }))
+                    makeInlineTxOutputDatum(
+                        castAssetGroup.toUplcData({ assets })
+                    )
                 )
             )
         )
@@ -163,7 +170,9 @@ export class ScriptContextBuilder {
                 makeTxOutput(
                     address,
                     value,
-                    makeInlineTxOutputDatum(castAssetGroup.toUplcData({ assets }))
+                    makeInlineTxOutputDatum(
+                        castAssetGroup.toUplcData({ assets })
+                    )
                 )
             )
         )
@@ -225,9 +234,7 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = makeSpendingPurpose(
-                id
-            )
+            this.purpose = makeSpendingPurpose(id)
         }
 
         this.tx.inputs.push(
@@ -270,9 +277,7 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = makeSpendingPurpose(
-                id
-            )
+            this.purpose = makeSpendingPurpose(id)
         }
 
         this.tx.inputs.push(
@@ -360,9 +365,7 @@ export class ScriptContextBuilder {
         const value = props?.value ?? makeValue(2_000_000)
 
         if (props?.redeemer) {
-            this.purpose = makeSpendingPurpose(
-                id
-            )
+            this.purpose = makeSpendingPurpose(id)
         }
 
         this.tx.inputs.push(makeTxInput(id, makeTxOutput(address, value)))
@@ -440,9 +443,7 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = makeSpendingPurpose(
-                id
-            )
+            this.purpose = makeSpendingPurpose(id)
         }
 
         this.tx.inputs.push(
@@ -501,9 +502,7 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = makeSpendingPurpose(
-                id
-            )
+            this.purpose = makeSpendingPurpose(id)
         }
 
         this.tx.inputs.push(
@@ -550,7 +549,9 @@ export class ScriptContextBuilder {
                 makeTxOutput(
                     props.address ?? makeDummyAddress(false, 0),
                     props.value ?? makeValue(0),
-                    props.datum ? makeInlineTxOutputDatum(props.datum) : undefined
+                    props.datum
+                        ? makeInlineTxOutputDatum(props.datum)
+                        : undefined
                 )
             )
         }
@@ -570,9 +571,7 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = makeSpendingPurpose(
-                id
-            )
+            this.purpose = makeSpendingPurpose(id)
         }
 
         this.tx.inputs.push(
@@ -662,9 +661,7 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = makeSpendingPurpose(
-                id
-            )
+            this.purpose = makeSpendingPurpose(id)
         }
 
         this.tx.inputs.push(
@@ -761,9 +758,7 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = makeSpendingPurpose(
-                id
-            )
+            this.purpose = makeSpendingPurpose(id)
         }
 
         this.tx.inputs.push(
@@ -872,9 +867,7 @@ export class ScriptContextBuilder {
         const value = makeValue(2_000_000n, supplyToken)
 
         if (props?.redeemer) {
-            this.purpose = makeSpendingPurpose(
-                id
-            )
+            this.purpose = makeSpendingPurpose(id)
         }
 
         this.tx.inputs.push(
@@ -983,9 +976,7 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = makeSpendingPurpose(
-                id
-            )
+            this.purpose = makeSpendingPurpose(id)
         }
 
         const datum = wrapVoucher(voucher)
@@ -996,7 +987,9 @@ export class ScriptContextBuilder {
                 makeTxOutput(
                     address,
                     makeValue(2_000_000, token),
-                    makeInlineTxOutputDatum(castVoucherWrapper.toUplcData(datum))
+                    makeInlineTxOutputDatum(
+                        castVoucherWrapper.toUplcData(datum)
+                    )
                 )
             )
         )
@@ -1042,9 +1035,7 @@ export class ScriptContextBuilder {
             const mph =
                 props?.assets?.assets?.[0]?.[0] ?? makeDummyMintingPolicyHash()
 
-            this.purpose = makeMintingPurpose(
-                mph
-            )
+            this.purpose = makeMintingPurpose(mph)
         }
 
         if (props?.assets) {
@@ -1065,9 +1056,7 @@ export class ScriptContextBuilder {
         this.reward({ hash, redeemer: castRatio.toUplcData(redeemer) })
 
         if (props?.isMainPurpose) {
-            this.purpose = makeRewardingPurpose(
-                hash
-            )
+            this.purpose = makeRewardingPurpose(hash)
         }
 
         return this
@@ -1157,9 +1146,7 @@ export class ScriptContextBuilder {
         const id = this.newInputId()
 
         if (props?.redeemer) {
-            this.purpose = makeSpendingPurpose(
-                id
-            )
+            this.purpose = makeSpendingPurpose(id)
         }
 
         this.tx.inputs.push(

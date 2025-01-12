@@ -1,4 +1,8 @@
-import { makeCast, type PermissiveType, type StrictType } from "@helios-lang/contract-utils"
+import {
+    makeCast,
+    type PermissiveType,
+    type StrictType
+} from "@helios-lang/contract-utils"
 import contract from "pbg-token-validators-test-context"
 
 export const castAssetPtr = contract.AssetPtrModule.AssetPtr

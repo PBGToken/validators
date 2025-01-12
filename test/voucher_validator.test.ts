@@ -1,7 +1,11 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { IntLike } from "@helios-lang/codec-utils"
-import { makeDummyAddress, type PubKeyHash, makeDummyPubKeyHash } from "@helios-lang/ledger"
+import {
+    makeDummyAddress,
+    type PubKeyHash,
+    makeDummyPubKeyHash
+} from "@helios-lang/ledger"
 import { makeIntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"

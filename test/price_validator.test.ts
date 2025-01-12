@@ -1,7 +1,11 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { type IntLike } from "@helios-lang/codec-utils"
-import { makeDummyAssetClass, makeDummyPubKeyHash, type PubKeyHash } from "@helios-lang/ledger"
+import {
+    makeDummyAssetClass,
+    makeDummyPubKeyHash,
+    type PubKeyHash
+} from "@helios-lang/ledger"
 import { makeIntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
@@ -78,14 +82,16 @@ describe("price_validator::main", () => {
     })
 
     it("price_validator::main #02 (throws an error if not signed by the correct agent)", () => {
-        configureContext({ signingAgent: makeDummyPubKeyHash(1) }).use((ctx) => {
-            throws(() => {
-                main.eval({
-                    $scriptContext: ctx,
-                    ...defaultTestArgs
-                })
-            }, /not signed by agent/)
-        })
+        configureContext({ signingAgent: makeDummyPubKeyHash(1) }).use(
+            (ctx) => {
+                throws(() => {
+                    main.eval({
+                        $scriptContext: ctx,
+                        ...defaultTestArgs
+                    })
+                }, /not signed by agent/)
+            }
+        )
     })
 
     it("price_validator::main #03 (throws an error if the new price ratio doesn't match the vault lovelace value over the number of tokens in circulation)", () => {
@@ -116,7 +122,9 @@ describe("price_validator::main", () => {
 
     it("price_validator::main #05 (throws an error if the portfolio reduction state isn't TotalAssetValue)", () => {
         configureContext({
-            reductionMode: { DoesNotExist: { asset_class: makeDummyAssetClass() } }
+            reductionMode: {
+                DoesNotExist: { asset_class: makeDummyAssetClass() }
+            }
         }).use((ctx) => {
             throws(() => {
                 main.eval({

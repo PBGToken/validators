@@ -1,6 +1,14 @@
 import { IntLike } from "@helios-lang/codec-utils"
-import { type PermissiveType, type StrictType } from "@helios-lang/contract-utils"
-import { AssetClass, makeDummyAssetClass, TimeLike, toTime } from "@helios-lang/ledger"
+import {
+    type PermissiveType,
+    type StrictType
+} from "@helios-lang/contract-utils"
+import {
+    AssetClass,
+    makeDummyAssetClass,
+    TimeLike,
+    toTime
+} from "@helios-lang/ledger"
 import { strictEqual } from "node:assert"
 import contract from "pbg-token-validators-test-context"
 

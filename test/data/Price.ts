@@ -1,5 +1,8 @@
 import { type IntLike } from "@helios-lang/codec-utils"
-import { type PermissiveType, type StrictType } from "@helios-lang/contract-utils"
+import {
+    type PermissiveType,
+    type StrictType
+} from "@helios-lang/contract-utils"
 import { type TimeLike, toTime } from "@helios-lang/ledger"
 import contract from "pbg-token-validators-test-context"
 

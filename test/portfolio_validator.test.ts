@@ -2136,7 +2136,9 @@ describe("portfolio_validator::validate_move_assets", () => {
             })
         ]
 
-        const configureContext = (props?: { secondGroupAddress?: ShelleyAddress }) => {
+        const configureContext = (props?: {
+            secondGroupAddress?: ShelleyAddress
+        }) => {
             let outputAssets0: AssetType[] = [
                 makeAsset({
                     assetClass: assetClass0,
@@ -2196,17 +2198,17 @@ describe("portfolio_validator::validate_move_assets", () => {
         })
 
         it("portfolio_validator::validate_move_assets #07 (returns false if the second asset group isn't sent to the assets_validator address)", () => {
-            configureContext({ secondGroupAddress: makeDummyAddress(false) }).use(
-                (ctx) => {
-                    throws(() => {
-                        validate_move_assets.eval({
-                            $scriptContext: ctx,
-                            portfolio0: portfolio
-                        }),
-                            /number of groups in inputs isn't equal to number of groups in outputs/
-                    })
-                }
-            )
+            configureContext({
+                secondGroupAddress: makeDummyAddress(false)
+            }).use((ctx) => {
+                throws(() => {
+                    validate_move_assets.eval({
+                        $scriptContext: ctx,
+                        portfolio0: portfolio
+                    }),
+                        /number of groups in inputs isn't equal to number of groups in outputs/
+                })
+            })
         })
     })
 })

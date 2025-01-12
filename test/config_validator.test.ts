@@ -649,17 +649,17 @@ describe("config_validator::main", () => {
             })
 
             it("config_validator::main #24 (throws an error if not witnessed by the corresponding oracle staking validator)", () => {
-                configureContext({ oracle: makeDummyStakingValidatorHash(6) }).use(
-                    (ctx) => {
-                        throws(() => {
-                            main.eval({
-                                $scriptContext: ctx,
-                                $datum: config0,
-                                _: redeemer
-                            })
-                        }, /not witnessed by new oracle delegate/)
-                    }
-                )
+                configureContext({
+                    oracle: makeDummyStakingValidatorHash(6)
+                }).use((ctx) => {
+                    throws(() => {
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        })
+                    }, /not witnessed by new oracle delegate/)
+                })
             })
         })
 
@@ -1689,17 +1689,17 @@ describe("config_validator::main", () => {
             })
 
             it("config_validator::main #75 (throws an error if the output data doesn't contain the correct agent)", () => {
-                configureContext({ agentInConfig: makeDummyPubKeyHash(124) }).use(
-                    (ctx) => {
-                        throws(() => {
-                            main.eval({
-                                $scriptContext: ctx,
-                                $datum: config0,
-                                _: redeemer
-                            })
-                        }, /invalid datum change/)
-                    }
-                )
+                configureContext({
+                    agentInConfig: makeDummyPubKeyHash(124)
+                }).use((ctx) => {
+                    throws(() => {
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        })
+                    }, /invalid datum change/)
+                })
             })
         })
 
@@ -2150,17 +2150,18 @@ describe("config_validator::main", () => {
             it("config_validator::main #96 (throws an error if the tx isn't signed by the agent)", () => {
                 const config0 = makeConfig0()
 
-                configureContext({ config0, agent: makeDummyPubKeyHash(1) }).use(
-                    (ctx) => {
-                        throws(() => {
-                            main.eval({
-                                $scriptContext: ctx,
-                                $datum: config0,
-                                _: redeemer
-                            })
-                        }, /not signed by new agent/)
-                    }
-                )
+                configureContext({
+                    config0,
+                    agent: makeDummyPubKeyHash(1)
+                }).use((ctx) => {
+                    throws(() => {
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: config0,
+                            _: redeemer
+                        })
+                    }, /not signed by new agent/)
+                })
             })
 
             it("config_validator::main #97 (throws an error if the output config data contains an invalid change)", () => {

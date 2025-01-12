@@ -1,7 +1,17 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { type ShelleyAddress, type Assets, makeValue, makeDummyAddress } from "@helios-lang/ledger"
-import { expectListData, makeIntData, makeListData, type UplcData } from "@helios-lang/uplc"
+import {
+    type ShelleyAddress,
+    type Assets,
+    makeValue,
+    makeDummyAddress
+} from "@helios-lang/ledger"
+import {
+    expectListData,
+    makeIntData,
+    makeListData,
+    type UplcData
+} from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { indirectPolicyScripts, scripts } from "./constants"
 import { castSupply, makeConfig, makeSupply } from "./data"

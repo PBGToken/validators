@@ -1,6 +1,9 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { makeCertifyingPurpose, makeDeregistrationDCert } from "@helios-lang/ledger"
+import {
+    makeCertifyingPurpose,
+    makeDeregistrationDCert
+} from "@helios-lang/ledger"
 import { makeByteArrayData, makeListData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
@@ -16,14 +19,13 @@ describe("benchmark_delegate::main", () => {
                 redeemer: props?.redeemer,
                 isMainPurpose: true
             })
-    
-    
+
             return ctx
         }
-    
+
         it("succeeds if the denominator is equal to the numerator", () => {
             const redeemer: RatioType = [1, 1]
-    
+
             configureContext({ redeemer }).use((ctx) => {
                 main.eval({
                     $scriptContext: ctx,
@@ -31,10 +33,10 @@ describe("benchmark_delegate::main", () => {
                 })
             })
         })
-    
+
         it("throws an error if denominator is equal to 0", () => {
             const redeemer: RatioType = [0, 0]
-    
+
             configureContext({ redeemer }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -44,10 +46,10 @@ describe("benchmark_delegate::main", () => {
                 }, /bottom of price ratio must be positive/)
             })
         })
-    
+
         it("throws an error if denominator is negative", () => {
             const redeemer: RatioType = [-1, -1]
-    
+
             configureContext({ redeemer }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -57,10 +59,10 @@ describe("benchmark_delegate::main", () => {
                 }, /bottom of price ratio must be positive/)
             })
         })
-    
+
         it("throws an error if the denominator isn't equal to the numerator", () => {
             const redeemer: RatioType = [2, 1]
-    
+
             configureContext({ redeemer }).use((ctx) => {
                 throws(() => {
                     main.eval({
@@ -70,7 +72,7 @@ describe("benchmark_delegate::main", () => {
                 }, /top not equal to bottom/)
             })
         })
-    
+
         it("throws an error if the redeemer is a list with two equal byte arrays", () => {
             configureContext().use((ctx) => {
                 throws(() => {
@@ -85,7 +87,7 @@ describe("benchmark_delegate::main", () => {
             })
         })
     })
-   
+
     describe("Certifying purpose", () => {
         const configureContext = (props?: { redeemer?: RatioType }) => {
             const ctx = new ScriptContextBuilder().observeBenchmark({

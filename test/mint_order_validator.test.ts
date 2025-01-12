@@ -1,7 +1,14 @@
 import { strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
 import { type IntLike } from "@helios-lang/codec-utils"
-import { type ShelleyAddress, makeAddress, makeDummyAddress, makeDummyPubKeyHash, makeValue, type PubKeyHash } from "@helios-lang/ledger"
+import {
+    type ShelleyAddress,
+    makeAddress,
+    makeDummyAddress,
+    makeDummyPubKeyHash,
+    makeValue,
+    type PubKeyHash
+} from "@helios-lang/ledger"
 import { makeIntData, makeListData, type UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
@@ -214,7 +221,7 @@ describe("mint_order_validator::main", () => {
         })
 
         it("mint_order_validator::main #05 (throws an error if not signed by agent)", () => {
-            configureContext({ agent: makeDummyPubKeyHash()}).use((ctx) => {
+            configureContext({ agent: makeDummyPubKeyHash() }).use((ctx) => {
                 throws(() => {
                     main.eval({
                         $scriptContext: ctx,

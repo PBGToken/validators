@@ -1,7 +1,14 @@
 import { strictEqual } from "node:assert"
 import { type IntLike } from "@helios-lang/codec-utils"
-import { type PermissiveType, type StrictType } from "@helios-lang/contract-utils"
-import { makeDummyPubKeyHash, type PubKeyHash, type StakingValidatorHash } from "@helios-lang/ledger"
+import {
+    type PermissiveType,
+    type StrictType
+} from "@helios-lang/contract-utils"
+import {
+    makeDummyPubKeyHash,
+    type PubKeyHash,
+    type StakingValidatorHash
+} from "@helios-lang/ledger"
 import contract from "pbg-token-validators-test-context"
 
 export const castConfigChangeProposal =

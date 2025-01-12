@@ -302,11 +302,13 @@ describe("fund_policy::validate_initial_config", () => {
     })
 
     it("fund_policy::validate_initial_config #02 (throws an error if the tx isn't signed by the agent)", () => {
-        configureContext({ signingAgent: makeDummyPubKeyHash(6) }).use((ctx) => {
-            throws(() => {
-                validate_initial_config.eval({ $scriptContext: ctx })
-            }, /not signed by agent/)
-        })
+        configureContext({ signingAgent: makeDummyPubKeyHash(6) }).use(
+            (ctx) => {
+                throws(() => {
+                    validate_initial_config.eval({ $scriptContext: ctx })
+                }, /not signed by agent/)
+            }
+        )
     })
 
     it("fund_policy::validate_initial_config #03 (throws an error if the success fee parameters are invalid)", () => {
@@ -1005,19 +1007,21 @@ describe("fund_policy::main", () => {
         })
 
         it("fund_policy::main #02 (throws an error if the currently spent input isn't from a validator address (unable to get own hash))", () => {
-            configureContext({ address: makeDummyAddress(false) }).use((ctx) => {
-                throws(() => {
-                    main.eval({
-                        $scriptContext: ctx,
-                        $datum: makeByteArrayData([]),
-                        args: {
-                            Spending: {
-                                redeemer: makeIntData(0)
+            configureContext({ address: makeDummyAddress(false) }).use(
+                (ctx) => {
+                    throws(() => {
+                        main.eval({
+                            $scriptContext: ctx,
+                            $datum: makeByteArrayData([]),
+                            args: {
+                                Spending: {
+                                    redeemer: makeIntData(0)
+                                }
                             }
-                        }
+                        })
                     })
-                })
-            })
+                }
+            )
         })
     })
 
@@ -1083,18 +1087,20 @@ describe("fund_policy::main", () => {
         })
 
         it("fund_policy::main #04 (throws an error if no input is spent with the correct seed id, no asset group is minted and supply UTxO isn't spent)", () => {
-            configureContext({ seedId: makeDummyTxOutputId(12345) }).use((ctx) => {
-                throws(() => {
-                    main.eval({
-                        $scriptContext: ctx,
-                        args: {
-                            Other: {
-                                redeemer
+            configureContext({ seedId: makeDummyTxOutputId(12345) }).use(
+                (ctx) => {
+                    throws(() => {
+                        main.eval({
+                            $scriptContext: ctx,
+                            args: {
+                                Other: {
+                                    redeemer
+                                }
                             }
-                        }
+                        })
                     })
-                })
-            })
+                }
+            )
         })
     })
 
@@ -1170,8 +1176,7 @@ describe("fund_policy::main", () => {
             assetClass?: AssetClass
         }) => {
             const assetClass = props?.assetClass ?? AssetClasses.voucher_ref(0)
-            const assets =
-                props?.assets ?? makeAssets([[assetClass, -1]])
+            const assets = props?.assets ?? makeAssets([[assetClass, -1]])
 
             return new ScriptContextBuilder().mint({ assets, redeemer })
         }

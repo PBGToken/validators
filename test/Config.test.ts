@@ -1,6 +1,12 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { expectListData, makeConstrData, makeIntData, makeListData, UplcData } from "@helios-lang/uplc"
+import {
+    expectListData,
+    makeConstrData,
+    makeIntData,
+    makeListData,
+    UplcData
+} from "@helios-lang/uplc"
 import {
     type ShelleyAddress,
     AssetClass,

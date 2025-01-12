@@ -1,6 +1,14 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { Address, AssetClass, Assets, makeAssets, makeDummyAddress, makeDummyAssetClass, makeValue } from "@helios-lang/ledger"
+import {
+    Address,
+    AssetClass,
+    Assets,
+    makeAssets,
+    makeDummyAddress,
+    makeDummyAssetClass,
+    makeValue
+} from "@helios-lang/ledger"
 import { IntData, makeIntData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { scripts } from "./constants"
@@ -238,10 +246,7 @@ describe("MintOrderModule::MintOrder::diff", () => {
 
     describe("the order input contains lovelace and a number of tokens of a single asset class", () => {
         const ac = makeDummyAssetClass()
-        const inputValue = makeValue(
-            10_000_000,
-            makeAssets([[ac, 1000]])
-        )
+        const inputValue = makeValue(10_000_000, makeAssets([[ac, 1000]]))
 
         describe("for the mint_order_validator", () => {
             it("MintOrderModule::MintOrder::diff #06 (returns a positive assets quantity if only the order lovelace quantity is returned)", () => {
@@ -268,7 +273,10 @@ describe("MintOrderModule::MintOrder::diff", () => {
                             value.assetClasses[0].toFingerprint(),
                             ac.toFingerprint()
                         )
-                        strictEqual(value.assets.getAssetClassQuantity(ac), 1000n)
+                        strictEqual(
+                            value.assets.getAssetClassQuantity(ac),
+                            1000n
+                        )
                     })
             })
         })
@@ -651,7 +659,9 @@ describe("MintOrderModule::MintOrder::voucher_id", () => {
             inputAssets?: Assets
             returnAssets?: Assets
         }) => {
-            const inputValue = props?.inputAssets ? makeValue(10_000_000, props?.inputAssets) : makeValue(10_000_000)
+            const inputValue = props?.inputAssets
+                ? makeValue(10_000_000, props?.inputAssets)
+                : makeValue(10_000_000)
             const returnValue = makeValue(
                 12_000_000,
                 props?.returnAssets ?? token

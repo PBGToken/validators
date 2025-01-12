@@ -497,10 +497,7 @@ describe("burn_order_validator::main", () => {
             }
 
             const assetClass = makeDummyAssetClass()
-            const value = makeValue(
-                644_262_500,
-                makeAssets([[assetClass, 10]])
-            )
+            const value = makeValue(644_262_500, makeAssets([[assetClass, 10]]))
 
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
@@ -541,10 +538,7 @@ describe("burn_order_validator::main", () => {
             }
 
             const assetClass = makeDummyAssetClass()
-            const value = makeValue(
-                644_262_500,
-                makeAssets([[assetClass, 10]])
-            )
+            const value = makeValue(644_262_500, makeAssets([[assetClass, 10]]))
 
             const burnOrder = makeBurnOrder({
                 address: returnAddress,
@@ -555,10 +549,7 @@ describe("burn_order_validator::main", () => {
             configureContext({
                 burnOrder,
                 returnValue: value.add(
-                    makeValue(
-                        0,
-                        makeAssets([[makeDummyAssetClass(1), 10]])
-                    )
+                    makeValue(0, makeAssets([[makeDummyAssetClass(1), 10]]))
                 )
             })
                 .addAssetGroupInput({

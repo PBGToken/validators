@@ -1,6 +1,13 @@
 import { deepEqual, strictEqual, throws } from "node:assert"
 import { describe, it } from "node:test"
-import { type ShelleyAddress, makeAssets, makeDummyAddress, makeDummyAssetClass, makeValue, type Value } from "@helios-lang/ledger"
+import {
+    type ShelleyAddress,
+    makeAssets,
+    makeDummyAddress,
+    makeDummyAssetClass,
+    makeValue,
+    type Value
+} from "@helios-lang/ledger"
 import { makeIntData, type UplcData } from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { scripts } from "./constants"
@@ -57,7 +64,10 @@ describe("BurnOrderModule::BurnOrder::find_return", () => {
             })
 
             strictEqual(output.address.toString(), address.toBech32())
-            strictEqual(output.datum?.data?.toSchemaJson(), datum.toSchemaJson())
+            strictEqual(
+                output.datum?.data?.toSchemaJson(),
+                datum.toSchemaJson()
+            )
         })
     })
 
@@ -253,7 +263,10 @@ describe("BurnOrderModule::BurnOrder::diff", () => {
                         value.assetClasses[0].toFingerprint(),
                         assetClass.toFingerprint()
                     )
-                    strictEqual(value.assets.getAssetClassQuantity(assetClass), nTokens)
+                    strictEqual(
+                        value.assets.getAssetClassQuantity(assetClass),
+                        nTokens
+                    )
                 })
             })
         })
@@ -752,10 +765,7 @@ describe("BurnOrderModule::BurnOrder::returned_enough", () => {
 
         it("returns false if not enough asset class tokens are returned", () => {
             configureContext({
-                returnValue: makeValue(
-                    2_000_000,
-                    makeAssets([[ac, 9]])
-                )
+                returnValue: makeValue(2_000_000, makeAssets([[ac, 9]]))
             }).use((ctx) => {
                 strictEqual(
                     returned_enough.eval({

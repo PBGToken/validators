@@ -8,9 +8,13 @@ import {
     makeDummyAssetClass,
     makeDummyPubKeyHash,
     makeValue,
-    type PubKeyHash,
+    type PubKeyHash
 } from "@helios-lang/ledger"
-import { makeByteArrayData, makeIntData, type UplcData } from "@helios-lang/uplc"
+import {
+    makeByteArrayData,
+    makeIntData,
+    type UplcData
+} from "@helios-lang/uplc"
 import contract from "pbg-token-validators-test-context"
 import { MAX_SCRIPT_SIZE } from "./constants"
 import {
