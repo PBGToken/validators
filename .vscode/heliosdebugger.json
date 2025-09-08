@@ -1,0 +1,258 @@
+{
+    "values": {
+        "ConfigModule::test": {
+            "b": "d87a80",
+            "msg": "80",
+            "opt": "1901a7"
+        },
+        "SuccessFeeModule::apply_internal": {
+            "next": "9f9f1a002fefd81a002fefd8ffff",
+            "sigma": "1a002fefd6"
+        },
+        "[]SuccessFeeStep::SuccessFeeStep_list-value-1": {
+            "item-0": "9f1a002fefd81a002fefd8ff"
+        },
+        "SuccessFeeStep::SuccessFeeStep-value-1": {
+            "sigma": "1a002fefd8",
+            "c": "1a002fefd8"
+        },
+        "BurnOrder::BurnOrder-value-1": {
+            "return_address": "d8799fd8799f581c00000000000000000000000000000000000000000000000000000000ffd87a80ff",
+            "return_datum": "00",
+            "min_return_value": "d8799f1afa56ea00ff",
+            "max_price_age": "00"
+        },
+        "BurnOrderModule::BurnOrder::find_return": {
+            "self": "9fd8799fd8799f581c00000000000000000000000000000000000000000000000000000000ffd87a80ff00d8799f1afa56ea00ff00ff"
+        },
+        "BurnOrderReturnValue::BurnOrderReturnValue-value-1": {
+            "_tag": "0",
+            "lovelace": "1afa56ea00",
+            "value": "a0"
+        },
+        "BurnOrderModule::BurnOrder::diff": {
+            "self": "9fd8799fd8799f581c00000000000000000000000000000000000000000000000000000000ffd87a80ff00d8799f1afa56ea00ff00ff"
+        },
+        "Option[Int]::Int_option-value-1": {
+            "_tag": "1",
+            "some": "1901a4"
+        },
+        "PortfolioModule::Portfolio::get_reduction_result": {
+            "expected_tick": "d87a80",
+            "self": "9f02d87a9f02187ad8799f19016d1903e8ffffff"
+        },
+        "Portfolio::Portfolio-value-1": {
+            "n_groups": "02",
+            "reduction": "d87a9f02187ad8799f19016d1903e8ffff"
+        },
+        "PortfolioReduction::PortfolioReduction-value-1": {
+            "_tag": "1",
+            "group_iter": "02",
+            "start_tick": "187a",
+            "mode": "d8799f19016d1903e8ff"
+        },
+        "PortfolioReductionMode::PortfolioReductionMode-value-1": {
+            "_tag": "0",
+            "total": "19016d",
+            "oldest_timestamp": "1903e8"
+        },
+        "PortfolioModule::PortfolioReduction::is_idle": {
+            "self": "d87a9f02187ad8799f19016d1903e8ffff"
+        },
+        "TestModule::get_some": {
+            "opt": "d87a80"
+        },
+        "TestModule::test_mph": {
+            "mph": "581c01231237123681623681238123414230911231231253751238761231"
+        },
+        "TestModule::test_data": {
+            "data": "9fd87980ff"
+        },
+        "Data::Data-value-1": {
+            "_tag": "2",
+            "tag": "00",
+            "key-0": "d87980",
+            "value-0": "d87980",
+            "item-0": "d87980",
+            "value": "182a",
+            "pool_id": "581c00000000000000000000000000000000000000000000000000000000",
+            "pool_vrf": "581c00000000000000000000000000000000000000000000000000000000",
+            "bytes": "44deadbeef",
+            "epoch": "182a",
+            "credential": "d8799fd8799f581c00000000000000000000000000000000000000000000000000000000ffff",
+            "hash": "d8799fd8799f581c00000000000000000000000000000000000000000000000000000000ffff",
+            "delegator": "d8799fd8799f581c00000000000000000000000000000000000000000000000000000000ffff"
+        },
+        "TestModule::test_timerange": {
+            "tr": "d8799fd8799fd87980d87a80ffd8799fd87b80d87a80ffff"
+        },
+        "TimeRange::TimeRange-value-1": {
+            "start_tag": "0",
+            "start_value": "1b00000199065845f7",
+            "include_start": "d87a80",
+            "end_tag": "2",
+            "end_value": "1b00000199065845f8",
+            "include_end": "d87a80"
+        },
+        "TestModule::test_address": {
+            "addr": "d8799fd87a9f581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014ffd87a80ff"
+        },
+        "MintingPolicyHash::test-value": {
+            "value": "581c01231237123681623681238123414230911231231253751238761231"
+        },
+        "TestModule::test_vh": {
+            "vh": "581c2cbf29e19aa287176c847cab22e41f8b9eaa5020b11fa310788f8c29"
+        },
+        "ValidatorHash::ValidatorHash-value-1": {
+            "value": "581c00000000000000000000000000000000000000000000000000000000"
+        },
+        "TestModule::test_value": {
+            "value": "a1581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014a144deadbeef01"
+        },
+        "AssetClass::AssetClass-value-1": {
+            "mph": "40",
+            "token_name": "40"
+        },
+        "AssetModule::Asset::new": {
+            "asset_class": "d8799f4040ff"
+        },
+        "ScriptContext::ScriptContext-value-1": {
+            "tx": "d8799f808080a0a140a1400080a0d8799fd8799fd87980d87a80ffd8799fd87b80d87a80ffff80a0a0d8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "purpose": "d87a9fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffff"
+        },
+        "VoucherModule::Voucher::find_return": {
+            "ScriptContext": "d8799fd8799f9fd8799fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffd8799fd8799fd87a9f581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014ffd87a80ffa1581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014a144deadbeef01d87980d87a80ffffff8080a0a140a1400080a0d8799fd8799fd87980d87a80ffd8799fd87b80d87a80ffff80a0a0d8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd87a9fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffffff",
+            "ptr": "00"
+        },
+        "ScriptContext::ScriptContext-value-2": {
+            "tx": "d8799f808080a0a140a1400080a0d8799fd8799fd87980d87a80ffd8799fd87b80d87a80ffff80a0a0d8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "purpose": "d87a9fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffff"
+        },
+        "ScriptContext::ScriptContext-value-3": {
+            "tx": "d8799f808080a0a140a1400080a0d8799fd8799fd87980d87a80ffd8799fd87b80d87a80ffff80a0a0d8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "purpose": "d87a9fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffff"
+        },
+        "ScriptContext::ScriptContext-value-4": {
+            "tx": "d8799f808080a0a140a1400080a0d8799fd8799fd87980d87a80ffd8799fd87b80d87a80ffff80a0a0d8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "purpose": "d87a9fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffff"
+        },
+        "ScriptContext::ScriptContext-value-5": {
+            "tx": "d8799f808080a0a140a1400080a0d8799fd8799fd87980d87a80ffd8799fd87b80d87a80ffff80a0a0d8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "purpose": "d87a9fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffff"
+        },
+        "TxOutputId::TxOutputId-value-1": {
+            "tx_id": "d8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "index": "00"
+        },
+        "TxId::TxId-value-1": {
+            "value": "5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        },
+        "ScriptContext::ScriptContext-value-6": {
+            "tx": "d8799f808080a0a140a1400080a0d8799fd8799fd87980d87a80ffd8799fd87b80d87a80ffff80a0a0d8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "purpose": "d87a9fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffff"
+        },
+        "TestModule::test_script_purpose": {
+            "sc": "d87a9fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffff"
+        },
+        "StakingCredential::StakingCredential-value-1": {
+            "hash": "d87a9f581cd819124a4ef8e98ef3adba2b0a079869817c90cd129d9a65f5755e18ff"
+        },
+        "StakingHash::StakingHash-value-1": {
+            "_tag": "1",
+            "hash": "581cd819124a4ef8e98ef3adba2b0a079869817c90cd129d9a65f5755e18"
+        },
+        "Tokens::indirect_policy": {
+            "ScriptContext": "d8799fd8799f9fd8799fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffd8799fd8799fd87a9f581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014ffd87a80ffa1581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014a144deadbeef01d87980d87a80ffffff8080a0a140a1400080a0d8799fd8799fd87980d87a80ffd8799fd87b80d87a80ffff80a0a0d8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd87a9fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffffff"
+        },
+        "ScriptContext::spends-input-with-dvp-token": {
+            "tx": "d8799f9fd8799fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffd8799fd8799fd87a9f581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014ffd87a80ffa1581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014a144deadbeef01d87980d87a80ffffff8080a0a140a1400080a0d8799fd8799fd87980d87a80ffd8799fd87b80d87a80ffff80a0a0d8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "purpose": "d87a9fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffff"
+        },
+        "ScriptPurpose::spends-first-input": {
+            "_tag": "1",
+            "output_id": "d8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ff",
+            "policy_hash": "40",
+            "credential": "d8799fd87a9f581cd819124a4ef8e98ef3adba2b0a079869817c90cd129d9a65f5755e18ffff"
+        },
+        "SpendingCredential::vault": {
+            "_tag": "1",
+            "hash": "581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014"
+        },
+        "Address::vault": {
+            "credential": "d87a9f581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014ff",
+            "staking_credential": "d87a80"
+        },
+        "Value::single_dvp_token": {
+            "policy-0": "581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014",
+            "token-name-0-0": "44deadbeef",
+            "quantity-0-0": "01"
+        },
+        "TxOutput::output_with_single_dvp_token": {
+            "address": "d8799fd87a9f581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014ffd87a80ff",
+            "value": "a1581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014a144deadbeef01",
+            "datum": "d87980",
+            "ref_script": "d87a80"
+        },
+        "TxInput::utxo_with_single_dvp_token": {
+            "output_id": "d8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ff",
+            "output": "d8799fd8799fd87a9f581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014ffd87a80ffa1581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014a144deadbeef01d87980d87a80ff"
+        },
+        "[]TxInput::singleton_with_single_dvp_token": {
+            "item-0": "d8799fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffd8799fd8799fd87a9f581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014ffd87a80ffa1581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014a144deadbeef01d87980d87a80ffff"
+        },
+        "Tx::spends_single_dvp_token": {
+            "inputs": "9fd8799fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffd8799fd8799fd87a9f581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014ffd87a80ffa1581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014a144deadbeef01d87980d87a80ffffff",
+            "refInputs": "80",
+            "outputs": "80",
+            "fee": "a0",
+            "minted": "a140a14000",
+            "dcerts": "80",
+            "withdrawals": "a0",
+            "time_range": "d8799fd8799fd87980d87a80ffd8799fd87b80d87a80ffff",
+            "signatories": "80",
+            "redeemers": "a0",
+            "datums": "a0",
+            "id": "d8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        },
+        "Tokens::policy": {
+            "ScriptContext": "d8799fd8799f9fd8799fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffd8799fd8799fd87a9f581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014ffd87a80ffa1581cc2ab923c881b35ce134b7caa59a3e60348861d3af2597c1aa814b014a144deadbeef01d87980d87a80ffffff8080a0a140a1400080a0d8799fd8799fd87980d87a80ffd8799fd87b80d87a80ffff80a0a0d8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd87a9fd8799fd8799f5820ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffffff",
+            "::CurrentValidator": "d9050580"
+        }
+    },
+    "links": {
+        "SuccessFeeModule::apply_internal::next": "[]SuccessFeeStep::SuccessFeeStep_list-value-1",
+        "[]SuccessFeeStep::SuccessFeeStep_list-value-1::item-0": "SuccessFeeStep::SuccessFeeStep-value-1",
+        "BurnOrderModule::BurnOrder::find_return::self": "BurnOrder::BurnOrder-value-1",
+        "BurnOrder::BurnOrder-value-1::min_return_value": "BurnOrderReturnValue::BurnOrderReturnValue-value-1",
+        "BurnOrderModule::BurnOrder::diff::self": "BurnOrder::BurnOrder-value-1",
+        "PortfolioModule::Portfolio::get_reduction_result::self": "Portfolio::Portfolio-value-1",
+        "Portfolio::Portfolio-value-1::reduction": "PortfolioReduction::PortfolioReduction-value-1",
+        "PortfolioReduction::PortfolioReduction-value-1::mode": "PortfolioReductionMode::PortfolioReductionMode-value-1",
+        "PortfolioModule::PortfolioReduction::is_idle::self": "PortfolioReduction::PortfolioReduction-value-1",
+        "TestModule::get_some::opt": "Option[Int]::Int_option-value-1",
+        "TestModule::test_data::data": "Data::Data-value-1",
+        "TestModule::test_timerange::tr": "TimeRange::TimeRange-value-1",
+        "TestModule::test_address::addr": "Address::vault",
+        "TestModule::test_mph::mph": "MintingPolicyHash::test-value",
+        "TestModule::test_value::value": "Value::single_dvp_token",
+        "AssetModule::Asset::new::asset_class": "AssetClass::AssetClass-value-1",
+        "VoucherModule::Voucher::find_return::ScriptContext": "ScriptContext::spends-input-with-dvp-token",
+        "ScriptContext::ScriptContext-value-5::purpose": "ScriptPurpose::spends-first-input",
+        "TxOutputId::TxOutputId-value-1::tx_id": "TxId::TxId-value-1",
+        "TestModule::test_script_purpose::sc": "ScriptPurpose::spends-first-input",
+        "StakingCredential::StakingCredential-value-1::hash": "StakingHash::StakingHash-value-1",
+        "Tokens::indirect_policy::ScriptContext": "ScriptContext::spends-input-with-dvp-token",
+        "ScriptContext::spends-input-with-dvp-token::purpose": "ScriptPurpose::spends-first-input",
+        "ScriptContext::spends-input-with-dvp-token::tx": "Tx::spends_single_dvp_token",
+        "ScriptPurpose::spends-first-input::output_id": "TxOutputId::TxOutputId-value-1",
+        "ScriptPurpose::spends-first-input::credential": "StakingCredential::StakingCredential-value-1",
+        "Address::vault::credential": "SpendingCredential::vault",
+        "TxOutput::output_with_single_dvp_token::address": "Address::vault",
+        "TxOutput::output_with_single_dvp_token::value": "Value::single_dvp_token",
+        "TxInput::utxo_with_single_dvp_token::output_id": "TxOutputId::TxOutputId-value-1",
+        "TxInput::utxo_with_single_dvp_token::output": "TxOutput::output_with_single_dvp_token",
+        "[]TxInput::singleton_with_single_dvp_token::item-0": "TxInput::utxo_with_single_dvp_token",
+        "Tx::spends_single_dvp_token::inputs": "[]TxInput::singleton_with_single_dvp_token",
+        "Tokens::policy::ScriptContext": "ScriptContext::spends-input-with-dvp-token"
+    }
+}

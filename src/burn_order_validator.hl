@@ -25,39 +25,39 @@ func calc_provisional_success_fee(
     diff: Value, 
     n_burn: Int
 ) -> Int {
-    config = Config::find_ref();
-    supply = Supply::find_input();
+    config = Config::find_ref()
+    supply = Supply::find_input()
 
-    success_fee: SuccessFee = config.fees.success_fee.fee;
+    success_fee: SuccessFee = config.fees.success_fee.fee
 
-    benchmark_price = price.relative_to_benchmark();
-    p0 = supply.success_fee.start_price;
+    benchmark_price = price.relative_to_benchmark()
+    p0 = supply.success_fee.start_price
 
     vouchers: Map[ByteArray]Int = diff.get_policy(Tokens::policy).filter((token_name: ByteArray, _) -> {
         TokenNames::has_voucher_nft_prefix(token_name)
-    });
+    })
 
     (delta_vouchers, n_voucher_tokens) = vouchers.fold2((delta_vouchers: Int, n_voucher_tokens: Int, token_name: ByteArray, qty: Int) -> {
-        voucher_id = TokenNames::parse_voucher_nft(token_name).unwrap();
+        voucher_id = TokenNames::parse_voucher_nft(token_name).unwrap()
 
-        assert(qty >= 1, "can't be negative");
+        assert(qty >= 1, "can't be negative")
 
-        voucher_ref_token = Tokens::voucher_ref_token(voucher_id);
+        voucher_ref_token = Tokens::voucher_ref_token(voucher_id)
         voucher_ref_input = tx.inputs.find((input: TxInput) -> {
             input.address == Addresses::voucher
             && input.value.get_safe(voucher_ref_token) == 1
-        });
+        })
 
-        voucher = extract_voucher_from_datum(voucher_ref_input.datum);
-        delta_voucher = voucher.calc_provisional_success_fee_delta(benchmark_price, success_fee);
+        voucher = extract_voucher_from_datum(voucher_ref_input.datum)
+        delta_voucher = voucher.calc_provisional_success_fee_delta(benchmark_price, success_fee)
 
         (
             delta_vouchers + delta_voucher, 
             n_voucher_tokens + voucher.tokens
         )
-    }, 0, 0);
+    }, 0, 0)
 
-    alpha = calc_alpha(p0, benchmark_price);
+    alpha = calc_alpha(p0, benchmark_price)
     success_fee.calc_provisional_fee(n_burn, alpha, n_voucher_tokens, delta_vouchers)
 }
 
@@ -65,23 +65,23 @@ func main(order: BurnOrder, redeemer: Redeemer) -> () {
     redeemer.switch{
         Cancel => assert(tx.is_approved_by(order.return_address.credential), "cancelation not approved by owner"),
         Fulfill{ptrs} => {
-            price = Price::find_ref();
+            price = Price::find_ref()
 
-            diff = order.diff();
-            n_burn = diff.get(Tokens::dvp_token); // positive quantities are from the input side, negative quantities (loss for the dvp agent) doesn't make any sense
+            diff = order.diff()
+            n_burn = diff.get(Tokens::dvp_token) // positive quantities are from the input side, negative quantities (loss for the dvp agent) doesn't make any sense
 
             delta_alpha = calc_provisional_success_fee(
                 price,
                 diff,
                 n_burn
-            );
+            )
 
-            n_expected = deduct_burn_fee(n_burn - delta_alpha);
-            n_actual = price.convert_lovelace_to_tokens_round_down(order.value_lovelace(ptrs));
+            n_expected = deduct_burn_fee(n_burn - delta_alpha)
+            n_actual = price.convert_lovelace_to_tokens_round_down(order.value_lovelace(ptrs))
 
-            assert(signed_by_agent(), "not signed by agent");
-            assert(price.is_not_expired(order.price_expiry()), "price expired");
-            assert(n_actual >= n_expected, "not enough value returned (as required by contract), expected the equivalent of at least " + n_expected.show() + " tokens, got the equivalent of " + n_actual.show() + " tokens");
+            assert(signed_by_agent(), "not signed by agent")
+            assert(price.is_not_expired(order.price_expiry()), "price expired")
+            assert(n_actual >= n_expected, "not enough value returned (as required by contract), expected the equivalent of at least " + n_expected.show() + " tokens, got the equivalent of " + n_actual.show() + " tokens")
             assert(order.returned_enough(ptrs), "not enough value returned (as requested by user)")
         }
     }

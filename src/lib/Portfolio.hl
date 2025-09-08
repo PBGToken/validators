@@ -42,9 +42,9 @@ struct Portfolio {
     func find_input() -> Portfolio {
         input = tx.inputs.find((input: TxInput) -> {
             input.address == Addresses::portfolio
-        });
+        })
 
-        assert(Tokens::contains_portfolio(input), "doesn't contain the portfolio token");
+        assert(Tokens::contains_portfolio(input), "doesn't contain the portfolio token")
 
         input.datum.inline.as[Portfolio]
     }
@@ -52,9 +52,9 @@ struct Portfolio {
     func find_output() -> Portfolio {
         output = tx.outputs.find((output: TxOutput) -> {
             output.address == Addresses::portfolio
-        });
+        })
 
-        assert(Tokens::contains_only_portfolio(output), "doesn't contain only the portfolio token");
+        assert(Tokens::contains_only_portfolio(output), "doesn't contain only the portfolio token")
 
         output.datum.inline.as_strictly[Portfolio]
     }
@@ -67,13 +67,13 @@ struct Portfolio {
             else => {
                 input = tx.ref_inputs.find((input: TxInput) -> {
                     input.address == Addresses::portfolio
-                });
+                })
         
-                assert(Tokens::contains_portfolio(input), "doesn't contain the portfolio token");
+                assert(Tokens::contains_portfolio(input), "doesn't contain the portfolio token")
 
                 input
             }
-        };
+        }
 
         input.datum.inline.as[Portfolio]
     }
@@ -93,11 +93,11 @@ struct Portfolio {
         self.reduction.switch{
             Idle => error("expected Reducing"),
             Reducing{ig, kp, mode} => {
-                assert(ig == self.n_groups, "reduction is incomplete");
+                assert(ig == self.n_groups, "reduction is incomplete")
 
                 expected_tick.switch{
                     Some{k} => assert(k == kp, "unexpected tick")
-                };
+                }
 
                 mode
             }
@@ -110,9 +110,9 @@ func sum_lovelace(v: Value, inputs: []TxInput, ptrs: []AssetPtr, price_expiry: T
         if (asset_class == AssetClass::ADA) {
             sum + qty
         } else {
-            asset = ptr.resolve_input(inputs, asset_class);
+            asset = ptr.resolve_input(inputs, asset_class)
 
-            assert(asset.price_timestamp >= price_expiry, "price expired");
+            assert(asset.price_timestamp >= price_expiry, "price expired")
 
             sum + asset.convert_asset_to_lovelace(qty)
         }

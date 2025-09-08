@@ -6,20 +6,20 @@ import { Price } from PriceModule
 import { Supply } from SupplyModule
 
 func main(price0: Price, _) -> () {
-    portfolio = Portfolio::find_ref();
-    supply = Supply::find_ref();
-    price1 = Price::find_output();
+    portfolio = Portfolio::find_ref()
+    supply = Supply::find_ref()
+    price1 = Price::find_output()
 
-    TotalAssetValue{V, tp} = portfolio.get_reduction_result(Option[Int]::Some{supply.tick});
+    TotalAssetValue{V, tp} = portfolio.get_reduction_result(Option[Int]::Some{supply.tick})
 
-    assert(signed_by_agent(), "not signed by agent");
-    assert(price1.timestamp == tp, "price timestamp not equal to oldest timestamp from reduction");
+    assert(signed_by_agent(), "not signed by agent")
+    assert(price1.timestamp == tp, "price timestamp not equal to oldest timestamp from reduction")
 
     if (supply.n_tokens == 0) {
         // must copy previous price
         assert(price1.value == price0.value, "price can't change if n_tokens is zero")
     } else {
-        assert(price1.value.top == V, "price numerator not equal to total asset value"); // must compare bottom and top separately, to avoid unboundedness
+        assert(price1.value.top == V, "price numerator not equal to total asset value") // must compare bottom and top separately, to avoid unboundedness
         assert(price1.value.bottom == supply.n_tokens, "price denominator not equal to token circulating supply")
     }
 }

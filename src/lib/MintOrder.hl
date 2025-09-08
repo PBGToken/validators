@@ -14,8 +14,8 @@ struct MintOrder {
 
     func find_return(self) -> TxOutput {
         // invariants taken out of loop for slightly better performance
-        return_address = self.return_address;
-        return_datum = self.return_datum;
+        return_address = self.return_address
+        return_datum = self.return_datum
         
         return = tx.outputs.find((output: TxOutput) -> {
             output.address == return_address 
@@ -23,7 +23,7 @@ struct MintOrder {
                 Inline{d} => d == return_datum,
                 else => false   
             }
-        });
+        })
 
         // prevent token dust attack by only allowing ADA and DVP tokens (including at most one voucher) to be returned
         assert(return.value.to_map().all((mph: MintingPolicyHash, tokens: Map[ByteArray]Int) -> {
@@ -34,7 +34,7 @@ struct MintOrder {
             } else {
                 false
             }
-        }), "can only return ADA and DVP tokens");
+        }), "can only return ADA and DVP tokens")
 
         return
     }
@@ -43,9 +43,9 @@ struct MintOrder {
         input: TxInput = current_script.switch{
             mint_order_validator => get_current_input(),
             else => error("unexpected")
-        };
+        }
 
-        return = self.find_return();
+        return = self.find_return()
 
         input.value - return.value
     }
@@ -76,9 +76,9 @@ struct MintOrder {
          // check returned voucher
          (voucher_nft_name, qty) = self.diff().get_policy(Tokens::policy).find((token_name: ByteArray, _) -> {
             TokenNames::has_voucher_nft_prefix(token_name)
-        });
+        })
 
-        assert(qty <= -1, "expected at least one token returned");
+        assert(qty <= -1, "expected at least one token returned")
 
         TokenNames::parse_voucher_nft(voucher_nft_name).unwrap()
     }

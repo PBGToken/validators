@@ -57,7 +57,7 @@ struct SuccessFeeConfig {
         lovelace_price: Ratio, 
         benchmark: StakingValidatorHash = self.benchmark
     ) -> Ratio {
-        benchmark_price = tx.redeemers.get(ScriptPurpose::new_rewarding(StakingCredential::new_hash(StakingHash::new_validator(benchmark)))).as[Ratio];
+        benchmark_price = tx.redeemers.get(ScriptPurpose::new_rewarding(StakingCredential::new_hash(StakingHash::new_validator(benchmark)))).as[Ratio]
 
         make_price_relative_to_benchmark(lovelace_price, benchmark_price)
     }
@@ -185,9 +185,9 @@ struct Config {
                     )
                 }
             }
-        };
+        }
 
-        assert(Tokens::contains_config(input), "doesn't contain the config token");
+        assert(Tokens::contains_config(input), "doesn't contain the config token")
 
         (input.datum.inline.as[Config], is_spent)
     }
@@ -198,9 +198,9 @@ struct Config {
             else => tx.inputs.find((input: TxInput) -> {
                 input.address == Addresses::config
             })
-        };
+        }
 
-        assert(Tokens::contains_config(input), "doesn't contain the config token");
+        assert(Tokens::contains_config(input), "doesn't contain the config token")
 
         input.datum.inline.as[Config]
     }
@@ -208,9 +208,9 @@ struct Config {
     func find_output() -> Config {
         output = tx.outputs.find((output: TxOutput) -> {
             output.address == Addresses::config
-        });
+        })
 
-        assert(Tokens::contains_only_config(output), "doesn't contain only the config token");
+        assert(Tokens::contains_only_config(output), "doesn't contain only the config token")
 
         output.datum.inline.as_strictly[Config]
     }
@@ -218,9 +218,9 @@ struct Config {
     func find_ref() -> Config {
         input = tx.ref_inputs.find((input: TxInput) -> {
             input.address == Addresses::config
-        });
+        })
 
-        assert(Tokens::contains_config(input), "doesn't contain the config token");
+        assert(Tokens::contains_config(input), "doesn't contain the config token")
 
         input.datum.inline.as[Config]
     }
@@ -242,20 +242,20 @@ struct Config {
 }
 
 func deduct_burn_fee(n: Int) -> Int {
-    (config, _) = Config::find();
+    (config, _) = Config::find()
 
     config.fees.burn_fee.deduct(n)
 }
 
 func deduct_mint_fee(n: Int) -> Int {
-    (config, _) = Config::find();
+    (config, _) = Config::find()
 
     config.fees.mint_fee.deduct(n)
 }
 
 // only used for checks resulting in booleans, so tx.time_range.end doesn't need to bounded by tx.time_range.start + Duration::DAY
 func price_expiry() -> Time {
-    (config, _) = Config::find();
+    (config, _) = Config::find()
 
     tx.time_range.end - config.token.max_price_age
 }

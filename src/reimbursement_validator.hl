@@ -17,39 +17,39 @@ import { extract_voucher_from_datum } from VoucherModule
  * Each spent voucher ref token
  */
 func validate_burned_vouchers(reim: Reimbursement, period_id: Int, voucher_output_ptrs: []Int) -> (Int, Int) {
-    config = Config::find_ref();
-    minted_tokens = Tokens::get_minted();
-    main_phi_alpha_ratio = reim.calc_phi_alpha_ratio();
-    min_reimbursement = config.fees.success_fee.min_reimbursement;
+    config = Config::find_ref()
+    minted_tokens = Tokens::get_minted()
+    main_phi_alpha_ratio = reim.calc_phi_alpha_ratio()
+    min_reimbursement = config.fees.success_fee.min_reimbursement
 
     (n_vouchers_burned, n_tokens_reimbursed, _) = tx.inputs.fold3((n_vouchers_burned: Int, n_tokens_reimbursed: Int, voucher_output_ptrs: []Int, input: TxInput) -> (Int, Int, []Int) {
         if (input.address == Addresses::voucher) {
-            id = Tokens::parse_voucher_ref(input);
-            ptr = voucher_output_ptrs.head;
+            id = Tokens::parse_voucher_ref(input)
+            ptr = voucher_output_ptrs.head
 
-            assert(minted_tokens.get(TokenNames::voucher_ref(id)) == -1, "voucher ref not burned");
+            assert(minted_tokens.get(TokenNames::voucher_ref(id)) == -1, "voucher ref not burned")
 
-            voucher = extract_voucher_from_datum(input.datum);
-            expected_reimbursed_tokens = reim.calc_success_fee_reimbursement(voucher, main_phi_alpha_ratio);
+            voucher = extract_voucher_from_datum(input.datum)
+            expected_reimbursed_tokens = reim.calc_success_fee_reimbursement(voucher, main_phi_alpha_ratio)
 
             // though the voucher period id is checked by voucher_validator, voucher period ids and reimbursement ids can be mixed here, as long as all reimbursement period ids are present
             // hence we still need to check the voucher period id here in order to avoid mixing
-            assert(voucher.period_id == period_id, "voucher is from other period");
+            assert(voucher.period_id == period_id, "voucher is from other period")
 
             // the reimbursement is only necessary if it is more than a certain amount of tokens
             if (expected_reimbursed_tokens >= min_reimbursement) {
-                return = voucher.find_return(ptr);
+                return = voucher.find_return(ptr)
 
                 // avoid token dust attack
                 //   for which it is sufficient to check that returned value only contains a DVP policy or ADA
                 assert(return.value.to_map().all_keys((mph: MintingPolicyHash) -> {
                     mph == MintingPolicyHash::new(#) // ADA
                     || mph == Tokens::policy
-                }), "returned value can only contain DVP tokens"); 
+                }), "returned value can only contain DVP tokens")
     
-                reimbursed_tokens = return.value.get_safe(Tokens::dvp_token);
+                reimbursed_tokens = return.value.get_safe(Tokens::dvp_token)
                 
-                assert(reimbursed_tokens == expected_reimbursed_tokens, "expected a reimbursement of " + expected_reimbursed_tokens.show() + ", actually reimbursed " + reimbursed_tokens.show());
+                assert(reimbursed_tokens == expected_reimbursed_tokens, "expected a reimbursement of " + expected_reimbursed_tokens.show() + ", actually reimbursed " + reimbursed_tokens.show())
     
                 (
                     n_vouchers_burned + 1,
@@ -66,17 +66,17 @@ func validate_burned_vouchers(reim: Reimbursement, period_id: Int, voucher_outpu
         } else {
             (n_vouchers_burned, n_tokens_reimbursed, voucher_output_ptrs)
         }
-    }, 0, 0, voucher_output_ptrs);
+    }, 0, 0, voucher_output_ptrs)
 
     (n_vouchers_burned, n_tokens_reimbursed)
 }
 
 func sum_net_tokens() -> Int {
-    tokens_minted = Tokens::get_minted();
+    tokens_minted = Tokens::get_minted()
 
     sum = tx.inputs.fold((sum: Int, input: TxInput) -> {
         sum + input.value.get_safe(Tokens::dvp_token)
-    }, 0);
+    }, 0)
 
     sum + tokens_minted.get_safe(TokenNames::dvp_token).switch{
         Some{n} => n,
@@ -86,35 +86,35 @@ func sum_net_tokens() -> Int {
 
 func validate_start_extracting(id: Int, start_price0: Ratio) -> () {
     // minting success fee
-    (reim1, n1) = Reimbursement::find_output(id);
+    (reim1, n1) = Reimbursement::find_output(id)
 
-    (config0, is_updated) = Config::find();
-    price = Price::find_ref();
-    supply0 = Supply::find_input();
+    (config0, is_updated) = Config::find()
+    price = Price::find_ref()
+    supply0 = Supply::find_input()
 
-    current_end_price = price.relative_to_benchmark();
+    current_end_price = price.relative_to_benchmark()
         
-    assert(reim1.start_price == start_price0, "start_price changed");
+    assert(reim1.start_price == start_price0, "start_price changed")
     reim1.state.switch{
         Collecting => {
             error("unexpected output reimbursement state")
         },
         Extracting{actual_end_price, actual_success_fee, actual_n_vouchers} => {
-            assert(n1 == sum_net_tokens(), "not all output dvp tokens collected by reimbursement");
-            assert(actual_end_price == current_end_price, "end price in reimbursement datum doesn't match dvp price datum");
-            assert(actual_success_fee == config0.fees.success_fee.fee,"success fee not copied from config0");
+            assert(n1 == sum_net_tokens(), "not all output dvp tokens collected by reimbursement")
+            assert(actual_end_price == current_end_price, "end price in reimbursement datum doesn't match dvp price datum")
+            assert(actual_success_fee == config0.fees.success_fee.fee,"success fee not copied from config0")
             assert(actual_n_vouchers == supply0.n_vouchers, "n remaining vouchers in reimbursement datum doesn't match n_vouchers in input supply datum")
         }
     };
 
-    (reim_next, n_next) = Reimbursement::find_output(id + 1);
+    (reim_next, n_next) = Reimbursement::find_output(id + 1)
 
-    assert(n_next == 0, "unexpected dvp tokens in next reimbursement");
-    assert(reim_next.state == ReimbursementState::Collecting, "next reimbursement state not set to Collecting");
+    assert(n_next == 0, "unexpected dvp tokens in next reimbursement")
+    assert(reim_next.state == ReimbursementState::Collecting, "next reimbursement state not set to Collecting")
 
     if (is_updated) {
-        config1 = Config::find_output();
-        updated_end_price = config1.fees.success_fee.get_benchmark_price(price.value);
+        config1 = Config::find_output()
+        updated_end_price = config1.fees.success_fee.get_benchmark_price(price.value)
 
         assert(reim_next.start_price == updated_end_price, "start_price of next reimbursement doesn't match end_price relative to new benchmark")
     } else {
@@ -123,12 +123,12 @@ func validate_start_extracting(id: Int, start_price0: Ratio) -> () {
 }
 
 func validate_continue_collecting(id: Int, start_price0: Ratio) -> () {
-    (reim1, n1) = Reimbursement::find_output(id);
+    (reim1, n1) = Reimbursement::find_output(id)
     
     reim1.state.switch{
         Collecting => {
             // n1 == dvp tokens in inputs + dvp tokens minted - dvp tokens burned
-            assert(n1 == sum_net_tokens(), "not all dvp tokens collected by reimbursement");
+            assert(n1 == sum_net_tokens(), "not all dvp tokens collected by reimbursement")
             assert(reim1.start_price == start_price0, "reimbursement start price changed")
         },
         Extracting => {
@@ -139,10 +139,10 @@ func validate_continue_collecting(id: Int, start_price0: Ratio) -> () {
 }
 
 func main(_: Reimbursement, voucher_output_ptrs: []Int) -> () {
-    tokens_minted = Tokens::get_minted();
-    (id, reim0, n0) = Reimbursement::find_input();
+    tokens_minted = Tokens::get_minted()
+    (id, reim0, n0) = Reimbursement::find_input()
     
-    assert(signed_by_agent(), "not signed by agent");
+    assert(signed_by_agent(), "not signed by agent")
     if (tokens_minted.get_safe(TokenNames::reimbursement(id + 1)) == Option[Int]::Some{1}) {
         validate_start_extracting(id, reim0.start_price)
     } else {
@@ -152,15 +152,15 @@ func main(_: Reimbursement, voucher_output_ptrs: []Int) -> () {
                 validate_continue_collecting(id, reim0.start_price)
             },
             Extracting{end_price, success_fee, n_remaining_vouchers} => {
-                (n_vouchers_burned, n_tokens_reimbursed) = validate_burned_vouchers(reim0, id, voucher_output_ptrs);
+                (n_vouchers_burned, n_tokens_reimbursed) = validate_burned_vouchers(reim0, id, voucher_output_ptrs)
     
                 if (n_vouchers_burned >= n_remaining_vouchers) {
                     // the reimbursement token itself must be burned, output isn't validated
                     assert(tokens_minted.get(TokenNames::reimbursement(id)) == -1, "not exactly one reimbursement token burned")
                 } else {
-                    (reim1, n1) = Reimbursement::find_output(id);
+                    (reim1, n1) = Reimbursement::find_output(id)
 
-                    assert(n1 == n0 - n_tokens_reimbursed, "number of success fee tokens remaining not decremented by the number of reimbursed tokens");
+                    assert(n1 == n0 - n_tokens_reimbursed, "number of success fee tokens remaining not decremented by the number of reimbursed tokens")
                     assert(reim1 == reim0.copy(
                         state: ReimbursementState::Extracting{
                             end_price,

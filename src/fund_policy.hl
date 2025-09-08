@@ -44,33 +44,33 @@ const INITIAL_MIN_MINT_FEE: Int = 30_000 // 0.03 tokens, equivalent to 3 ADA
 const INITIAL_MIN_BURN_FEE: Int = 30_000 // 0.03 tokens, equivalent to 3 ADA
 
 func validate_minted_tokens() -> () {
-    tokens = Tokens::get_minted();
+    tokens = Tokens::get_minted()
     
-    assert(tokens.length == 6, "not precisely 6 tokens minted");
-    assert(tokens.get(TokenNames::metadata) == 1, "metadata token not minted");
-    assert(tokens.get(TokenNames::config) == 1, "config token not minted");
-    assert(tokens.get(TokenNames::portfolio) == 1, "portfolio token not minted");
-    assert(tokens.get(TokenNames::price) == 1, "price token not minted");
-    assert(tokens.get(TokenNames::reimbursement(INITIAL_CYCLE_ID)) == 1, "reimbursement token not minted");
+    assert(tokens.length == 6, "not precisely 6 tokens minted")
+    assert(tokens.get(TokenNames::metadata) == 1, "metadata token not minted")
+    assert(tokens.get(TokenNames::config) == 1, "config token not minted")
+    assert(tokens.get(TokenNames::portfolio) == 1, "portfolio token not minted")
+    assert(tokens.get(TokenNames::price) == 1, "price token not minted")
+    assert(tokens.get(TokenNames::reimbursement(INITIAL_CYCLE_ID)) == 1, "reimbursement token not minted")
     assert(tokens.get(TokenNames::supply) == 1, "supply token not minted")
 }
 
 func validate_initial_metadata() -> () {
-    metadata = Metadata::find_output().get_content();
+    metadata = Metadata::find_output().get_content()
 
-    assert(metadata.name == INITIAL_NAME, "wrong metadata name");
-    assert(metadata.description == INITIAL_DESCRIPTION, "wrong metadata description");
-    assert(metadata.ticker == INITIAL_TICKER, "wrong metadata ticker");
-    assert(metadata.url == INITIAL_URL, "wrong metadata url");
-    assert(metadata.decimals == 6, "wrong metadata decimals");
+    assert(metadata.name == INITIAL_NAME, "wrong metadata name")
+    assert(metadata.description == INITIAL_DESCRIPTION, "wrong metadata description")
+    assert(metadata.ticker == INITIAL_TICKER, "wrong metadata ticker")
+    assert(metadata.url == INITIAL_URL, "wrong metadata url")
+    assert(metadata.decimals == 6, "wrong metadata decimals")
     assert(metadata.logo == INITIAL_LOGO, "wrong metadata logo uri")
 }
 
 func validate_initial_config() -> () {
-    config = Config::find_output();
+    config = Config::find_output()
 
-    assert(tx.is_signed_by(INITIAL_AGENT), "not signed by agent");
-    assert(INITIAL_SUCCESS_FEE.is_valid(), "initial success fee coefs aren't valid");
+    assert(tx.is_signed_by(INITIAL_AGENT), "not signed by agent")
+    assert(INITIAL_SUCCESS_FEE.is_valid(), "initial success fee coefs aren't valid")
     assert(config == Config{
         agent: INITIAL_AGENT,
         fees: FeesConfig{
@@ -106,7 +106,7 @@ func validate_initial_config() -> () {
 }
 
 func validate_initial_portfolio() -> () {
-    portfolio = Portfolio::find_output();
+    portfolio = Portfolio::find_output()
 
     assert(portfolio == Portfolio{
         n_groups:  0,
@@ -115,7 +115,7 @@ func validate_initial_portfolio() -> () {
 }
 
 func validate_initial_price() -> () {
-    price = Price::find_output();
+    price = Price::find_output()
 
     assert(price == Price{
         value:     INITIAL_PRICE,
@@ -124,37 +124,37 @@ func validate_initial_price() -> () {
 }
 
 func validate_initial_reimbursement() -> () {
-    (reimbursement, _) = Reimbursement::find_output(INITIAL_CYCLE_ID);
+    (reimbursement, _) = Reimbursement::find_output(INITIAL_CYCLE_ID)
 
-    assert(reimbursement.start_price == INITIAL_PRICE, "initial reimbursement start_price not correctly set");
+    assert(reimbursement.start_price == INITIAL_PRICE, "initial reimbursement start_price not correctly set")
     assert(reimbursement.state == ReimbursementState::Collecting, "initial reimbursement state not set to Collecting")
 }
 
 func validate_initial_supply() -> () {
-    supply = Supply::find_output();
+    supply = Supply::find_output()
 
-    assert(tx.time_range.end - tx.time_range.start < Duration::DAY, "validity time range is too large");
-    assert(supply.tick == INITIAL_TICK, "supply tick not correctly set");
-    assert(supply.n_tokens == 0, "circulating supply not set to 0");
-    assert(supply.n_vouchers == 0, "voucher count not set to 0");
-    assert(supply.last_voucher_id == 0, "last_voucher_id not set to 0");
-    assert(supply.n_lovelace == 0, "n_lovelace not set to 0");
-    assert(supply.management_fee_timestamp > tx.time_range.end, "management fee timestamp lies in the past");
-    assert(supply.management_fee_timestamp < tx.time_range.end + Duration::DAY, "management fee timestamp lies too far in the future");
-    assert(supply.success_fee.period_id == INITIAL_CYCLE_ID, "cycle id not set to 1");
-    assert(supply.success_fee.start_time > tx.time_range.end, "cycle start time lies in the past");
-    assert(supply.success_fee.start_time < tx.time_range.end + Duration::DAY, "success fee timestamp lies too far in the future");
-    assert(supply.success_fee.period == INITIAL_CYCLE_PERIOD, "cycle period not correctly set");
+    assert(tx.time_range.end - tx.time_range.start < Duration::DAY, "validity time range is too large")
+    assert(supply.tick == INITIAL_TICK, "supply tick not correctly set")
+    assert(supply.n_tokens == 0, "circulating supply not set to 0")
+    assert(supply.n_vouchers == 0, "voucher count not set to 0")
+    assert(supply.last_voucher_id == 0, "last_voucher_id not set to 0")
+    assert(supply.n_lovelace == 0, "n_lovelace not set to 0")
+    assert(supply.management_fee_timestamp > tx.time_range.end, "management fee timestamp lies in the past")
+    assert(supply.management_fee_timestamp < tx.time_range.end + Duration::DAY, "management fee timestamp lies too far in the future")
+    assert(supply.success_fee.period_id == INITIAL_CYCLE_ID, "cycle id not set to 1")
+    assert(supply.success_fee.start_time > tx.time_range.end, "cycle start time lies in the past")
+    assert(supply.success_fee.start_time < tx.time_range.end + Duration::DAY, "success fee timestamp lies too far in the future")
+    assert(supply.success_fee.period == INITIAL_CYCLE_PERIOD, "cycle period not correctly set")
     assert(supply.success_fee.start_price == INITIAL_PRICE, "cycle price not correctly set")
 }
 
 func validate_initialization() -> () {
-    validate_minted_tokens();
-    validate_initial_metadata();
-    validate_initial_config();
-    validate_initial_portfolio();
-    validate_initial_price();
-    validate_initial_reimbursement();
+    validate_minted_tokens()
+    validate_initial_metadata()
+    validate_initial_config()
+    validate_initial_portfolio()
+    validate_initial_price()
+    validate_initial_reimbursement()
     validate_initial_supply()
 }
 
@@ -176,7 +176,7 @@ func main(args: MixedArgs) -> () {
             validate_vault_spending()
         },
         Other => {
-            tokens = Tokens::get_minted();
+            tokens = Tokens::get_minted()
 
             if (tokens.get_safe(TokenNames::dvp_token) != Option[Int]::None) {
                 // voucher and reimbursement token minting is usually accompanied by DVP token minting
@@ -192,7 +192,7 @@ func main(args: MixedArgs) -> () {
             } else if (tokens.any_key(TokenNames::has_reimbursement_prefix) && tokens.get_safe(TokenNames::reimbursement(INITIAL_CYCLE_ID)) == Option[Int]::None) {
                 validate_mint_or_burn_dvp_tokens_vouchers_or_reimbursement()
             } else {
-                assert(tx.inputs.any((input: TxInput) -> {input.output_id == SEED_ID}), "UTxO with SEED_ID not spent");
+                assert(tx.inputs.any((input: TxInput) -> {input.output_id == SEED_ID}), "UTxO with SEED_ID not spent")
                 validate_initialization()
             }
         }

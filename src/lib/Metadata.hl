@@ -27,9 +27,9 @@ enum Metadata {
     func find_input() -> Metadata {
         input = tx.inputs.find((input: TxInput) -> {
             input.address == Addresses::metadata
-        });
+        })
 
-        assert(Tokens::contains_metadata(input), "doesn't contain the metadata token");
+        assert(Tokens::contains_metadata(input), "doesn't contain the metadata token")
 
         input.datum.inline.as[Metadata]
     }
@@ -37,9 +37,9 @@ enum Metadata {
     func find_output() -> Metadata {
         output = tx.outputs.find((output: TxOutput) -> {
             output.address == Addresses::metadata
-        });
+        })
 
-        assert(Tokens::contains_only_metadata(output), "doesn't contain only the metadata token");
+        assert(Tokens::contains_only_metadata(output), "doesn't contain only the metadata token")
 
         output.datum.inline.as[Metadata]
     }

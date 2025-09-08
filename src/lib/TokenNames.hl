@@ -21,7 +21,7 @@ func assets(group_id: Int) -> ByteArray {
 // Note: although it doesn't matter here: IDs should be one-base
 func parse_series(prefix: ByteArray, token_name: ByteArray) -> Option[Int] {
     if (token_name.starts_with(prefix)) {
-        id = token_name.slice(prefix.length, token_name.length);
+        id = token_name.slice(prefix.length, token_name.length)
         Option[Int]::Some{Int::parse(id.decode_utf8())}
     } else {
         Option[Int]::None

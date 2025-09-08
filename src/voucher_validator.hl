@@ -6,10 +6,10 @@ import Tokens
 import { VoucherWrapper, get_current_voucher } from VoucherModule
 
 func main(_: VoucherWrapper, _) -> () {
-    (id, voucher) = get_current_voucher();
+    (id, voucher) = get_current_voucher()
 
     if (tx.minted.get_safe(Tokens::voucher_user_nft(id)) == -1) {
-        assert(signed_by_agent(), "not signed by agent");
+        assert(signed_by_agent(), "not signed by agent")
         assert(tx.minted.get_safe(Tokens::voucher_ref_token(id)) == -1, "voucher ref token not burned")
     } else {
         assert(tx.inputs.any(Tokens::contains_reimbursement[TxInput](voucher.period_id)), "not witnessed by reimbursement validator")

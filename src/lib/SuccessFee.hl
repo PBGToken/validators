@@ -11,7 +11,7 @@ func apply_internal(alpha: Real, sigma: Real, c: Real, next: []SuccessFeeStep) -
     } else if (next.is_empty()) {
         (alpha - sigma)*c
     } else {
-        SuccessFeeStep{sigma_next, c_next} = next.head;
+        SuccessFeeStep{sigma_next, c_next} = next.head
         
         (Real::min(alpha, sigma_next) - sigma)*c 
         + apply_internal(alpha, sigma_next, c_next, next.tail)
@@ -30,7 +30,7 @@ func is_valid_internal(sigma: Real, c: Real, next: []SuccessFeeStep) -> Bool {
     } else if (next.is_empty()) {
         true
     } else {
-        SuccessFeeStep{sigma_next, c_next} = next.head;
+        SuccessFeeStep{sigma_next, c_next} = next.head
 
         if (sigma_next <= sigma) {
             false

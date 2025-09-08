@@ -13,7 +13,7 @@ import Tokens
 const VAULT_DATUM: ByteArray = #
 
 /**
- * Assures that nothing is spent from the vault, nor an asset groups are spent
+ * Ensures that nothing is spent from the vault, nor an asset groups are spent
  */
 func nothing_spent() -> Bool {
     tx.inputs.all((input: TxInput) -> Bool {
@@ -27,7 +27,7 @@ func nothing_spent() -> Bool {
  * Negative entries in the returned Value mean the vault decreases in that asset class
  */
 func diff() -> Value {
-    addr = Addresses::vault;
+    addr = Addresses::vault
 
     // vault outputs are transaction inputs and simply match the vault credential 
     //  (validate as many UTxOs taken out of the vault as possible)
@@ -37,7 +37,7 @@ func diff() -> Value {
         } else {
             prev
         }
-    }, Value::ZERO);
+    }, Value::ZERO)
 
     // vault inputs are transaction outputs that must match the address and datum exactly, and can only contain a single asset class in addition to ADA
     //  (be as restrictive as possible when sending UTxOs to the vault)
@@ -52,7 +52,7 @@ func diff() -> Value {
         } else {
             prev
         }
-    }, Value::ZERO);
+    }, Value::ZERO)
 
     in - out
 }
@@ -60,7 +60,7 @@ func diff() -> Value {
 // positive: vault increases in value
 // negative: vault decreases in value
 func diff_lovelace(ptrs: []AssetPtr) -> Int {
-    d = diff();
+    d = diff()
 
     // TODO: separate price_expiry() for swap txs?
     sum_lovelace(d, tx.inputs, ptrs, price_expiry())
@@ -70,28 +70,28 @@ func diff_counted(d_lovelace: Int, asset_group_output_ptrs: []Int) -> Value {
     (m: Map[AssetClass]Int, _) = tx.inputs.fold2((m: Map[AssetClass]Int, asset_group_output_ptrs: []Int, input: TxInput) -> {
         if (input.address == Addresses::assets) {
             // extract the token
-            tokens = input.value.get_policy(Tokens::policy);
+            tokens = input.value.get_policy(Tokens::policy)
 
             (token_name, qty) = tokens.find((token_name: ByteArray, _) -> Bool {
                 TokenNames::has_assets_prefix(token_name)
-            });
+            })
 
-            assert(qty > 0, "not a positive number of assets tokens");
+            assert(qty > 0, "not a positive number of assets tokens")
 
-            id = TokenNames::parse_assets(token_name).unwrap();
-            group_asset_class = Tokens::assets(id);
+            id = TokenNames::parse_assets(token_name).unwrap()
+            group_asset_class = Tokens::assets(id)
 
-            output_index = asset_group_output_ptrs.head;
-            output = tx.outputs.get(output_index);
+            output_index = asset_group_output_ptrs.head
+            output = tx.outputs.get(output_index)
             
-            assert(output.address == Addresses::assets, "asset group not sent to assets_validator");
-            assert(output.value.get_singleton_asset_class() == group_asset_class, "indexed output doesn't contain the expected assets token");
+            assert(output.address == Addresses::assets, "asset group not sent to assets_validator")
+            assert(output.value.get_singleton_asset_class() == group_asset_class, "indexed output doesn't contain the expected assets token")
             
-            assets0 = input.datum.inline.as[AssetGroup].assets;
-            assets1 = output.datum.inline.as_strictly[AssetGroup].assets;
+            assets0 = input.datum.inline.as[AssetGroup].assets
+            assets1 = output.datum.inline.as_strictly[AssetGroup].assets
 
             // the fold method iterates over the shortest of either, so the length equality must be checked explicitly
-            assert(assets0.length == assets1.length, "assets list not same length");
+            assert(assets0.length == assets1.length, "assets list not same length")
 
             m_ = assets0.zip(assets1).fold((m: Map[AssetClass]Int, a: Asset, b: Asset) -> {
                 assert(
@@ -99,26 +99,26 @@ func diff_counted(d_lovelace: Int, asset_group_output_ptrs: []Int) -> Value {
                     && (b.price == a.price).trace_if_false("price changed")
                     && (b.price_timestamp == a.price_timestamp).trace_if_false("price timestamp changed"),
                     "invalid asset change"
-                );
+                )
 
                 if (b.count == a.count) {
                     m
                 } else {
                     m.prepend(a.asset_class, b.count - a.count)
                 }
-            }, m);
+            }, m)
 
             (m_, asset_group_output_ptrs.tail)
         } else {
             (m, asset_group_output_ptrs)
         }
-    }, Map[AssetClass]Int{}, asset_group_output_ptrs);
+    }, Map[AssetClass]Int{}, asset_group_output_ptrs)
 
     m = if (d_lovelace != 0) {
         m.prepend(AssetClass::ADA, d_lovelace)
     } else {
         m
-    };
+    }
 
     // this function sorts by assetclass to make it easier to detect duplicates
     Value::from_flat(m)
@@ -128,7 +128,7 @@ func diff_counted(d_lovelace: Int, asset_group_output_ptrs: []Int) -> Value {
  * This is an expensive function
  */
 func counters_are_consistent(d_lovelace: Int, asset_group_output_ptrs: []Int) -> Bool {
-    d = diff().sort();
-    dc = diff_counted(d_lovelace, asset_group_output_ptrs);
+    d = diff().sort()
+    dc = diff_counted(d_lovelace, asset_group_output_ptrs)
     d.to_map() == dc.to_map()
 }

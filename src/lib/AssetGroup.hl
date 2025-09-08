@@ -2,7 +2,7 @@ module AssetGroupModule
 
 import Addresses
 import { Asset } from AssetModule
-import { current_script, get_current_input, tx } from ScriptContext
+import { get_current_input, tx } from ScriptContext
 import TokenNames
 import Tokens
 
@@ -12,20 +12,20 @@ struct AssetGroup {
     const MAX_SIZE: Int = 3
 
     func find_current() -> (Int, AssetGroup) {
-        input = get_current_input();
+        input = get_current_input()
 
-        id = Tokens::parse_assets(input);
+        id = Tokens::parse_assets(input)
 
         (id, input.datum.inline.as[AssetGroup])
     }
 
     func find_output(id: Int) -> AssetGroup {
-        assets_token = Tokens::assets(id);
+        assets_token = Tokens::assets(id)
     
         output = tx.outputs.find((output: TxOutput) -> {
             output.address == Addresses::assets
             && Tokens::contains_only(output, assets_token)
-        });
+        })
     
         output.datum.inline.as_strictly[AssetGroup]
     }
@@ -33,11 +33,11 @@ struct AssetGroup {
     func find_output_asset(asset_class: AssetClass) -> Asset {
         maybe_asset: Option[Asset] = tx.outputs.fold_lazy((output: TxOutput, next: () -> Option[Asset]) -> {
             if (output.address == Addresses::assets) {
-                assert(Tokens::contains_only_any_one_assets(output), "doesn't only contain assets token");
+                assert(Tokens::contains_only_any_one_assets(output), "doesn't only contain assets token")
 
-                group = output.datum.inline.as_strictly[AssetGroup];
+                group = output.datum.inline.as_strictly[AssetGroup]
 
-                maybe_asset = group.find_asset(asset_class);
+                maybe_asset = group.find_asset(asset_class)
 
                 // TODO: a higher performance way of doing this would be to pass next() as the terminating expression to an inner find_or() function
                 maybe_asset.switch{
@@ -47,7 +47,7 @@ struct AssetGroup {
             } else {
                 next()
             }
-        }, Option[Asset]::None);
+        }, Option[Asset]::None)
 
         maybe_asset.unwrap()
     }
@@ -55,11 +55,11 @@ struct AssetGroup {
     func find_input_asset(asset_class: AssetClass) -> Asset {
         maybe_asset: Option[Asset] = tx.inputs.fold_lazy((input: TxInput, next: () -> Option[Asset]) -> {
             if (input.address == Addresses::assets) {
-                assert(Tokens::contains_any_one_assets(input), "doesn't only contain assets token");
+                assert(Tokens::contains_any_one_assets(input), "doesn't only contain assets token")
 
-                group = input.datum.inline.as[AssetGroup];
+                group = input.datum.inline.as[AssetGroup]
 
-                maybe_asset = group.find_asset(asset_class);
+                maybe_asset = group.find_asset(asset_class)
 
                 // TODO: a higher performance way of doing this would be to pass next() as the terminating expression to an inner find_or() function
                 maybe_asset.switch{
@@ -69,7 +69,7 @@ struct AssetGroup {
             } else {
                 next()
             }
-        }, Option[Asset]::None);
+        }, Option[Asset]::None)
 
         maybe_asset.unwrap()
     }
@@ -81,16 +81,16 @@ struct AssetGroup {
     func find_single_input() -> (Int, AssetGroup) {
         input = tx.inputs.filter((input: TxInput) -> {
             input.address == Addresses::assets
-        }).get_singleton();
+        }).get_singleton()
 
-        id = Tokens::parse_assets(input);
+        id = Tokens::parse_assets(input)
 
         (id, input.datum.inline.as[AssetGroup])
     }
 
     func find_single_thread() -> (AssetGroup, AssetGroup) {
-        (id, group0) = AssetGroup::find_single_input();
-        group1 = AssetGroup::find_output(id);
+        (id, group0) = AssetGroup::find_single_input()
+        group1 = AssetGroup::find_output(id)
         (group0, group1)
     }
 
@@ -121,14 +121,14 @@ struct AssetGroup {
  * This function is used by the portfolio validator
  */
 func search_for_asset_class(asset_class: AssetClass, group_ptrs: []Int, first_id: Int) -> Bool {
-    ref_inputs = tx.ref_inputs;
+    ref_inputs = tx.ref_inputs
 
     (_, found) = group_ptrs.fold2((expected_id: Int, found: Bool, ptr: Int) -> (Int, Bool) {
-        input = ref_inputs.get(ptr);
-        id = Tokens::parse_assets(input);
+        input = ref_inputs.get(ptr)
+        id = Tokens::parse_assets(input)
 
-        assert(input.address == Addresses::assets, "asset group not at correct address");
-        assert(id == expected_id, "assets id doesn't match expected id (asset groups not iterated in order)");
+        assert(input.address == Addresses::assets, "asset group not at correct address")
+        assert(id == expected_id, "assets id doesn't match expected id (asset groups not iterated in order)")
 
         (
             expected_id+1,
@@ -136,13 +136,13 @@ func search_for_asset_class(asset_class: AssetClass, group_ptrs: []Int, first_id
                 // no need to loop over the assets in the group
                 true
             } else {
-                group = input.datum.inline.as[AssetGroup];
+                group = input.datum.inline.as[AssetGroup]
 
                 // reuse group.has_asset
                 group.has_asset(asset_class)
             }
         )
-    }, first_id, false);
+    }, first_id, false)
 
     found
 }
@@ -152,32 +152,32 @@ func search_for_asset_class(asset_class: AssetClass, group_ptrs: []Int, first_id
  * Note: group_ptrs can be empty if the vault only contains ADA, which we can handle gracefully by using the tx validity time range start as the initial oldest timestamp in the fold
  */
 func sum_total_asset_value(group_ptrs: []Int, first_id: Int) -> (Time, Int) {
-    assert(tx.time_range.end - tx.time_range.start < Duration::DAY, "validity time range too large");
+    assert(tx.time_range.end - tx.time_range.start < Duration::DAY, "validity time range too large")
     
-    ref_inputs = tx.ref_inputs;
+    ref_inputs = tx.ref_inputs
 
     (_, tp: Time, dV: Int) = group_ptrs.fold3((expected_id: Int, tp: Time, dV: Int, ptr: Int) -> (Int, Time, Int) {
-        input = ref_inputs.get(ptr);
-        id = Tokens::parse_assets(input);
+        input = ref_inputs.get(ptr)
+        id = Tokens::parse_assets(input)
 
-        assert(input.address == Addresses::assets, "asset group not at correct address");
-        assert(id == expected_id, "assets id doesn't match expected id (asset groups not iterated in order)");
+        assert(input.address == Addresses::assets, "asset group not at correct address")
+        assert(id == expected_id, "assets id doesn't match expected id (asset groups not iterated in order)")
 
-        group = input.datum.inline.as[AssetGroup];
+        group = input.datum.inline.as[AssetGroup]
 
         (tp: Time, dV: Int) = group.assets.fold2((tp: Time, dV: Int, asset: Asset) -> {
             (
                 if (asset.price_timestamp < tp) {asset.price_timestamp} else {tp},
                 dV + asset.calc_value()
             )
-        }, tp, dV);
+        }, tp, dV)
 
         (
             expected_id+1,
             tp,
             dV
         )
-    }, first_id, tx.time_range.start, 0);
+    }, first_id, tx.time_range.start, 0)
 
     (tp, dV)
 }

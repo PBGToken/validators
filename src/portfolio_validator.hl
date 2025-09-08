@@ -23,24 +23,24 @@ enum Action {
 }
 
 func validate_add_asset_group(portfolio0: Portfolio, portfolio1: Portfolio, added_id: Int) -> () {
-    added_group = AssetGroup::find_output(added_id);
+    added_group = AssetGroup::find_output(added_id)
         
-    assert(AssetGroup::nothing_spent(), "spent an asset group");
-    assert(portfolio0.reduction.is_idle(), "portfolio0 state isn't idle");
-    assert(portfolio1.reduction.is_idle(), "portfolio1 state isn't idle");
-    assert(portfolio1.n_groups == added_id, "wrong new asset group id"); // this means AssetGroup ids are one-based
-    assert(portfolio1.n_groups == portfolio0.n_groups + 1, "n_groups not incremented by 1");
+    assert(AssetGroup::nothing_spent(), "spent an asset group")
+    assert(portfolio0.reduction.is_idle(), "portfolio0 state isn't idle")
+    assert(portfolio1.reduction.is_idle(), "portfolio1 state isn't idle")
+    assert(portfolio1.n_groups == added_id, "wrong new asset group id") // this means AssetGroup ids are one-based
+    assert(portfolio1.n_groups == portfolio0.n_groups + 1, "n_groups not incremented by 1")
     assert(added_group.is_empty(), "added group isn't empty")
 }
 
 func validate_remove_asset_group(portfolio0: Portfolio, portfolio1: Portfolio, burned_id: Int) -> () {
-    (removed_id, removed_group) = AssetGroup::find_single_input();
+    (removed_id, removed_group) = AssetGroup::find_single_input()
                     
-    assert(portfolio0.reduction.is_idle(), "portfolio0 state isn't idle");
-    assert(portfolio1.reduction.is_idle(), "portfolio1 state isn't idle");
-    assert(burned_id == removed_id, "the spent asset group id isn't equal to the burned token id");
-    assert(portfolio0.n_groups == removed_id, "the removed id isn't the last asset group"); // only the last one can be removed
-    assert(portfolio1.n_groups == portfolio0.n_groups - 1, "n_groups not decremented by 1");
+    assert(portfolio0.reduction.is_idle(), "portfolio0 state isn't idle")
+    assert(portfolio1.reduction.is_idle(), "portfolio1 state isn't idle")
+    assert(burned_id == removed_id, "the spent asset group id isn't equal to the burned token id")
+    assert(portfolio0.n_groups == removed_id, "the removed id isn't the last asset group") // only the last one can be removed
+    assert(portfolio1.n_groups == portfolio0.n_groups - 1, "n_groups not decremented by 1")
     assert(removed_group.is_empty(), "the removed asset group isn't empty")
 }
 
@@ -49,42 +49,42 @@ func validate_start_reduction(
     group_ptrs: []Int,
     n_all_groups: Int // used to terminate Exists early
 ) -> () {
-    supply = Supply::find_ref();
-    n_groups = group_ptrs.length;
+    supply = Supply::find_ref()
+    n_groups = group_ptrs.length
 
-    assert(AssetGroup::nothing_spent(), "spent an asset group");
-    assert(kp1 == supply.tick, "start tick of reduction not equal to supply tick");
+    assert(AssetGroup::nothing_spent(), "spent an asset group")
+    assert(kp1 == supply.tick, "start tick of reduction not equal to supply tick")
     
     mode1.switch{
         TotalAssetValue{V1, tp1} => {
             V0 = supply.n_lovelace;
-            (tp_oldest, dV) = sum_total_asset_value(group_ptrs, 1);
+            (tp_oldest, dV) = sum_total_asset_value(group_ptrs, 1)
 
-            assert(V1 == V0 + dV, "wrong first total asset value sum, expected " + V0.show() + " + " + dV.show() + ", got " + V1.show());
-            assert(ig1 == n_groups, "iteration index not equal to the number of groups iterated over");
+            assert(V1 == V0 + dV, "wrong first total asset value sum, expected " + V0.show() + " + " + dV.show() + ", got " + V1.show())
+            assert(ig1 == n_groups, "iteration index not equal to the number of groups iterated over")
             assert(tp1 == tp_oldest, "timestamp in reduction not equal to oldest timestamp")
         },
         Exists{asset_class, found1} => {
-            assert(asset_class.mph.bytes.length == 28, "asset class mph isn't 28 bytes long");
-            assert(asset_class.token_name.length <= 32, "asset class token name too long");
+            assert(asset_class.mph.bytes.length == 28, "asset class mph isn't 28 bytes long")
+            assert(asset_class.token_name.length <= 32, "asset class token name too long")
 
-            found = search_for_asset_class(asset_class, group_ptrs, 1);
+            found = search_for_asset_class(asset_class, group_ptrs, 1)
 
             if (found) {
-                assert(found1 == true, "found1 not equal to true");
+                assert(found1 == true, "found1 not equal to true")
                 assert(ig1 == n_all_groups, "iteration index not set to end")
             } else {
-                assert(found1 == false, "found1 not equal to false");
+                assert(found1 == false, "found1 not equal to false")
                 assert(ig1 == n_groups, "iteration index no equal to the number of groups iterated over")
             }         
         },
         DoesNotExist{asset_class} => {
-            assert(asset_class.mph.bytes.length == 28, "asset class mph isn't 28 bytes long");
-            assert(asset_class.token_name.length <= 32, "asset class token name too long");
+            assert(asset_class.mph.bytes.length == 28, "asset class mph isn't 28 bytes long")
+            assert(asset_class.token_name.length <= 32, "asset class token name too long")
 
-            found = search_for_asset_class(asset_class, group_ptrs, 1);
+            found = search_for_asset_class(asset_class, group_ptrs, 1)
 
-            assert(!found, "asset class found");
+            assert(!found, "asset class found")
             assert(ig1 == n_groups, "iteration index no equal to the number of groups iterated over")
         }
     }
@@ -97,40 +97,40 @@ func validate_continue_reduction(
     n_all_groups: Int // used to terminate Exists reduction early
 ) -> () {
     
-    n_groups = group_ptrs.length;
-    next_id = ig0+1;
+    n_groups = group_ptrs.length
+    next_id = ig0+1
 
-    assert(AssetGroup::nothing_spent(), "spent an asset group");
-    assert(kp1 == kp0, "reduction tick changed");
+    assert(AssetGroup::nothing_spent(), "spent an asset group")
+    assert(kp1 == kp0, "reduction tick changed")
     (mode0, mode1).switch{
         (TotalAssetValue{V0, tp0}, TotalAssetValue{V1, tp1}) => {
-            supply = Supply::find_ref();
+            supply = Supply::find_ref()
 
-            (tp_oldest, dV) = sum_total_asset_value(group_ptrs, next_id);
+            (tp_oldest, dV) = sum_total_asset_value(group_ptrs, next_id)
 
-            assert(V1 == V0 + dV, "wrong total asset value sum, expected " + V0.show() + " + " + dV.show() + ", got " + V1.show());
-            assert(kp1 == supply.tick, "supply tick changed since start of reduction");
-            assert(ig1 == ig0 + n_groups, "iteration index not incremented by the number of groups iterated over");
+            assert(V1 == V0 + dV, "wrong total asset value sum, expected " + V0.show() + " + " + dV.show() + ", got " + V1.show())
+            assert(kp1 == supply.tick, "supply tick changed since start of reduction")
+            assert(ig1 == ig0 + n_groups, "iteration index not incremented by the number of groups iterated over")
             assert(tp1 == if (tp_oldest < tp0) {tp_oldest} else {tp0}, "reduction timestamp not equal to oldest timestamp")
         },
         (Exists{asset_class0, found0}, Exists{asset_class1, found1}) => {
-            found = search_for_asset_class(asset_class0, group_ptrs, next_id);
+            found = search_for_asset_class(asset_class0, group_ptrs, next_id)
 
-            assert(asset_class0 == asset_class1, "reduction asset class changed");
-            assert(!found0, "already found"); // can't continue reduction if already found before
+            assert(asset_class0 == asset_class1, "reduction asset class changed")
+            assert(!found0, "already found") // can't continue reduction if already found before
             if (found) {
-                assert(found1 == true, "found1 not equal to true");
+                assert(found1 == true, "found1 not equal to true")
                 assert(ig1 == n_all_groups, "iteration index not set to end")
             } else {
-                assert(found1 == false, "found1 not equal to false");
+                assert(found1 == false, "found1 not equal to false")
                 assert(ig1 == ig0 + n_groups, "iteration index not incremented by the number of groups iterated over")
             }
         },
         (DoesNotExist{asset_class0}, DoesNotExist{asset_class1}) => {
-            found = search_for_asset_class(asset_class0, group_ptrs, next_id);
+            found = search_for_asset_class(asset_class0, group_ptrs, next_id)
 
-            assert(asset_class0 == asset_class1, "reduction asset class changed");
-            assert(!found, "found asset class");
+            assert(asset_class0 == asset_class1, "reduction asset class changed")
+            assert(!found, "found asset class")
             assert(ig1 == ig0 + n_groups, "iteration index not incremented by the number of groups iterated over")
         },
         else => error("invalid reduction state change")
@@ -138,52 +138,52 @@ func validate_continue_reduction(
 }
 
 func validate_add_asset_class(config0: Config, config_is_spent: Bool) -> () {
-    (group0, group1) = AssetGroup::find_single_thread();
+    (group0, group1) = AssetGroup::find_single_thread()
 
-    AddingAssetClass{asset_class} = config0.state.get_proposal();
+    AddingAssetClass{asset_class} = config0.state.get_proposal()
 
-    assert(group1.assets == group0.assets.append(Asset::new(asset_class)), "unexpected group1 content");
-    assert(group1.is_not_overfull(), "group1 is overfull");
+    assert(group1.assets == group0.assets.append(Asset::new(asset_class)), "unexpected group1 content")
+    assert(group1.is_not_overfull(), "group1 is overfull")
     assert(config_is_spent, "config isn't spent")
 }
 
 func validate_remove_asset_class(config0: Config, config_is_spent: Bool) -> () {
-    (group0, group1) = AssetGroup::find_single_thread();
+    (group0, group1) = AssetGroup::find_single_thread()
 
-    RemovingAssetClass{asset_class} = config0.state.get_proposal();
+    RemovingAssetClass{asset_class} = config0.state.get_proposal()
     
     asset = group0.assets.filter((asset: Asset) -> {
         asset.asset_class == asset_class
-    }).get_singleton();
+    }).get_singleton()
 
-    assert(asset.count == 0, "count not zero");
-    assert(group1.assets == group0.assets.filter((asset: Asset) -> {asset.asset_class != asset_class}), "asset class not correctly removed from group");
+    assert(asset.count == 0, "count not zero")
+    assert(group1.assets == group0.assets.filter((asset: Asset) -> {asset.asset_class != asset_class}), "asset class not correctly removed from group")
     assert(config_is_spent, "tx not witnessed by config validator")
 }
 
 func validate_update_prices(portfolio0: Portfolio) -> () {
-    assert(portfolio0.reduction.is_idle(), "portfolio0 state not idle");
-    assert(witnessed_by_oracle(), "not witnessed by oracle");
-    assert(tx.time_range.end - tx.time_range.start < Duration::DAY, "validity time range interval too large");
+    assert(portfolio0.reduction.is_idle(), "portfolio0 state not idle")
+    assert(witnessed_by_oracle(), "not witnessed by oracle")
+    assert(tx.time_range.end - tx.time_range.start < Duration::DAY, "validity time range interval too large")
     tx.inputs.for_each((input: TxInput) -> {
         if (input.address == Addresses::assets) {
-            id = Tokens::parse_assets(input);
+            id = Tokens::parse_assets(input)
 
-            group0 = input.datum.inline.as[AssetGroup];
-            group1 = AssetGroup::find_output(id);
+            group0 = input.datum.inline.as[AssetGroup]
+            group1 = AssetGroup::find_output(id)
 
-            assets0 = group0.assets;
-            assets1 = group1.assets;
+            assets0 = group0.assets
+            assets1 = group1.assets
 
-            // group0 and group1 must have same length, zip() doesn't assure this
-            assert(assets0.length == assets1.length, "number of assets in group changed");
+            // group0 and group1 must have same length, zip() doesn't ensure this
+            assert(assets0.length == assets1.length, "number of assets in group changed")
 
             assets0.zip(assets1).for_each((asset0: Asset, asset1: Asset) -> {
-                assert(asset1.asset_class == asset0.asset_class, "asset class changed");
-                assert(asset1.count == asset0.count, "asset count changed");
-                assert(asset1.price.top >= 0, "asset price numerator is negative"); // allowed to be zero for extreme market situations, but can't be negative
+                assert(asset1.asset_class == asset0.asset_class, "asset class changed")
+                assert(asset1.count == asset0.count, "asset count changed")
+                assert(asset1.price.top >= 0, "asset price numerator is negative") // allowed to be zero for extreme market situations, but can't be negative
                 // denominator check isn't necessary because it is already being done by AssetGroup::find_output()
-                assert(asset1.price_timestamp >= asset0.price_timestamp, "asset price timestamp can't decrease");
+                assert(asset1.price_timestamp >= asset0.price_timestamp, "asset price timestamp can't decrease")
                 assert(asset1.price_timestamp < tx.time_range.end, "asset price timestamp lies too far in the future") // we can't used `< tx.time_range.start` because for some on-demand price feeds the price stamp might lie after tx.time_range.start
             })
         } else {
@@ -198,37 +198,37 @@ func validate_move_assets(portfolio0: Portfolio) -> () {
      */
     (n_groups_in_inputs, n_assets_in_inputs) = tx.inputs.fold2((n_groups: Int, n_assets: Int, input: TxInput) -> {
         if (input.address == Addresses::assets) {
-            assert(Tokens::contains_any_one_assets(input), "doesn't contain only 1 assets token");
+            assert(Tokens::contains_any_one_assets(input), "doesn't contain only 1 assets token")
 
-            group = input.datum.inline.as[AssetGroup];
+            group = input.datum.inline.as[AssetGroup]
 
             n_assets_ = group.assets.fold((n_assets: Int, asset0: Asset) -> {
                 // look for asset somewhere in output
                 // TODO: use a ptr in the redeemer because this is very expensive
-                asset1 = AssetGroup::find_output_asset(asset0.asset_class);
+                asset1 = AssetGroup::find_output_asset(asset0.asset_class)
 
                 // asset can only move, but content can't change
-                assert(asset1 == asset0, "asset can't change");
+                assert(asset1 == asset0, "asset can't change")
 
                 n_assets + 1
-            }, n_assets);
+            }, n_assets)
 
             (n_groups + 1, n_assets_)
         } else {
             (n_groups, n_assets)
         }
-    }, 0, 0);
+    }, 0, 0)
 
     /**
      * Each asset class in outputs must also be found in inputs
      */
     (n_groups_in_outputs, n_assets_in_outputs) = tx.outputs.fold2((n_groups: Int, n_assets: Int, output: TxOutput) -> {
         if (output.address == Addresses::assets) {
-            assert(Tokens::contains_only_any_one_assets(output), "doesn't contain only 1 assets token");
+            assert(Tokens::contains_only_any_one_assets(output), "doesn't contain only 1 assets token")
             
-            group = output.datum.inline.as_strictly[AssetGroup];
+            group = output.datum.inline.as_strictly[AssetGroup]
 
-            assert(group.is_not_overfull(), "output assetgroup is overfull");
+            assert(group.is_not_overfull(), "output assetgroup is overfull")
 
             // checking that each asset exists in the inputs is redundant, as we already checked that each input is in the output, 
             //  and there need to be same number of input assets and outputs (uniqueness of the assets is guaranteed by the rest of the contract)
@@ -239,29 +239,29 @@ func validate_move_assets(portfolio0: Portfolio) -> () {
         }
     }, 0, 0);
 
-    assert(portfolio0.reduction.is_idle(), "portfolio0 state not idle");
-    assert(n_groups_in_inputs == n_groups_in_outputs, "number of groups in inputs isn't equal to number of groups in outputs");
+    assert(portfolio0.reduction.is_idle(), "portfolio0 state not idle")
+    assert(n_groups_in_inputs == n_groups_in_outputs, "number of groups in inputs isn't equal to number of groups in outputs")
     assert(n_assets_in_inputs == n_assets_in_outputs, "number of assets in inputs isn't equal to number of assets in outputs")
 }
 
 func validate_reset_reduction(portfolio0: Portfolio) -> () {
     // portfolio1.reduction.is_idle()==true has already been checked by the caller
-    assert(!portfolio0.reduction.is_idle(), "portfolio0 state is idle");
+    assert(!portfolio0.reduction.is_idle(), "portfolio0 state is idle")
     assert(AssetGroup::nothing_spent(), "spent an asset group")
 }
 
 func main(_: Portfolio, action: Action) -> () {
     // the config UTxO must be spent for the AddAssetClass and RemoveAssetClass actions, 
     //  but it doesn't matter for the other actions
-    (config0, config_is_spent) = Config::find(); 
-    (portfolio0, portfolio1) = Portfolio::find_thread();
-    minted_tokens = Tokens::get_minted();
+    (config0, config_is_spent) = Config::find()
+    (portfolio0, portfolio1) = Portfolio::find_thread()
+    minted_tokens = Tokens::get_minted()
     
-    assert(signed_by_agent(), "not signed by agent");
+    assert(signed_by_agent(), "not signed by agent")
     if (!minted_tokens.is_empty()) {
-        assert(minted_tokens.length == 1, "only a single asset counter can be minted or burned");
-        (token_name, qty) = minted_tokens.head;
-        id = TokenNames::parse_assets(token_name).unwrap();
+        assert(minted_tokens.length == 1, "only a single asset counter can be minted or burned")
+        (token_name, qty) = minted_tokens.head
+        id = TokenNames::parse_assets(token_name).unwrap()
 
         if (qty == 1) {
             validate_add_asset_group(portfolio0, portfolio1, id)
@@ -271,14 +271,14 @@ func main(_: Portfolio, action: Action) -> () {
             error("not exactly 1 asset group token minted or burned")
         }
     } else {
-        assert(portfolio1.n_groups == portfolio0.n_groups, "n_groups changed");
+        assert(portfolio1.n_groups == portfolio0.n_groups, "n_groups changed")
         (portfolio0.reduction, portfolio1.reduction).switch{
             (Idle, Reducing{ig1, kp1, mode1}) => {
-                Reduce{ptrs} = action;
+                Reduce{ptrs} = action
                 validate_start_reduction(ig1, kp1, mode1, ptrs, portfolio1.n_groups)
             },
             (Reducing{ig0, kp0, mode0}, Reducing{ig1, kp1, mode1}) => {
-                Reduce{ptrs} = action;
+                Reduce{ptrs} = action
                 validate_continue_reduction(ig0, kp0, mode0, ig1, kp1, mode1, ptrs, portfolio1.n_groups)
             },
             (_, Idle) => {

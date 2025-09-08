@@ -33,8 +33,8 @@ struct BurnOrder {
 
     func find_return(self) -> TxOutput {
         // invariants taken out of loop for slightly better performance
-        return_address = self.return_address;
-        return_datum = self.return_datum;
+        return_address = self.return_address
+        return_datum = self.return_datum
 
         tx.outputs.find((output: TxOutput) -> {
             output.address == return_address
@@ -49,15 +49,15 @@ struct BurnOrder {
         input = current_script.switch{
             burn_order_validator => get_current_input(),
             else => error("unexpected current script (BurnOrder.diff() can only be called within burn_order_validator)")
-        };
+        }
             
-        return = self.find_return();
+        return = self.find_return()
 
         input.value - return.value
     }
 
     func value(self) -> Value {
-        d = self.diff();
+        d = self.diff()
 
         // prevent token dust attack with vouchers (other token dust attack prevention is in self.returned_enough())
         // we do this here instead of in self.find_return() because we don't want to check tokens that were also included on the input side (so we want to perform this check on the net tokens returned)
@@ -69,7 +69,7 @@ struct BurnOrder {
             } else {
                 true
             }
-        }), "can't return new dvp policy related tokens");
+        }), "can't return new dvp policy related tokens")
 
         (-1) * d.delete_policy(Tokens::policy)
     }
@@ -94,7 +94,7 @@ struct BurnOrder {
                 self.value_lovelace(ptrs) >= lovelace
             },
             V{requested_value} => {
-                actual_value = self.value();
+                actual_value = self.value()
 
                 // prevent token dust attack with other tokens by assuring that the returned value is either ADA, or exists in the requested value
                 //  the fastest way to do this is to compare the number of asset classes in the returned value and in the requested value

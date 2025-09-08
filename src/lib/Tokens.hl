@@ -3,7 +3,7 @@ module Tokens
 import { current_script, get_current_input, tx } from ScriptContext
 import TokenNames
 
-const direct_policy = MintingPolicyHash::from_script_hash(Scripts::fund_policy)
+const direct_policy: MintingPolicyHash = MintingPolicyHash::from_script_hash(Scripts::fund_policy)
 
 // as a function because it can fail
 func indirect_policy() -> MintingPolicyHash {
@@ -69,12 +69,12 @@ func contains_assets[V: Valuable](v: V, id: Int) -> Bool {
 }
 
 func contains_any_one_assets[V: Valuable](v: V) -> Bool {
-    tokens = v.value.get_policy(policy);
+    tokens = v.value.get_policy(policy)
 
     if (tokens.length != 1) {
         false
     } else {
-        (token_name, qty) = tokens.head;
+        (token_name, qty) = tokens.head
 
         if (qty != 1) {
             error("expected only 1 assets token")
@@ -155,7 +155,7 @@ func contains_only_voucher_ref[V: Valuable](v: V, id: Int) -> Bool {
 }
 
 func contains_only_any_reimbursement[V: Valuable](v: V) -> Bool {
-    asset_class = v.value.get_singleton_asset_class();
+    asset_class = v.value.get_singleton_asset_class()
 
     asset_class.mph == policy
     &&  TokenNames::parse_reimbursement(asset_class.token_name).switch{
@@ -165,7 +165,7 @@ func contains_only_any_reimbursement[V: Valuable](v: V) -> Bool {
 }
 
 func contains_only_any_one_assets[V: Valuable](v: V) -> Bool {
-    asset_class = v.value.get_singleton_asset_class();
+    asset_class = v.value.get_singleton_asset_class()
 
     asset_class.mph == policy
     &&  TokenNames::parse_assets(asset_class.token_name).switch{
@@ -178,51 +178,51 @@ func contains_only_any_one_assets[V: Valuable](v: V) -> Bool {
  * Throws an error if the value contains other tokens
  */
 func parse_assets[V: Valuable](v: V) -> Int {
-    tokens = v.value.get_policy(policy);
+    tokens = v.value.get_policy(policy)
 
-    assert(tokens.length == 1, "can only contain one assets token");
+    assert(tokens.length == 1, "can only contain one assets token")
 
-    (token_name, qty) = tokens.head;
+    (token_name, qty) = tokens.head
 
-    assert(qty == 1, "expected only 1 assets token");
+    assert(qty == 1, "expected only 1 assets token")
 
     TokenNames::parse_assets(token_name).unwrap()
 }
 
 func parse_reimbursement[V: Valuable](v: V) -> Int {
-    tokens = v.value.get_policy(policy);
+    tokens = v.value.get_policy(policy)
 
-    n = tokens.length;
+    n = tokens.length
 
     (token_name, qty) = if (n == 1) {
         tokens.head
     } else if (n == 2) {
-        (tn0, qty0) = tokens.head;
+        (tn0, qty0) = tokens.head
 
         if (tn0 == TokenNames::dvp_token) {
             tokens.tail.head
         } else {
-            assert(tokens.tail.head.first == TokenNames::dvp_token, "can only contain one reimbursement and optionally DVP tokens");
+            assert(tokens.tail.head.first == TokenNames::dvp_token, "can only contain one reimbursement and optionally DVP tokens")
 
             (tn0, qty0)
         }
     } else {
         error("can only contain one reimbursement and optionally DVP tokens")
-    };
+    }
 
-    assert(qty == 1, "expected only 1 reimbursement token");
+    assert(qty == 1, "expected only 1 reimbursement token")
 
     TokenNames::parse_reimbursement(token_name).unwrap()
 }
 
 func parse_voucher_ref[V: Valuable](v: V) -> Int {
-    tokens = v.value.get_policy(policy);
+    tokens = v.value.get_policy(policy)
 
-    assert(tokens.length == 1, "can only contain one voucher ref token");
+    assert(tokens.length == 1, "can only contain one voucher ref token")
 
-    (token_name, qty) = tokens.head;
+    (token_name, qty) = tokens.head
 
-    assert(qty == 1, "expected only 1 voucher ref token");
+    assert(qty == 1, "expected only 1 voucher ref token")
 
     TokenNames::parse_voucher_ref(token_name).unwrap()
 }
@@ -232,7 +232,7 @@ func nothing_minted() -> Bool {
 }
 
 func minted_only_dvp_tokens() -> Bool {
-    tokens = get_minted();
+    tokens = get_minted()
 
     tokens.length <= 1
     && tokens.all_keys((token_name: ByteArray) -> {

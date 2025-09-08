@@ -19,17 +19,17 @@ struct Voucher {
     url: String "url"
 
     func find_return(self, ptr: Int) -> TxOutput {
-        output = tx.outputs.get(ptr);
+        output = tx.outputs.get(ptr)
 
-        assert(output.address == self.return_address, "unexpected voucher return address");
-        assert(output.datum.inline == self.return_datum, "unexpected voucher return datum");
+        assert(output.address == self.return_address, "unexpected voucher return address")
+        assert(output.datum.inline == self.return_datum, "unexpected voucher return datum")
 
         output
     }
 
     func calc_provisional_success_fee_delta(self, benchmark_price: Ratio, success_fee: SuccessFee) -> Int {
-        alpha_voucher = calc_alpha(self.price, benchmark_price);
-        phi = success_fee.apply(alpha_voucher);
+        alpha_voucher = calc_alpha(self.price, benchmark_price)
+        phi = success_fee.apply(alpha_voucher)
         (self.tokens*(phi/alpha_voucher)).floor()
     }
 }
@@ -49,17 +49,17 @@ enum VoucherWrapper {
 }
 
 func extract_voucher_from_datum(datum: TxOutputDatum) -> Voucher {
-    wrapper = datum.inline.as[VoucherWrapper];
+    wrapper = datum.inline.as[VoucherWrapper]
     
     wrapper.get_voucher()
 }
 
 func get_current_voucher() -> (Int, Voucher) {
-    input = get_current_input();
+    input = get_current_input()
 
-    id = Tokens::parse_voucher_ref(input);
+    id = Tokens::parse_voucher_ref(input)
 
-    voucher = extract_voucher_from_datum(input.datum);
+    voucher = extract_voucher_from_datum(input.datum)
 
     (id, voucher)
 }
@@ -68,7 +68,7 @@ func find_input_voucher(id: Int) -> Voucher {
     input = tx.inputs.find((input: TxInput) -> {
         input.address == Addresses::voucher
         && Tokens::contains_voucher_ref(input, id)
-    });
+    })
 
     extract_voucher_from_datum(input.datum)
 }
@@ -77,14 +77,12 @@ func find_output_voucher(id: Int) -> Voucher {
     output = tx.outputs.find((output: TxOutput) -> {
         output.address == Addresses::voucher
         && Tokens::contains_only_voucher_ref(output, id)
-    });
+    })
 
-    wrapper = output.datum.inline.as_strictly[VoucherWrapper];
+    wrapper = output.datum.inline.as_strictly[VoucherWrapper]
 
     wrapper.get_voucher()
 }
-
-
 
 /**
  * Returns the total number of tokens mentioned in the vouchers
@@ -92,44 +90,44 @@ func find_output_voucher(id: Int) -> Voucher {
  * Asserts that each minted voucher has a unique id
  */
 func validate_minted_vouchers(price: Ratio, period_id: Int, last_voucher_id: Int, is_successful: Bool) -> (Int, Int, Int) {
-    tokens_minted = Tokens::get_minted();
+    tokens_minted = Tokens::get_minted()
 
     n_vouchers_minted = tokens_minted.fold((n_vouchers: Int, token_name: ByteArray, qty: Int) -> {
         if (token_name == TokenNames::dvp_token) {
             n_vouchers
         } else {
-            assert(qty == 1, "not exactly 1");
+            assert(qty == 1, "not exactly 1")
 
             TokenNames::parse_voucher_ref(token_name).switch{
                 Some{id} => {
-                    // assure the user nft is minted
-                    assert(tokens_minted.get(TokenNames::voucher_nft(id)) == 1, "not exactly one user nft minted");
+                    // ensure the user nft is minted
+                    assert(tokens_minted.get(TokenNames::voucher_nft(id)) == 1, "not exactly one user nft minted")
 
                     n_vouchers + 1
                 },
                 else => {
-                    id = TokenNames::parse_voucher_nft(token_name).unwrap();
+                    id = TokenNames::parse_voucher_nft(token_name).unwrap()
     
                     // make sure the ref token was minted
-                    assert(tokens_minted.get(TokenNames::voucher_ref(id)) == 1, "not exactly one ref token minted");
+                    assert(tokens_minted.get(TokenNames::voucher_ref(id)) == 1, "not exactly one ref token minted")
                     
                     // the count is incremented via the ref token, not the user nft
                     n_vouchers
                 }
             }
         }
-    }, 0);
+    }, 0)
 
     if (is_successful) {
         // assert each voucher has a unique id, and check it's output datum
         (new_last_voucher_id, n_tokens_in_vouchers) = tx.outputs.fold2((prev_id: Int, n_tokens_in_vouchers: Int, output: TxOutput) -> {
             if (output.address == Addresses::voucher) {
-                id = prev_id + 1;
+                id = prev_id + 1
 
-                assert(Tokens::contains_only_voucher_ref(output, id), "voucher doesn't have expected id");
+                assert(Tokens::contains_only_voucher_ref(output, id), "voucher doesn't have expected id")
 
-                wrapper = output.datum.inline.as_strictly[VoucherWrapper];
-                voucher = wrapper.get_voucher();
+                wrapper = output.datum.inline.as_strictly[VoucherWrapper]
+                voucher = wrapper.get_voucher()
 
                 // return_address and return_datum are checked by the mint_order_validator
                 assert(
@@ -137,19 +135,19 @@ func validate_minted_vouchers(price: Ratio, period_id: Int, last_voucher_id: Int
                     && voucher.price == price
                     && voucher.period_id == period_id, 
                     "invalid Voucher datum"
-                );
+                )
 
                 (id, n_tokens_in_vouchers + voucher.tokens)
             } else {
                 (prev_id, n_tokens_in_vouchers)
             }
-        }, last_voucher_id, 0);
+        }, last_voucher_id, 0)
 
-        assert(n_vouchers_minted == new_last_voucher_id - last_voucher_id, "number of voucher pairs minted doesn't correspond to number of outputs with vouchers");
+        assert(n_vouchers_minted == new_last_voucher_id - last_voucher_id, "number of voucher pairs minted doesn't correspond to number of outputs with vouchers")
 
         (n_vouchers_minted, n_tokens_in_vouchers, new_last_voucher_id)
     } else {
-        assert(n_vouchers_minted == 0, "can't mint vouchers when there isn't any success");
+        assert(n_vouchers_minted == 0, "can't mint vouchers when there isn't any success")
 
         (0, 0, last_voucher_id)
     }
@@ -159,28 +157,28 @@ func validate_minted_vouchers(price: Ratio, period_id: Int, last_voucher_id: Int
  * Asserts the token name is either the dvp token or a voucher
  */
 func validate_burned_vouchers(period_id: Int) -> Int {
-    tokens_minted = Tokens::get_minted();
+    tokens_minted = Tokens::get_minted()
 
     tokens_minted.fold((n_vouchers: Int, token_name: ByteArray, qty: Int) -> {
         if (token_name == TokenNames::dvp_token) {
             n_vouchers
         } else {
-            assert(qty == -1, "not exactly -1");
+            assert(qty == -1, "not exactly -1")
 
             TokenNames::parse_voucher_ref(token_name).switch{
                 Some{id} => {
-                    assert(tokens_minted.get(TokenNames::voucher_nft(id)) == -1, "not exactly one nft burned");
+                    assert(tokens_minted.get(TokenNames::voucher_nft(id)) == -1, "not exactly one nft burned")
 
-                    voucher = find_input_voucher(id);
+                    voucher = find_input_voucher(id)
 
-                    assert(voucher.period_id == period_id, "Voucher from other period");
+                    assert(voucher.period_id == period_id, "Voucher from other period")
 
                     n_vouchers + 1
                 },
                 else => {
-                    id = TokenNames::parse_voucher_nft(token_name).unwrap();
+                    id = TokenNames::parse_voucher_nft(token_name).unwrap()
 
-                    assert(tokens_minted.get(TokenNames::voucher_ref(id)) == -1, "not exactly one ref token burned");
+                    assert(tokens_minted.get(TokenNames::voucher_ref(id)) == -1, "not exactly one ref token burned")
 
                     n_vouchers
                 }

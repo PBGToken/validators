@@ -15,9 +15,9 @@ struct Price {
             else => tx.ref_inputs.find((input: TxInput) -> {
                 input.address == Addresses::price
             })
-        };
+        }
 
-        assert(Tokens::contains_only_price(input), "doesn't contain only the price token");
+        assert(Tokens::contains_only_price(input), "doesn't contain only the price token")
 
         input.datum.inline.as[Price]
     }
@@ -28,9 +28,9 @@ struct Price {
             else => tx.inputs.find((input: TxInput) -> {
                 input.address == Addresses::price
             })
-        };
+        }
 
-        assert(Tokens::contains_only_price(input), "doesn't contain only the price token");
+        assert(Tokens::contains_only_price(input), "doesn't contain only the price token")
 
         input.datum.inline.as[Price]
     }
@@ -38,9 +38,9 @@ struct Price {
     func find_output() -> Price {
         output = tx.outputs.find((output: TxOutput) -> {
             output.address == Addresses::price
-        });
+        })
 
-        assert(Tokens::contains_only_price(output), "doesn't contain only the price token");
+        assert(Tokens::contains_only_price(output), "doesn't contain only the price token")
 
         output.datum.inline.as_strictly[Price]
     }
@@ -48,9 +48,9 @@ struct Price {
     func find_ref() -> Price {
         input = tx.ref_inputs.find((input: TxInput) -> {
             input.address == Addresses::price
-        });
+        })
 
-        assert(Tokens::contains_only_price(input), "doesn't contain only the price token");
+        assert(Tokens::contains_only_price(input), "doesn't contain only the price token")
 
         input.datum.inline.as[Price]
     }
@@ -70,7 +70,7 @@ struct Price {
     }
 
     func relative_to_benchmark(self) -> Ratio {
-        (config, _) = Config::find();
+        (config, _) = Config::find()
 
         config.fees.success_fee.get_benchmark_price(self.value)
     }
