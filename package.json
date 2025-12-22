@@ -73,7 +73,7 @@
         "@helios-lang/ledger": "^0.7.23",
         "@helios-lang/tx-utils": "^0.6.36",
         "@helios-lang/type-utils": "0.3.0",
-        "@helios-lang/uplc": "0.7.18"
+        "@helios-lang/uplc": "^0.7.20"
     },
     "devDependencies": {
         "@helios-lang/crypto": "^0.2.3",
