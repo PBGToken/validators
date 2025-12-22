@@ -1,6 +1,6 @@
 {
     "name": "@pbgtoken/dvp-validators",
-    "version": "1.0.37",
+    "version": "1.0.38",
     "description": "PBG Token validators for Cardano",
     "type": "module",
     "main": "dist/dvp/index.js",
